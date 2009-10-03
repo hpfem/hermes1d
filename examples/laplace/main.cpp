@@ -309,62 +309,11 @@ int main() {
   Mesh mesh;
   mesh.create(A, B, Nelem);
   mesh.set_poly_orders(P_INIT);
+  mesh.assign_dofs();
 
-  // create mesh
-  Vertex *Vertices = new Vertex[Nelem+1];    // allocate array of vertices
-  double h = (B - A)/Nelem;
-  for(int i = 0; i < Nelem+1; i++) {
-    Vertices[i].x = A + i*h;             // so far equidistant division only
-  }
-  Element *Elems = new Element[Nelem];                // allocate array of elements
-  for(int i=0; i<Nelem; i++) {
-    Elems[i].p = P_INIT; 
-    Elems[i].v1 = Vertices + i;
-    Elems[i].v2 = Vertices + i + 1;
-    Elems[i].dof = new int[P_INIT+1];
-  }
-
-  // define element connectivities
-  // (so far only for zero Dirichlet conditions)
-  // (a) enumerate vertex dofs
-  Elems[0].dof[0] = -1;        // Dirichlet left end of domain
-  Elems[0].dof[1] = 0;         // first vertex dof
-  for(int i=1; i<Nelem-1; i++) {
-    Elems[i].dof[0] = i-1;     // Dirichlet left end of domain
-    Elems[i].dof[1] = i;       // first dof
-  }
-  Elems[Nelem-1].dof[0] = Nelem-2;     // last vertex dof
-  Elems[Nelem-1].dof[1] = -1;      // Dirichlet left end of domain
-  // (b) enumerate bubble dofs
-  Ndof = Nelem-1; 
-  for(int i=0; i<Nelem; i++) {
-    for(int j=2; j<=P_INIT; j++) {
-      Elems[i].dof[j] = Ndof++;     // enumerating higher-order dofs
-    }
-  }
-
-  // test (print DOF in elements)
-  int n_test = 0;
-  for(int i=0; i<Nelem; i++) n_test += Elems[i].p;
-  n_test -= 1;
-  if(Ndof != n_test) {
-    printf("Ndof = %d, n_test = %d\n", Ndof, n_test);
-    error("Internal: Test of total DOF number failed."); 
-  }
-
-  // test (print element connectivities)
-  if(DEBUG) {
-    printf("Printing element DOF arrays:\n");
-    printf("Elements = %d\n", Nelem);
-    printf("DOF = %d", Ndof);
-    for (int i = 0; i < Nelem; i++) {
-      printf("\nElement[%d]: ", i); 
-      for(int j = 0; j<Elems[i].p+1; j++) {
-        printf("%d, ", Elems[i].dof[j]);
-      }
-    }
-    printf("\n"); 
-  }
+  Vertex *Vertices = mesh.get_vertices();
+  Element *Elems = mesh.get_elems();
+  Ndof = mesh.get_n_dof();
 
   DiscreteProblem dp(1);
   dp.add_matrix_form(0, 0, jacobian);
