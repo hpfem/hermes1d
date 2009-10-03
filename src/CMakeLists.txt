@@ -1,5 +1,6 @@
 set(SRC
-    matrix.cpp
+    common.cpp
+    lobatto.cpp  matrix.cpp
     )
 
-add_library(hermes1d SHARED ${SRC})
+add_library(${HERMES_BIN} SHARED ${SRC})

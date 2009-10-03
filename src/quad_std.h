@@ -19,8 +19,10 @@
 
 // $Id: quad.h 1086 2008-10-21 09:05:44Z jakub $
 
-#ifndef __HERMES2D_QUAD_H
-#define __HERMES2D_QUAD_H
+#ifndef __HERMES1D_QUAD_H
+#define __HERMES1D_QUAD_H
+
+#include "common.h"
 
 
 /// Quad1D is a base class for all 1D quadrature points.

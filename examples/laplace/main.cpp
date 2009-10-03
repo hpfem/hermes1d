@@ -5,9 +5,9 @@
 #include <math.h>
 #include <string.h>
 #include "common.h"
-#include "matrix.cpp"
-#include "quad_std.cpp"
-#include "lobatto.cpp"
+#include "matrix.h"
+#include "quad_std.h"
+#include "lobatto.h"
 
 int DEBUG = 1;
 
