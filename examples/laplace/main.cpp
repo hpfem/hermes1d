@@ -157,19 +157,23 @@ void eval_approx(Element *e, double x_ref, double *y, double &x_phys, double &va
 } 
 
 // construct Jacobi matrix or residual vector
-// matrix_flag != 0... assembling Jacobi matrix
-// matrix_flag == 0... assembling residual vector
+// matrix_flag == 0... assembling Jacobi matrix and residual vector together
+// matrix_flag == 1... assembling Jacobi matrix only
+// matrix_flag == 2... assembling residual vector only
+// NOTE: Simultaneous assembling of the Jacobi matrix and residual
+// vector is more efficient than if they are assembled separately
 void assemble(int ndof, Element *elems, double **mat, double *res, 
               double *y_prev, int matrix_flag) {
   // erase matrix
-  if(matrix_flag) {
+  if(matrix_flag == 0 || matrix_flag == 1) {
     for(int i=0; i<ndof; i++) {
       for(int j=0; j<ndof; j++) mat[i][j] = 0;
     }
   }
 
   // erase residual vector
-  if(!matrix_flag) for(int i=0; i<ndof; i++) res[i] = 0;
+  if(matrix_flag == 0 || matrix_flag == 2) 
+    for(int i=0; i<ndof; i++) res[i] = 0;
 
   // memory for quadrature data
   // FIXME - this is a memory leak
@@ -210,7 +214,7 @@ void assemble(int ndof, Element *elems, double **mat, double *res,
         element_shapefn(elems[m].v1->x, elems[m].v2->x,  
                         i, order, phys_v, phys_dvdx); 
         // if we are constructing the matrix
-        if(matrix_flag) {
+        if(matrix_flag == 0 || matrix_flag == 1) {
           // loop over basis functions (columns)
           for(int j=0; j < elems[m].p + 1; j++) {
             int pos_j = elems[m].dof[j]; // matrix column index
@@ -228,7 +232,8 @@ void assemble(int ndof, Element *elems, double **mat, double *res,
 	    }
 	  }
         }
-        else {// contribute to residual vector
+        // contribute to residual vector
+        if(matrix_flag == 0 || matrix_flag == 2) {
      	  double val_i = residual(pts_num, phys_pts, phys_weights, 
                                   phys_u_prev, phys_du_prevdx, phys_v,
                                   phys_dvdx);
@@ -241,7 +246,7 @@ void assemble(int ndof, Element *elems, double **mat, double *res,
   }
 
   // DEBUG: print Jacobi matrix
-  if(DEBUG && matrix_flag) {
+  if(DEBUG && (matrix_flag == 0 || matrix_flag == 1)) {
     printf("Jacobi matrix:\n");
     for(int i=0; i<ndof; i++) {
       for(int j=0; j<ndof; j++) {
@@ -252,7 +257,7 @@ void assemble(int ndof, Element *elems, double **mat, double *res,
   }
 
   // DEBUG: print residual vector
-  if(DEBUG && !matrix_flag) {
+  if(DEBUG && (matrix_flag == 0 || matrix_flag == 2)) {
     printf("Residual:\n");
     for(int i=0; i<ndof; i++) {
       printf("%g ", res[i]);
@@ -263,17 +268,23 @@ void assemble(int ndof, Element *elems, double **mat, double *res,
   return;
 } 
 
-// construct Jacobi matrix and residual
-void assemble_jacobi_matrix(int ndof, Element *elems, double **mat, double *y_prev) {
+// construct both the Jacobi matrix and the residual vector
+void assemble_matrix_and_vector(int ndof, Element *elems, double **mat, double *res, double *y_prev) {
+  assemble(ndof, elems, mat, res, y_prev, 0);
+  return;
+} 
+
+// construct Jacobi matrix only
+void assemble_matrix(int ndof, Element *elems, double **mat, double *y_prev) {
   double *void_res = NULL;
   assemble(ndof, elems, mat, void_res, y_prev, 1);
   return;
 } 
 
-// construct resodual vector
-void assemble_residual_vector(int ndof, Element *elems, double *res, double *y_prev) {
+// construct residual vector only
+void assemble_vector(int ndof, Element *elems, double *res, double *y_prev) {
   double **void_mat = NULL;
-  assemble(ndof, elems, void_mat, res, y_prev, 0);
+  assemble(ndof, elems, void_mat, res, y_prev, 2);
   return;
 } 
 
@@ -366,7 +377,7 @@ int main() {
   // Newton's loop
   while (1) {
     // construct residual vector
-    assemble_residual_vector(Ndof, Elems, res, y_prev); 
+    assemble_matrix_and_vector(Ndof, Elems, mat, res, y_prev); 
 
     // calculate L2 norm of residual vector
     double res_norm = 0;
@@ -376,9 +387,6 @@ int main() {
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
     if(res_norm < TOL) break;
-
-    // construct Jacobi matrix
-    assemble_jacobi_matrix(Ndof, Elems, mat, y_prev); 
 
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
