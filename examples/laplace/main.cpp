@@ -48,7 +48,8 @@ int plotting_elem_subdivision = 100;
 // u_prev...previous solution
 double jacobian(int pts_num, double *pts, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-		double *u_prev, double *du_prevdx) {
+                double *u_prev, double *du_prevdx)
+{
   double val = 0;
   for(int i = 0; i<pts_num; i++) {
     val += dudx[i]*dvdx[i]*weights[i];
@@ -65,7 +66,8 @@ double jacobian(int pts_num, double *pts, double *weights,
 // u_prev...previous solution
 double residual(int pts_num, double *pts, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-		double *u_prev, double *du_prevdx) {
+                double *u_prev, double *du_prevdx)
+{
   double val = 0;
   for(int i = 0; i<pts_num; i++) {
     val += (du_prevdx[i]*dvdx[i] - f(pts[i])*v[i])*weights[i];
