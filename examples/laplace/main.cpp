@@ -4,10 +4,8 @@
 #include <fstream>
 #include <math.h>
 #include <string.h>
-#include "common.h"
-#include "matrix.h"
-#include "quad_std.h"
-#include "lobatto.h"
+
+#include "hermes1d.h"
 
 int DEBUG = 1;
 
@@ -353,6 +351,9 @@ int main() {
     }
     printf("\n"); 
   }
+
+  WeakForm wf(1);
+  wf.add_biform(0, 0, jacobian);
 
   // allocate Jacobi matrix and residual
   double **mat = new_matrix<double>(Ndof,Ndof);
