@@ -306,6 +306,10 @@ int main() {
   // variable for the total number of DOF 
   int Ndof;				       
 
+  Mesh mesh;
+  mesh.create(A, B, Nelem);
+  mesh.set_poly_orders(P_INIT);
+
   // create mesh
   Vertex *Vertices = new Vertex[Nelem+1];    // allocate array of vertices
   double h = (B - A)/Nelem;
