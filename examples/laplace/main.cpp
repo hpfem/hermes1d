@@ -311,13 +311,14 @@ int main() {
   mesh.set_poly_orders(P_INIT);
   mesh.assign_dofs();
 
+  DiscreteProblem dp(1, &mesh);
+  dp.add_matrix_form(0, 0, jacobian);
+  dp.add_vector_form(0, 0, residual);
+
   Vertex *Vertices = mesh.get_vertices();
   Element *Elems = mesh.get_elems();
   Ndof = mesh.get_n_dof();
 
-  DiscreteProblem dp(1);
-  dp.add_matrix_form(0, 0, jacobian);
-  dp.add_vector_form(0, 0, residual);
 
   // allocate Jacobi matrix and residual
   double **mat = new_matrix<double>(Ndof,Ndof);
