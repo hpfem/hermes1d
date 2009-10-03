@@ -63,20 +63,19 @@ double jacobian(int pts_num, double *pts, double *weights,
 // v...test function
 // u_prev...previous solution
 double residual(int pts_num, double *pts, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx)
+                double *u_prev, double *du_prevdx, double *v, double *dvdx)
 {
   double val = 0;
   for(int i = 0; i<pts_num; i++) {
     val += (du_prevdx[i]*dvdx[i] - f(pts[i])*v[i])*weights[i];
   }
   if(DEBUG) {
-    printf("u = ");
+    /*printf("u = ");
     for(int i=0; i<pts_num; i++) printf("%g, ", u[i]);
     printf("\n");
     printf("dudx = ");
     for(int i=0; i<pts_num; i++) printf("%g, ", dudx[i]);
-    printf("\n");
+    printf("\n");*/
     printf("v = ");
     for(int i=0; i<pts_num; i++) printf("%g, ", v[i]);
     printf("\n");
@@ -231,8 +230,8 @@ void assemble(int ndof, Element *elems, double **mat, double *res,
         }
         else {// contribute to residual vector
      	  double val_i = residual(pts_num, phys_pts, phys_weights, 
-                                  phys_u, phys_dudx, phys_v, phys_dvdx, 
-                                  phys_u_prev, phys_du_prevdx);
+                                  phys_u_prev, phys_du_prevdx, phys_v,
+                                  phys_dvdx);
           // add the contribution to the residual vector
           printf("Adding to residual pos %d value %g\n", pos_i, val_i);
           res[pos_i] += val_i;
@@ -352,8 +351,9 @@ int main() {
     printf("\n"); 
   }
 
-  WeakForm wf(1);
-  wf.add_biform(0, 0, jacobian);
+  DiscreteProblem dp(1);
+  dp.add_matrix_form(0, 0, jacobian);
+  dp.add_vector_form(0, 0, residual);
 
   // allocate Jacobi matrix and residual
   double **mat = new_matrix<double>(Ndof,Ndof);

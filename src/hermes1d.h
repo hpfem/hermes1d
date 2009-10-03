@@ -5,6 +5,6 @@
 #include "matrix.h"
 #include "quad_std.h"
 #include "lobatto.h"
-#include "weakform.h"
+#include "discrete.h"
 
 #endif
