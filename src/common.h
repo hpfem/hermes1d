@@ -1,3 +1,6 @@
+#ifndef __HERMES1D_COMMON_H
+#define __HERMES1D_COMMON_H
+
 #include <stdlib.h>
 
 void error(const char *msg) {
@@ -22,3 +25,4 @@ public:
   int *dof;        // connectivity array of length p+1
 };
 
+#endif

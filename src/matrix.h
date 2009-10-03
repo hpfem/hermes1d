@@ -21,8 +21,8 @@
 
 // $Id: matrix.h 1086 2008-10-21 09:05:44Z jakub $
 
-#ifndef __HERMES2D_MATRIX_H
-#define __HERMES2D_MATRIX_H
+#ifndef __HERMES1D_MATRIX_H
+#define __HERMES1D_MATRIX_H
 
 /// Creates a new (full) matrix with m rows and n columns with entries of the type T.
 /// The entries can be accessed by matrix[i][j]. To delete the matrix, just
