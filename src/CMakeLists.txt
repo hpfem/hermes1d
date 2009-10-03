@@ -1,5 +1,5 @@
 set(SRC
-    main.cpp
+    matrix.cpp
     )
 
-add_executable(h1d ${SRC})
+add_library(hermes1d SHARED ${SRC})

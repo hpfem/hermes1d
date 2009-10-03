@@ -24,6 +24,14 @@
 #ifndef __HERMES1D_MATRIX_H
 #define __HERMES1D_MATRIX_H
 
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <math.h>
+#include <string.h>
+
+#include "common.h"
+
 /// Creates a new (full) matrix with m rows and n columns with entries of the type T.
 /// The entries can be accessed by matrix[i][j]. To delete the matrix, just
 /// do "delete matrix".
