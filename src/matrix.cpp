@@ -96,3 +96,10 @@ void solve_linear_system_dense(DenseMatrix *mat, double *res)
     ludcmp(_mat, n, indx, &d);
     lubksb(_mat, n, indx, res);
 }
+
+
+void solve_linear_system(Matrix *mat, double *res)
+{
+    DenseMatrix *dmat = new DenseMatrix(mat);
+    solve_linear_system_dense(dmat, res);
+}

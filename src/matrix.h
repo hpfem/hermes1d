@@ -301,6 +301,7 @@ class DenseMatrix : public Matrix {
 
 
 // solve linear system
+void solve_linear_system(Matrix *mat, double *res);
 void solve_linear_system_dense(DenseMatrix *mat, double *res);
 
 #endif
