@@ -6,9 +6,9 @@ int DEBUG = 1;
 
 // general input:
 static int NUM_EQ = 1;
-int Nelem = 2;                         // number of elements
+int Nelem = 3;                         // number of elements
 double A = 0, B = 2*M_PI;                // domain end points
-int P_INIT = 3;                        // initial polynomal degree
+int P_INIT = 2;                        // initial polynomal degree
 
 // Tolerance for Newton's method
 double TOL = 1e-8;
@@ -109,7 +109,7 @@ int main() {
   // Newton's loop
   while (1) {
     // zero the matrix:
-    mat = new CooMatrix(Ndof);
+    mat = new DenseMatrix(Ndof);
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
@@ -126,6 +126,10 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
+    CSRMatrix *csr = new CSRMatrix((DenseMatrix*)mat);
+    mat->print();
+    csr->print();
+    exit(1);
     solve_linear_system(mat, res);
 
     // DEBUG: print solution

@@ -299,6 +299,76 @@ class DenseMatrix : public Matrix {
 
 };
 
+class CSRMatrix : public Matrix {
+    public:
+        CSRMatrix(CooMatrix *m) {
+            DenseMatrix *dmat = new DenseMatrix(m);
+            //CSRMatrix(dmat);
+        }
+        CSRMatrix(DenseMatrix *m) {
+            this->size = m->get_size();
+            this->nnz = 0;
+            for(int i = 0; i < this->size; i++)
+                for(int j = 0; j < this->size; j++) {
+                    double v = m->get(i, j);
+                    if (fabs(v) > 1e-12)
+                        this->nnz++;
+                }
+            this->A = new double[this->nnz];
+            this->IA = new int[this->size+1];
+            this->JA = new int[this->nnz];
+            int count = 0;
+            this->IA[0] = 1;
+            for(int i = 0; i < this->size; i++) {
+                for(int j = 0; j < this->size; j++) {
+                    double v = m->get(i, j);
+                    if (fabs(v) > 1e-12) {
+                        this->A[count] = v;
+                        this->JA[count] = j;
+                        count++;
+                    }
+                }
+                this->IA[i+1] = count+1;
+            }
+        }
+        virtual void zero() {
+            error("Not implemented.");
+        }
+        virtual void add(int m, int n, double v) {
+            error("Not implemented.");
+        }
+        virtual double get(int m, int n) {
+            error("Not implemented.");
+        }
+
+        virtual int get_size() {
+            return this->size;
+        }
+        virtual void copy_into(Matrix *m) {
+            error("Not implemented.");
+        }
+
+        virtual void print() {
+            printf("(I, J): value:\n");
+            for (int i = 0; i < this->nnz; i++) {
+                printf("(%d, %d): %f\n", -1,
+                        this->JA[i], this->A[i]);
+            }
+            printf("IA:\n");
+            for (int i = 0; i < this->size+1; i++) {
+                printf("%d ", this->IA[i]);
+            }
+            printf("\n");
+        }
+
+    private:
+        int size;
+        int nnz;
+        double *A;
+        int *IA;
+        int *JA;
+
+};
 
 // solve linear system
 void solve_linear_system(Matrix *mat, double *res);
