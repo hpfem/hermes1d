@@ -22,17 +22,11 @@ void DiscreteProblem::add_vector_form(int i, vector_form fn)
 // matrix_flag == 2... assembling residual vector only
 // NOTE: Simultaneous assembling of the Jacobi matrix and residual
 // vector is more efficient than if they are assembled separately
-void DiscreteProblem::assemble(double **mat, double *res, 
+void DiscreteProblem::assemble(Matrix *mat, double *res, 
               double *y_prev, int matrix_flag) {
   int ndof = this->mesh->get_n_dof();
   Element *elems = this->mesh->get_elems();
   int DEBUG = 0;
-  // erase matrix
-  if(matrix_flag == 0 || matrix_flag == 1) {
-    for(int i=0; i<ndof; i++) {
-      for(int j=0; j<ndof; j++) mat[i][j] = 0;
-    }
-  }
 
   // erase residual vector
   if(matrix_flag == 0 || matrix_flag == 2) 
@@ -109,7 +103,7 @@ void DiscreteProblem::assemble(double **mat, double *res,
 				       phys_u, phys_dudx, phys_v, phys_dvdx, 
                                        phys_u_prev, phys_du_prevdx); 
               // add the result to the matrix
-              mat[pos_j][pos_i] += val_ji; 
+              mat->add(pos_j, pos_i, val_ji);
 	    }
 	  }
         }
@@ -131,7 +125,7 @@ void DiscreteProblem::assemble(double **mat, double *res,
     printf("Jacobi matrix:\n");
     for(int i=0; i<ndof; i++) {
       for(int j=0; j<ndof; j++) {
-        printf("%g ", mat[i][j]);
+        printf("%g ", mat->get(i, j));
       }
       printf("\n");
     }
@@ -148,19 +142,19 @@ void DiscreteProblem::assemble(double **mat, double *res,
 } 
 
 // construct both the Jacobi matrix and the residual vector
-void DiscreteProblem::assemble_matrix_and_vector(double **mat, double *res, double *y_prev) {
+void DiscreteProblem::assemble_matrix_and_vector(Matrix *mat, double *res, double *y_prev) {
   assemble(mat, res, y_prev, 0);
 } 
 
 // construct Jacobi matrix only
-void DiscreteProblem::assemble_matrix(double **mat, double *y_prev) {
+void DiscreteProblem::assemble_matrix(Matrix *mat, double *y_prev) {
   double *void_res = NULL;
   assemble(mat, void_res, y_prev, 1);
 } 
 
 // construct residual vector only
 void DiscreteProblem::assemble_vector(double *res, double *y_prev) {
-  double **void_mat = NULL;
+  Matrix *void_mat = NULL;
   assemble(void_mat, res, y_prev, 2);
 } 
 

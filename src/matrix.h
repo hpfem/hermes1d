@@ -135,5 +135,45 @@ void cholsl(double **a, int n, double p[], T b[], T x[])
   }
 }
 
+class Matrix {
+public:
+    virtual ~Matrix() { }
+    virtual int get_size() = 0;
+    virtual void add(int m, int n, double v) = 0;
+    virtual double get(int m, int n) = 0;
+};
+
+
+class DenseMatrix : public Matrix {
+    public:
+        DenseMatrix(int size) {
+            this->mat = new_matrix<double>(size, size);
+            this->size = size;
+            // erase matrix
+            for(int i = 0; i < this->size; i++)
+                for(int j = 0; j < this->size; j++)
+                    this->mat[i][j] = 0;
+        }
+        virtual void add(int m, int n, double v) {
+            this->mat[m][n] += v;
+        }
+        virtual double get(int m, int n) {
+            return this->mat[m][n];
+        }
+
+        virtual int get_size() {
+            return this->size;
+        }
+
+        // Return the internal matrix.
+        double **get_mat() {
+            return this->mat;
+        }
+
+    private:
+        int size;
+        double **mat;
+
+};
 
 #endif

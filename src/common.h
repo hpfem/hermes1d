@@ -28,4 +28,6 @@ void intro();
 
 void throw_exception(char *text);
 
+#define MEM_CHECK(var) if (var == NULL) { printf("Out of memory."); exit(1); }
+
 #endif

@@ -34,13 +34,13 @@ double rhs(int pts_num, double *pts, double *weights,
   return val;
 }
 
-void insert_matrix(double **mat, int len)
+void insert_matrix(DenseMatrix *mat, int len)
 {
   insert_int("len", len);
   double _mat[len*len];
   for(int i=0; i<len; i++)
       for(int j=0; j<len; j++)
-          _mat[i*len+j] = mat[i][j];
+          _mat[i*len+j] = mat->get(i, j);
   insert_double_array("mat", _mat, len*len);
   cmd("_ = mat.reshape((len, len))");
   cmd("del len");
@@ -66,8 +66,8 @@ int main(int argc, char* argv[]) {
   int Ndof = mesh.get_n_dof();
 
   // allocate Jacobi matrix and residual
-  double **mat1 = new_matrix<double>(Ndof, Ndof);
-  double **mat2 = new_matrix<double>(Ndof, Ndof);
+  DenseMatrix *mat1 = new DenseMatrix(Ndof);
+  DenseMatrix *mat2 = new DenseMatrix(Ndof);
   double *y_prev = new double[Ndof];
 
   // zero initial condition for the Newton's method

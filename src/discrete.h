@@ -4,6 +4,7 @@
 #include "mesh.h"
 #include "quad_std.h"
 #include "lobatto.h"
+#include "matrix.h"
 
 typedef double (*matrix_form) (int pts_num, double *pts, double *weights,
         double *u, double *dudx, double *v, double *dvdx, double *u_prev,
@@ -19,9 +20,9 @@ public:
 
     void add_matrix_form(int i, int j, matrix_form fn);
     void add_vector_form(int i, vector_form fn);
-    void assemble(double **mat, double *res, double *y_prev, int matrix_flag);
-    void assemble_matrix_and_vector(double **mat, double *res, double *y_prev); 
-    void assemble_matrix(double **mat, double *y_prev);
+    void assemble(Matrix *mat, double *res, double *y_prev, int matrix_flag);
+    void assemble_matrix_and_vector(Matrix *mat, double *res, double *y_prev); 
+    void assemble_matrix(Matrix *mat, double *y_prev);
     void assemble_vector(double *res, double *y_prev);
 
 private:

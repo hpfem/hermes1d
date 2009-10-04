@@ -99,7 +99,8 @@ int main() {
   int Ndof = mesh.get_n_dof();
 
   // allocate Jacobi matrix and residual
-  double **mat = new_matrix<double>(Ndof,Ndof);
+  Matrix *mat = new DenseMatrix(Ndof);
+  double **_mat = (dynamic_cast<DenseMatrix *>(mat))->get_mat();
   double *y_prev = new double[Ndof];
   double *res = new double[Ndof];
 
@@ -126,8 +127,8 @@ int main() {
     // solve linear system
     int *indx = new int[Ndof];
     double d;
-    ludcmp(mat, Ndof, indx, &d);
-    lubksb(mat, Ndof, indx, res);
+    ludcmp(_mat, Ndof, indx, &d);
+    lubksb(_mat, Ndof, indx, res);
 
     // DEBUG: print solution
     if(DEBUG) {
