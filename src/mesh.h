@@ -71,4 +71,7 @@ class Linearizer {
         Mesh *mesh;
 };
 
+void element_solution(Element *e, double *coeff, int pts_num, 
+        double *pts_array, double *val, double *der);
+
 #endif

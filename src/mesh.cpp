@@ -92,16 +92,30 @@ void Linearizer::eval_approx(Element *e, double x_ref, double *y, double &x_phys
 void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plotting_elem_subdivision)
 {
   // Plot solution in Gnuplot format
-  Element *Elems = this->mesh->get_elems();
+  Element *elems = this->mesh->get_elems();
   FILE *f = fopen(out_filename, "wb");
+  // FIXME: this is a memory leak!!!
+  double *phys_u_prev =    new double[100];
+  double *phys_du_prevdx = new double[100];
   for(int m=0; m<this->mesh->get_n_elems(); m++) {
+    double coeffs[100];
+    if (m == 0 && elems[m].dof[0] == -1)
+        coeffs[0] = this->mesh->dir_bc_left_values[0];
+    else
+        coeffs[0] = y_prev[elems[m].dof[0]];
+    if (m == this->mesh->get_n_elems()-1 && elems[m].dof[1] == -1)
+        coeffs[1] = this->mesh->dir_bc_right_values[0];
+    else
+        coeffs[1] = y_prev[elems[m].dof[1]];
+    for (int j=1; j<=elems[m].p-1; j++)
+        coeffs[j] = y_prev[elems[m].dof[j]];
+    double pts_array[plotting_elem_subdivision+1];
     double h = 2./plotting_elem_subdivision;
-    double x_phys, val;
-    for(int i=0; i<=plotting_elem_subdivision; i++) {
-      double x_ref = -1. + i*h;
-      eval_approx(Elems + m, x_ref, y_prev, x_phys, val);
-      fprintf(f, "%g %g\n", x_phys, val);
-    }
+    for (int j=0; j<plotting_elem_subdivision+1; j++)
+        pts_array[j] = -1. + j*h;
+    element_solution(elems + m, coeffs, plotting_elem_subdivision+1, pts_array, phys_u_prev, phys_du_prevdx); 
+    for (int j=0; j<plotting_elem_subdivision+1; j++)
+      fprintf(f, "%g %g\n", pts_array[j], phys_u_prev[j]);
   }
   fclose(f);
 }

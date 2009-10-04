@@ -36,7 +36,5 @@ void element_quadrature(double a, double b,
                         int order, double *pts, double *weights, int &num);
 void element_shapefn(double a, double b, 
 		     int k, int order, double *val, double *der);
-void element_solution(Element *e, double *coeff, int pts_num, 
-        double *pts_array, double *val, double *der);
 
 #endif
