@@ -1,6 +1,7 @@
 #ifndef __HERMES1D_COMMON_H
 #define __HERMES1D_COMMON_H
 
+#include <stdexcept>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -24,5 +25,7 @@ public:
 };
 
 void intro();
+
+void throw_exception(char *text);
 
 #endif
