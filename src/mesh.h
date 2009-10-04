@@ -14,6 +14,9 @@ class Mesh {
         Element *get_elems() {
             return this->elems;
         }
+        int get_n_elems() {
+            return this->n_elem;
+        }
         int get_n_dof() {
             return this->n_dof;
         }
