@@ -118,7 +118,7 @@ int main() {
 
   DiscreteProblem dp(1, &mesh);
   dp.add_matrix_form(0, 0, jacobian);
-  dp.add_vector_form(0, 0, residual);
+  dp.add_vector_form(0, residual);
 
   // variable for the total number of DOF 
   int Ndof = mesh.get_n_dof();

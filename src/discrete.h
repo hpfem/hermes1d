@@ -18,7 +18,7 @@ public:
     DiscreteProblem(int neq, Mesh *mesh);
 
     void add_matrix_form(int i, int j, matrix_form fn);
-    void add_vector_form(int i, int j, vector_form fn);
+    void add_vector_form(int i, vector_form fn);
     void assemble(double **mat, double *res, double *y_prev, int matrix_flag);
     void assemble_matrix_and_vector(double **mat, double *res, double *y_prev); 
     void assemble_matrix(double **mat, double *y_prev);
