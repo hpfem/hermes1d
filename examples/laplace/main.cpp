@@ -174,4 +174,4 @@ int main() {
   printf("Output written to %s.\n", out_filename);
   printf("Done.\n");
   return 1;
-  };
+}
