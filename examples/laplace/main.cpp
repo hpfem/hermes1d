@@ -109,7 +109,7 @@ int main() {
   // Newton's loop
   while (1) {
     // zero the matrix:
-    mat = new DenseMatrix(Ndof);
+    mat = new CooMatrix(Ndof);
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
@@ -126,10 +126,6 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
-    CSRMatrix *csr = new CSRMatrix((DenseMatrix*)mat);
-    mat->print();
-    csr->print();
-    exit(1);
     solve_linear_system(mat, res);
 
     // DEBUG: print solution

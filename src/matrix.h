@@ -303,9 +303,13 @@ class CSRMatrix : public Matrix {
     public:
         CSRMatrix(CooMatrix *m) {
             DenseMatrix *dmat = new DenseMatrix(m);
-            //CSRMatrix(dmat);
+            this->copy_from_dense_matrix(dmat);
         }
         CSRMatrix(DenseMatrix *m) {
+            this->copy_from_dense_matrix(m);
+        }
+
+        void copy_from_dense_matrix(DenseMatrix *m) {
             this->size = m->get_size();
             this->nnz = 0;
             for(int i = 0; i < this->size; i++)
@@ -331,6 +335,7 @@ class CSRMatrix : public Matrix {
                 this->IA[i+1] = count+1;
             }
         }
+
         virtual void zero() {
             error("Not implemented.");
         }
