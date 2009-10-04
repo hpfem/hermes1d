@@ -109,7 +109,7 @@ int main() {
   // Newton's loop
   while (1) {
     // zero the matrix:
-    mat = new DenseMatrix(Ndof);
+    mat = new CooMatrix(Ndof);
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
@@ -126,7 +126,8 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
-    solve_linear_system(mat, res);
+    DenseMatrix *dmat = new DenseMatrix(dynamic_cast<CooMatrix *>(mat));
+    solve_linear_system(dmat, res);
 
     // DEBUG: print solution
     if(DEBUG) {

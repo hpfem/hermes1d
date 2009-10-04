@@ -141,14 +141,100 @@ public:
     virtual int get_size() = 0;
     virtual void add(int m, int n, double v) = 0;
     virtual double get(int m, int n) = 0;
+    virtual void zero() = 0;
+    virtual void copy_into(Matrix *m) = 0;
 };
 
+class Triple {
+    public:
+        int i;
+        int j;
+        double v;
+        Triple *next;
+
+        Triple(int i, int j, double v) {
+            this->i = i;
+            this->j = j;
+            this->v = v;
+            this->next = NULL;
+        }
+};
+
+class CooMatrix : public Matrix {
+    public:
+        CooMatrix(int size) {
+            this->size = size;
+            this->zero();
+        }
+        virtual void zero() {
+            this->list = NULL;
+            this->list_last = NULL;
+        }
+        virtual void add(int m, int n, double v) {
+            Triple *t = new Triple(m, n, v);
+            if (this->list == NULL) {
+                this->list = t;
+                this->list_last = this->list;
+            } else {
+                this->list_last->next = t;
+                this->list_last = this->list_last->next;
+            }
+            if (m > this->size-1) error("m is bigger than size");
+            if (n > this->size-1) error("n is bigger than size");
+        }
+        virtual double get(int m, int n) {
+            double v=0;
+            Triple *t = this->list;
+            if (t != NULL) {
+                while (t->next != NULL) {
+                    if (m == t->i && n == t->j)
+                        v += t->v;
+                    t = t->next;
+                }
+            }
+            return v;
+        }
+
+        virtual int get_size() {
+            return this->size;
+        }
+
+        virtual void copy_into(Matrix *m) {
+            m->zero();
+            Triple *t = this->list;
+            if (t != NULL) {
+                while (t->next != NULL) {
+                    m->add(t->i, t->j, t->v);
+                    t = t->next;
+                }
+            }
+        }
+
+    private:
+        int size;
+        /*
+           We represent the COO matrix as a list of Triples (i, j, v), where
+           (i, j) can be redundant (then the corresponding "v" have to be
+           summed). We remember the pointers to the first (*list) and last
+           (*list_last) element.
+           */
+        Triple *list;
+        Triple *list_last;
+};
 
 class DenseMatrix : public Matrix {
     public:
         DenseMatrix(int size) {
             this->mat = new_matrix<double>(size, size);
             this->size = size;
+            this->zero();
+        }
+        DenseMatrix(Matrix *m) {
+            this->mat = new_matrix<double>(m->get_size(), m->get_size());
+            this->size = size;
+            m->copy_into(this);
+        }
+        virtual void zero() {
             // erase matrix
             for(int i = 0; i < this->size; i++)
                 for(int j = 0; j < this->size; j++)
@@ -164,6 +250,15 @@ class DenseMatrix : public Matrix {
         virtual int get_size() {
             return this->size;
         }
+        virtual void copy_into(Matrix *m) {
+            m->zero();
+            for (int i = 0; i < this->size; i++)
+                for (int j = 0; j < this->size; j++) {
+                    double v = this->get(i, j);
+                    if (abs(v) > 1e-12)
+                        m->add(i, j, v);
+                }
+        }
 
         // Return the internal matrix.
         double **get_mat() {
@@ -175,6 +270,7 @@ class DenseMatrix : public Matrix {
         double **mat;
 
 };
+
 
 // solve linear system
 void solve_linear_system(Matrix *mat, double *res);
