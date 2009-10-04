@@ -1,0 +1,21 @@
+Welcome to Hermes1D!
+
+This is a README file for Linux.
+
+Compilation
+===========
+
+If you are using a Debian-based system, install the required libraries first:
+
+$ apt-get install cmake g++
+
+$ cmake .
+$ make
+
+Examples
+========
+
+$ cd examples/laplace
+$ ./laplace
+$ gnuplot
+gnuplot> plot './solution.gp' w l
