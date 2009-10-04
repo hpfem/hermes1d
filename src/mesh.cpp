@@ -39,12 +39,10 @@ void Mesh::assign_dofs()
       count++;
   }
   elems[0].dof[1] = count;         // first vertex dof
-  count++;
   for(int i=1; i<n_elem-1; i++) {
     elems[i].dof[0] = count;
     count++;
     elems[i].dof[1] = count;
-    count++;
   }
   elems[n_elem-1].dof[0] = count;
   count++;
@@ -116,4 +114,6 @@ void Mesh::set_dirichlet_bc_left(int eq_n, double val)
 
 void Mesh::set_dirichlet_bc_right(int eq_n, double val)
 {
+    this->dir_bc_right_active[eq_n] = 1;
+    this->dir_bc_right_values[eq_n] = val;
 }
