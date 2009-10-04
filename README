@@ -19,3 +19,12 @@ $ cd examples/laplace
 $ ./laplace
 $ gnuplot
 gnuplot> plot './solution.gp' w l
+
+Python
+======
+
+python -c 'print "set(WITH_PYTHON yes)\n"' > CMake.vars
+cmake .
+make
+cd examples/schroedinger
+./schroedinger

@@ -1,2 +1,4 @@
 add_subdirectory(laplace)
-add_subdirectory(schroedinger)
+if(WITH_PYTHON)
+    add_subdirectory(schroedinger)
+endif(WITH_PYTHON)
