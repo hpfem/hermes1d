@@ -26,7 +26,7 @@ void DiscreteProblem::assemble(double **mat, double *res,
               double *y_prev, int matrix_flag) {
   int ndof = this->mesh->get_n_dof();
   Element *elems = this->mesh->get_elems();
-  int DEBUG = 1;
+  int DEBUG = 0;
   // erase matrix
   if(matrix_flag == 0 || matrix_flag == 1) {
     for(int i=0; i<ndof; i++) {

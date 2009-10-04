@@ -27,7 +27,7 @@ void Mesh::set_poly_orders(int poly_order)
 
 void Mesh::assign_dofs()
 {
-  int DEBUG=1;
+  int DEBUG=0;
   // define element connectivities
   // (so far only for zero Dirichlet conditions)
   // (a) enumerate vertex dofs
