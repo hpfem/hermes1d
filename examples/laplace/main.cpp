@@ -152,7 +152,7 @@ int main() {
   // Newton's loop
   while (1) {
     // construct residual vector
-    dp.assemble_matrix_and_vector(Ndof, Elems, mat, res, y_prev); 
+    dp.assemble_matrix_and_vector(mat, res, y_prev); 
 
     // calculate L2 norm of residual vector
     double res_norm = 0;

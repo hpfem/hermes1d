@@ -19,14 +19,10 @@ public:
 
     void add_matrix_form(int i, int j, matrix_form fn);
     void add_vector_form(int i, int j, vector_form fn);
-    void assemble(int ndof, Element *elems, double **mat, double *res, 
-              double *y_prev, int matrix_flag);
-    void assemble_matrix_and_vector(int ndof, Element *elems, double **mat,
-            double *res, double *y_prev); 
-    void assemble_matrix(int ndof, Element *elems, double **mat,
-            double *y_prev);
-    void assemble_vector(int ndof, Element *elems, double *res,
-            double *y_prev);
+    void assemble(double **mat, double *res, double *y_prev, int matrix_flag);
+    void assemble_matrix_and_vector(double **mat, double *res, double *y_prev); 
+    void assemble_matrix(double **mat, double *y_prev);
+    void assemble_vector(double *res, double *y_prev);
 
 private:
     int neq;

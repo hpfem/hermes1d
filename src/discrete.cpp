@@ -22,9 +22,10 @@ void DiscreteProblem::add_vector_form(int i, int j, vector_form fn)
 // matrix_flag == 2... assembling residual vector only
 // NOTE: Simultaneous assembling of the Jacobi matrix and residual
 // vector is more efficient than if they are assembled separately
-void DiscreteProblem::assemble(int ndof, Element *elems, double **mat, double *res, 
+void DiscreteProblem::assemble(double **mat, double *res, 
               double *y_prev, int matrix_flag) {
-
+  int ndof = this->mesh->get_n_dof();
+  Element *elems = this->mesh->get_elems();
   int DEBUG = 1;
   // erase matrix
   if(matrix_flag == 0 || matrix_flag == 1) {
@@ -126,28 +127,23 @@ void DiscreteProblem::assemble(int ndof, Element *elems, double **mat, double *r
     }
     printf("\n");
   }
-
-  return;
 } 
 
 // construct both the Jacobi matrix and the residual vector
-void DiscreteProblem::assemble_matrix_and_vector(int ndof, Element *elems, double **mat, double *res, double *y_prev) {
-  assemble(ndof, elems, mat, res, y_prev, 0);
-  return;
+void DiscreteProblem::assemble_matrix_and_vector(double **mat, double *res, double *y_prev) {
+  assemble(mat, res, y_prev, 0);
 } 
 
 // construct Jacobi matrix only
-void DiscreteProblem::assemble_matrix(int ndof, Element *elems, double **mat, double *y_prev) {
+void DiscreteProblem::assemble_matrix(double **mat, double *y_prev) {
   double *void_res = NULL;
-  assemble(ndof, elems, mat, void_res, y_prev, 1);
-  return;
+  assemble(mat, void_res, y_prev, 1);
 } 
 
 // construct residual vector only
-void DiscreteProblem::assemble_vector(int ndof, Element *elems, double *res, double *y_prev) {
+void DiscreteProblem::assemble_vector(double *res, double *y_prev) {
   double **void_mat = NULL;
-  assemble(ndof, elems, void_mat, res, y_prev, 2);
-  return;
+  assemble(void_mat, res, y_prev, 2);
 } 
 
 // transformation of quadrature to physical element
