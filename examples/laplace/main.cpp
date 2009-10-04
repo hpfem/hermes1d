@@ -1,10 +1,3 @@
-// including higher-order shape functions
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
-#include <math.h>
-#include <string.h>
-
 #include "hermes1d.h"
 
 int DEBUG = 1;
@@ -111,11 +104,13 @@ int main() {
   // introductory text
   intro();
 
+  // create mesh
   Mesh mesh;
   mesh.create(A, B, Nelem);
   mesh.set_poly_orders(P_INIT);
   mesh.assign_dofs();
 
+  // register weak forms
   DiscreteProblem dp(1, &mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual);
