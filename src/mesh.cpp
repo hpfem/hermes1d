@@ -95,10 +95,10 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
   Element *elems = this->mesh->get_elems();
   FILE *f = fopen(out_filename, "wb");
   // FIXME: this is a memory leak!!!
-  double *phys_u_prev =    new double[1000];
-  double *phys_du_prevdx = new double[1000];
+  double *phys_u_prev =    new double[plotting_elem_subdivision + 1];
+  double *phys_du_prevdx = new double[plotting_elem_subdivision + 1];
   for(int m=0; m<this->mesh->get_n_elems(); m++) {
-    double coeffs[1000];
+    double coeffs[100];
     if (m == 0 && elems[m].dof[0] == -1)
         coeffs[0] = this->mesh->dir_bc_left_values[0];
     else
@@ -107,7 +107,7 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
         coeffs[1] = this->mesh->dir_bc_right_values[0];
     else
         coeffs[1] = y_prev[elems[m].dof[1]];
-    for (int j=1; j<=elems[m].p-1; j++)
+    for (int j=2; j<=elems[m].p; j++)
         coeffs[j] = y_prev[elems[m].dof[j]];
     double pts_array[plotting_elem_subdivision+1];
     double h = 2./plotting_elem_subdivision;

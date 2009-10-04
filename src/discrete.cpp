@@ -77,7 +77,7 @@ void DiscreteProblem::assemble(double **mat, double *res,
         coeffs[1] = this->mesh->dir_bc_right_values[0];
     else
         coeffs[1] = y_prev[elems[m].dof[1]];
-    for (int j=1; j<=elems[m].p-1; j++)
+    for (int j=2; j<=elems[m].p; j++)
         coeffs[j] = y_prev[elems[m].dof[j]];
     double2 *ref_tab = g_quad_1d_std.get_points(order);
     int pts_num = g_quad_1d_std.get_num_points(order);
