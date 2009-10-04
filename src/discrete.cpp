@@ -79,7 +79,12 @@ void DiscreteProblem::assemble(double **mat, double *res,
         coeffs[1] = y_prev[elems[m].dof[1]];
     for (int j=1; j<=elems[m].p-1; j++)
         coeffs[j] = y_prev[elems[m].dof[j]];
-    element_solution(elems + m, order, coeffs, phys_u_prev, phys_du_prevdx); 
+    double2 *ref_tab = g_quad_1d_std.get_points(order);
+    int pts_num = g_quad_1d_std.get_num_points(order);
+    double pts_array[pts_num];
+    for (int j=0; j<pts_num; j++)
+        pts_array[j] = ref_tab[j][0];
+    element_solution(elems + m, coeffs, pts_num, pts_array, phys_u_prev, phys_du_prevdx); 
 
     // loop over test functions (rows)
     for(int i=0; i<elems[m].p + 1; i++) {
@@ -186,21 +191,19 @@ void element_shapefn(double a, double b,
 };
 
 // evaluate previous solution and its derivative 
-// in the Gauss quadrature points of order 'order'
-void element_solution(Element *e, int order, double *coeff, double *val,
-        double *der)
+// in the "pts_array" points
+void element_solution(Element *e, double *coeff, int pts_num, 
+        double *pts_array, double *val, double *der)
 {
   double a = e->v1->x;
   double b = e->v2->x;
   double jac = (b-a)/2.; 
   int p = e->p;
-  double2 *ref_tab = g_quad_1d_std.get_points(order);
-  int pts_num = g_quad_1d_std.get_num_points(order);
   for (int i=0 ; i<pts_num; i++) {
     der[i] = val[i] = 0;
     for(int j=0; j<=p; j++) {
-      val[i] += coeff[j]*lobatto_fn_tab_1d[j](ref_tab[i][0]);
-      der[i] += coeff[j]*lobatto_der_tab_1d[j](ref_tab[i][0]);
+      val[i] += coeff[j]*lobatto_fn_tab_1d[j](pts_array[i]);
+      der[i] += coeff[j]*lobatto_der_tab_1d[j](pts_array[i]);
     }
     der[i] /= jac;
   }
