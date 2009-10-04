@@ -144,6 +144,7 @@ public:
     virtual double get(int m, int n) = 0;
     virtual void zero() = 0;
     virtual void copy_into(Matrix *m) = 0;
+    virtual void print() = 0;
 };
 
 class Triple {
@@ -203,11 +204,17 @@ class CooMatrix : public Matrix {
         virtual void copy_into(Matrix *m) {
             m->zero();
             Triple *t = this->list;
-            if (t != NULL) {
-                while (t->next != NULL) {
-                    m->add(t->i, t->j, t->v);
-                    t = t->next;
-                }
+            while (t != NULL) {
+                m->add(t->i, t->j, t->v);
+                t = t->next;
+            }
+        }
+
+        virtual void print() {
+            Triple *t = this->list;
+            while (t != NULL) {
+                printf("(%d, %d): %f\n", t->i, t->j, t->v);
+                t = t->next;
             }
         }
 
@@ -234,8 +241,8 @@ class DenseMatrix : public Matrix {
             this->mat = new_matrix<double>(m->get_size(), m->get_size());
             //printf("%d %d", this->size, m->get_size());
             //exit(1);
-            //this->size = m->get_size();
-            this->size = size;
+            this->size = m->get_size();
+            //this->size = size;
             m->copy_into(this);
         }
         virtual void zero() {
@@ -246,6 +253,7 @@ class DenseMatrix : public Matrix {
         }
         virtual void add(int m, int n, double v) {
             this->mat[m][n] += v;
+            printf("calling add: %d %d %f\n", m, n, v);
         }
         virtual double get(int m, int n) {
             return this->mat[m][n];
@@ -259,9 +267,25 @@ class DenseMatrix : public Matrix {
             for (int i = 0; i < this->size; i++)
                 for (int j = 0; j < this->size; j++) {
                     double v = this->get(i, j);
-                    if (abs(v) > 1e-12)
+                    if (fabs(v) > 1e-12)
                         m->add(i, j, v);
                 }
+        }
+
+        virtual void print() {
+            for (int i = 0; i < this->size; i++) {
+                for (int j = 0; j < this->size; j++) {
+                    double v = this->get(i, j);
+                    printf("%f ", v);
+                    /*
+                    if (fabs(v) > 1e-12)
+                        printf("%f ", v);
+                    else
+                        printf("0 ");
+                        */
+                }
+                printf("\n");
+            }
         }
 
         // Return the internal matrix.
@@ -277,6 +301,6 @@ class DenseMatrix : public Matrix {
 
 
 // solve linear system
-void solve_linear_system(Matrix *mat, double *res);
+void solve_linear_system_dense(DenseMatrix *mat, double *res);
 
 #endif

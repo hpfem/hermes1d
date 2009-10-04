@@ -87,19 +87,11 @@ void choldc(double **a, int n, double p[])
   }
 }
 
-void solve_linear_system(Matrix *mat, double *res)
+void solve_linear_system_dense(DenseMatrix *mat, double *res)
 {
-    DenseMatrix *dmat;
-    if (typeid(*mat) == typeid(DenseMatrix))
-        dmat = dynamic_cast<DenseMatrix *>(mat);
-    else
-        dmat = new DenseMatrix(mat);
-
-    int n = dmat->get_size();
-    printf("solve: %d", n);
-    //exit(1);
+    int n = mat->get_size();
     int *indx = new int[n];
-    double **_mat = dmat->get_mat();
+    double **_mat = mat->get_mat();
     double d;
     ludcmp(_mat, n, indx, &d);
     lubksb(_mat, n, indx, res);
