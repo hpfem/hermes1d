@@ -82,9 +82,6 @@ double residual(int pts_num, double *pts, double *weights,
 
 /******************************************************************************/
 int main() {
-  // introductory text
-  intro();
-
   // create mesh
   Mesh mesh(NUM_EQ);
   mesh.create(A, B, Nelem);

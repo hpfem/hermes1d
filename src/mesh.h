@@ -4,9 +4,14 @@
 #include "common.h"
 #include "lobatto.h"
 
+
 class Mesh {
     public:
         Mesh(int n_eqn) {
+            // Print the banner (only once)
+            static int n_calls = 0;
+            n_calls++;
+            if (n_calls == 1) intro();
             this->n_eqn = n_eqn;
             this->dir_bc_left_active = new int[n_eqn];
             this->dir_bc_left_values = new double[n_eqn];
