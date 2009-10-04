@@ -95,10 +95,10 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
   Element *elems = this->mesh->get_elems();
   FILE *f = fopen(out_filename, "wb");
   // FIXME: this is a memory leak!!!
-  double *phys_u_prev =    new double[100];
-  double *phys_du_prevdx = new double[100];
+  double *phys_u_prev =    new double[1000];
+  double *phys_du_prevdx = new double[1000];
   for(int m=0; m<this->mesh->get_n_elems(); m++) {
-    double coeffs[100];
+    double coeffs[1000];
     if (m == 0 && elems[m].dof[0] == -1)
         coeffs[0] = this->mesh->dir_bc_left_values[0];
     else
@@ -111,11 +111,14 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
         coeffs[j] = y_prev[elems[m].dof[j]];
     double pts_array[plotting_elem_subdivision+1];
     double h = 2./plotting_elem_subdivision;
+    //double h = (elems[m].v2->x - elems[m].v1->x)/plotting_elem_subdivision;
     for (int j=0; j<plotting_elem_subdivision+1; j++)
-        pts_array[j] = -1. + j*h;
+        pts_array[j] = -1 + j*h;
     element_solution(elems + m, coeffs, plotting_elem_subdivision+1, pts_array, phys_u_prev, phys_du_prevdx); 
+    double a = elems[m].v1->x;
+    double b = elems[m].v2->x;
     for (int j=0; j<plotting_elem_subdivision+1; j++)
-      fprintf(f, "%g %g\n", pts_array[j], phys_u_prev[j]);
+      fprintf(f, "%g %g\n", (a + b)/2 + pts_array[j] * (b-a)/2, phys_u_prev[j]);
   }
   fclose(f);
 }
