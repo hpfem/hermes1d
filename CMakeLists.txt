@@ -8,5 +8,5 @@ set(HERMES_BIN hermes1d)
 
 
 add_subdirectory(src)
-add_subdirectory(examples)
 add_subdirectory(python)
+add_subdirectory(examples)

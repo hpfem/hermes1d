@@ -1,5 +1,7 @@
 #include "hermes1d.h"
 
+#include "_hermes1d_api.h"
+
 static int NUM_EQ = 1;
 int Nelem = 6;                         // number of elements
 double A = 0, B = 2*M_PI;                // domain end points
@@ -39,7 +41,7 @@ double rhs(int pts_num, double *pts, double *weights,
 }
 
 /******************************************************************************/
-int main() {
+int main(int argc, char* argv[]) {
   // create mesh
   Mesh mesh(NUM_EQ);
   mesh.create(A, B, Nelem);
@@ -66,6 +68,13 @@ int main() {
 
   dp1.assemble_matrix(mat1, y_prev);
   dp2.assemble_matrix(mat2, y_prev);
+
+  printf("Importing hermes1d\n");
+  // Initialize Python
+  Py_Initialize();
+  PySys_SetArgv(argc, argv);
+  if (import_hermes1d___hermes1d())
+      throw std::runtime_error("hermes1d failed to import.");
 
   /*
   for(int i=0; i<Ndof; i++) {
