@@ -99,8 +99,7 @@ int main() {
   int Ndof = mesh.get_n_dof();
 
   // allocate Jacobi matrix and residual
-  Matrix *mat = new DenseMatrix(Ndof);
-  double **_mat = (dynamic_cast<DenseMatrix *>(mat))->get_mat();
+  Matrix *mat;
   double *y_prev = new double[Ndof];
   double *res = new double[Ndof];
 
@@ -109,6 +108,9 @@ int main() {
 
   // Newton's loop
   while (1) {
+    // zero the matrix:
+    mat = new DenseMatrix(Ndof);
+
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
 
@@ -124,11 +126,7 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
-    // solve linear system
-    int *indx = new int[Ndof];
-    double d;
-    ludcmp(_mat, Ndof, indx, &d);
-    lubksb(_mat, Ndof, indx, res);
+    solve_linear_system(mat, res);
 
     // DEBUG: print solution
     if(DEBUG) {

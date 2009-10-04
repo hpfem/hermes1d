@@ -176,4 +176,7 @@ class DenseMatrix : public Matrix {
 
 };
 
+// solve linear system
+void solve_linear_system(Matrix *mat, double *res);
+
 #endif

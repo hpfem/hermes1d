@@ -87,3 +87,12 @@ void choldc(double **a, int n, double p[])
   }
 }
 
+void solve_linear_system(Matrix *mat, double *res)
+{
+    int n = mat->get_size();
+    int *indx = new int[n];
+    double **_mat = (dynamic_cast<DenseMatrix *>(mat))->get_mat();
+    double d;
+    ludcmp(_mat, n, indx, &d);
+    lubksb(_mat, n, indx, res);
+}
