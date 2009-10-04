@@ -100,3 +100,13 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
   }
   fclose(f);
 }
+
+void Mesh::set_dirichlet_bc_left(int eq_n, double val)
+{
+    this->dir_bc_left_active[eq_n] = 1;
+    this->dir_bc_left_values[eq_n] = val;
+}
+
+void Mesh::set_dirichlet_bc_right(int eq_n, double val)
+{
+}

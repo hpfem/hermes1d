@@ -6,6 +6,19 @@
 
 class Mesh {
     public:
+        Mesh(int n_eqn) {
+            this->n_eqn = n_eqn;
+            this->dir_bc_left_active = new int[n_eqn];
+            this->dir_bc_left_values = new double[n_eqn];
+            this->dir_bc_right_active = new int[n_eqn];
+            this->dir_bc_right_values = new double[n_eqn];
+            for (int i=0; i<n_eqn; i++) {
+                this->dir_bc_left_active[i] = 0;
+                this->dir_bc_left_values[i] = 0;
+                this->dir_bc_right_active[i] = 0;
+                this->dir_bc_right_values[i] = 0;
+            }
+        }
         void create(double A, double B, int n);
         void set_poly_orders(int poly_order);
         void assign_dofs();
@@ -21,19 +34,24 @@ class Mesh {
         int get_n_dof() {
             return this->n_dof;
         }
+        void set_dirichlet_bc_left(int eq_n, double val);
+        void set_dirichlet_bc_right(int eq_n, double val);
 
     private:
+        int n_eqn;
         int n_elem;
         int n_dof;
         Vertex *vertices;
         Element *elems;
 
-    // Dirichlet boundary conditions at both endpoints
-    // (first integer in pair indicates whether there is 
-    // a Dirichlet condition for that equation, the other
-    // one tells the value)
-    int2 DIR_BC_LEFT[];
-    int2 DIR_BC_RIGHT[];
+        // Dirichlet boundary conditions at both endpoints
+        // (first integer in pair indicates whether there is 
+        // a Dirichlet condition for that equation, the other
+        // one tells the value)
+        int *dir_bc_left_active;
+        double *dir_bc_left_values;
+        int *dir_bc_right_active;
+        double *dir_bc_right_values;
 
 };
 
