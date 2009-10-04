@@ -70,3 +70,33 @@ void Mesh::assign_dofs()
     printf("\n"); 
   }
 }
+
+// evaluate approximate solution at element 'm' at reference 
+// point 'x_ref'. Here 'y' is the global vector of coefficients
+void Linearizer::eval_approx(Element *e, double x_ref, double *y, double &x_phys, double &val) {
+  val = 0;
+  for(int i=0; i <= e->p; i++) {
+    if(e->dof[i] >= 0) val += y[e->dof[i]]*lobatto_fn_tab_1d[i](x_ref);
+  }
+  double a = e->v1->x;
+  double b = e->v2->x;
+  x_phys = (a+b)/2 + x_ref*(b-a)/2;
+  return;
+}
+
+void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plotting_elem_subdivision)
+{
+  // Plot solution in Gnuplot format
+  Element *Elems = this->mesh->get_elems();
+  FILE *f = fopen(out_filename, "wb");
+  for(int m=0; m<this->mesh->get_n_elems(); m++) {
+    double h = 2./plotting_elem_subdivision;
+    double x_phys, val;
+    for(int i=0; i<=plotting_elem_subdivision; i++) {
+      double x_ref = -1. + i*h;
+      eval_approx(Elems + m, x_ref, y_prev, x_phys, val);
+      fprintf(f, "%g %g\n", x_phys, val);
+    }
+  }
+  fclose(f);
+}

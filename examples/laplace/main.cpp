@@ -96,19 +96,6 @@ double residual(int pts_num, double *pts, double *weights,
   return val;
 };
 
-// evaluate approximate solution at element 'm' at reference 
-// point 'x_ref'. Here 'y' is the global vector of coefficients
-void eval_approx(Element *e, double x_ref, double *y, double &x_phys, double &val) {
-  val = 0;
-  for(int i=0; i <= e->p; i++) {
-    if(e->dof[i] >= 0) val += y[e->dof[i]]*lobatto_fn_tab_1d[i](x_ref);
-  }
-  double a = e->v1->x;
-  double b = e->v2->x;
-  x_phys = (a+b)/2 + x_ref*(b-a)/2; 
-  return;
-} 
-
 void intro() {
   printf("\n-------------------------------------------\n");
   printf("   This is Hermes1D - a free ODE solver\n");
@@ -180,21 +167,9 @@ int main() {
     for(int i=0; i<Ndof; i++) y_prev[i] += res[i];
   }
 
-  // Plot solution in Gnuplot format
-  Element *Elems = mesh.get_elems();
-  char out_filename[100];
-  strcpy(out_filename, "solution.gp");
-  FILE *f = fopen(out_filename, "wb"); 
-  for(int m=0; m<Nelem; m++) {
-    double h = 2./plotting_elem_subdivision; 
-    double x_phys, val;
-    for(int i=0; i<=plotting_elem_subdivision; i++) {
-      double x_ref = -1. + i*h;  
-      eval_approx(Elems + m, x_ref, y_prev, x_phys, val);
-      fprintf(f, "%g %g\n", x_phys, val);
-    }
-  }
-  fclose(f);  
+  Linearizer l(&mesh);
+  const char *out_filename = "solution.gp";
+  l.plot_solution(out_filename, y_prev, plotting_elem_subdivision);
 
   printf("Output written to %s.\n", out_filename);
   printf("Done.\n");
