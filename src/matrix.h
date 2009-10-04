@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
+#include <typeinfo>
 #include <math.h>
 #include <string.h>
 
@@ -231,6 +232,9 @@ class DenseMatrix : public Matrix {
         }
         DenseMatrix(Matrix *m) {
             this->mat = new_matrix<double>(m->get_size(), m->get_size());
+            //printf("%d %d", this->size, m->get_size());
+            //exit(1);
+            //this->size = m->get_size();
             this->size = size;
             m->copy_into(this);
         }
