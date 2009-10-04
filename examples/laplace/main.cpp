@@ -13,20 +13,11 @@ int P_INIT = 3;                        // initial polynomal degree
 // Tolerance for Newton's method
 double TOL = 1e-8;
 
-// Dirichlet boundary conditions at both endpoints
-// (first integer in pair indicates whether there is 
-// a Dirichlet condition for that equation, the other
-// one tells the value)
-int2 DIR_BC_LEFT[] = { {1, 1} };
-int2 DIR_BC_RIGHT[] = { {1, 2} };
-
 // right-hand side
 double f(double x) {
   return sin(x);
   //return 1;
 }
-
-int plotting_elem_subdivision = 100; 
 
 // ********************************************************************
 
@@ -111,7 +102,7 @@ int main() {
   mesh.assign_dofs();
 
   // register weak forms
-  DiscreteProblem dp(1, &mesh);
+  DiscreteProblem dp(NUM_EQ, &mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual);
 
@@ -164,7 +155,7 @@ int main() {
 
   Linearizer l(&mesh);
   const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev, plotting_elem_subdivision);
+  l.plot_solution(out_filename, y_prev);
 
   printf("Output written to %s.\n", out_filename);
   printf("Done.\n");

@@ -27,6 +27,14 @@ class Mesh {
         int n_dof;
         Vertex *vertices;
         Element *elems;
+
+    // Dirichlet boundary conditions at both endpoints
+    // (first integer in pair indicates whether there is 
+    // a Dirichlet condition for that equation, the other
+    // one tells the value)
+    int2 DIR_BC_LEFT[];
+    int2 DIR_BC_RIGHT[];
+
 };
 
 class Linearizer {
@@ -39,7 +47,7 @@ class Linearizer {
         void eval_approx(Element *e, double x_ref, double *y, double &x_phys,
                 double &val);
         void plot_solution(const char *out_filename, double *y_prev, int
-                plotting_elem_subdivision);
+                plotting_elem_subdivision=100);
 
     private:
         Mesh *mesh;
