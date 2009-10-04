@@ -31,30 +31,37 @@ void Mesh::assign_dofs()
   // define element connectivities
   // (so far only for zero Dirichlet conditions)
   // (a) enumerate vertex dofs
-  elems[0].dof[0] = -1;        // Dirichlet left end of domain
-  elems[0].dof[1] = 0;         // first vertex dof
-  for(int i=1; i<n_elem-1; i++) {
-    elems[i].dof[0] = i-1;     // Dirichlet left end of domain
-    elems[i].dof[1] = i;       // first dof
+  int count = 0;
+  if (this->dir_bc_left_active[0])
+      elems[0].dof[0] = -1;        // Dirichlet BC on the left
+  else {
+      elems[0].dof[0] = count;        // No Dirichlet BC on the left
+      count++;
   }
-  elems[n_elem-1].dof[0] = n_elem-2;     // last vertex dof
-  elems[n_elem-1].dof[1] = -1;      // Dirichlet left end of domain
+  elems[0].dof[1] = count;         // first vertex dof
+  count++;
+  for(int i=1; i<n_elem-1; i++) {
+    elems[i].dof[0] = count;
+    count++;
+    elems[i].dof[1] = count;
+    count++;
+  }
+  elems[n_elem-1].dof[0] = count;
+  count++;
+  if (this->dir_bc_right_active[0])
+      elems[n_elem-1].dof[1] = -1;      // Dirichlet BC on the right
+  else {
+      elems[n_elem-1].dof[1] = count;        // No Dirichlet BC on the right
+      count++;
+  }
   // (b) enumerate bubble dofs
-  n_dof = n_elem-1; 
   for(int i=0; i<n_elem; i++) {
     for(int j=2; j<=elems[i].p; j++) {
-      elems[i].dof[j] = n_dof++;     // enumerating higher-order dofs
+      elems[i].dof[j] = count;     // enumerating higher-order dofs
+      count++;
     }
   }
-
-  // test (print DOF in elements)
-  int n_test = 0;
-  for(int i=0; i<n_elem; i++) n_test += elems[i].p;
-  n_test -= 1;
-  if(n_dof != n_test) {
-    printf("n_dof = %d, n_test = %d\n", n_dof, n_test);
-    error("Internal: Test of total DOF number failed."); 
-  }
+  n_dof = count;
 
   // test (print element connectivities)
   if(DEBUG) {
