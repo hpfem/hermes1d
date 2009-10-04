@@ -23,4 +23,6 @@ public:
   int *dof;        // connectivity array of length p+1
 };
 
+void intro();
+
 #endif

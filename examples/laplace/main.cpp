@@ -80,16 +80,6 @@ double residual(int pts_num, double *pts, double *weights,
   return val;
 };
 
-void intro() {
-  printf("\n-------------------------------------------\n");
-  printf("   This is Hermes1D - a free ODE solver\n");
-  printf(" based on the hp-FEM and Newton's method,\n");
-  printf("   developed by the hp-FEM group at UNR\n");
-  printf("  and distributed under the GPL license.\n");
-  printf(" For more details visit http://hpfem.org/.\n");
-  printf("-------------------------------------------\n");
-}
-
 /******************************************************************************/
 int main() {
   // introductory text
