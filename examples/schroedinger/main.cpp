@@ -3,18 +3,12 @@
 #include "_hermes1d_api.h"
 
 static int NUM_EQ = 1;
-int Nelem = 6;                         // number of elements
-double A = 0, B = 2*M_PI;                // domain end points
-int P_INIT = 1;                        // initial polynomal degree
+int Nelem = 100;                         // number of elements
+double A = 0, B = 30;                // domain end points
+int P_INIT = 2;                        // initial polynomal degree
 
 double l = 1;
-// bilinear form for the Jacobi matrix 
-// pts_num...number of Gauss points in element
-// pts[]...Gauss points
-// weights[]...Gauss weights for points in pts[]
-// u...basis function
-// v...test function
-// u_prev...previous solution
+
 double lhs(int pts_num, double *pts, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
                 double *u_prev, double *du_prevdx)
@@ -38,6 +32,19 @@ double rhs(int pts_num, double *pts, double *weights,
     val += u[i]*v[i]*pts[i]*pts[i]*weights[i];
   }
   return val;
+}
+
+void insert_matrix(double **mat, int len)
+{
+  insert_int("len", len);
+  double _mat[len*len];
+  for(int i=0; i<len; i++)
+      for(int j=0; j<len; j++)
+          _mat[i*len+j] = mat[i][j];
+  insert_double_array("mat", _mat, len*len);
+  cmd("_ = mat.reshape((len, len))");
+  cmd("del len");
+  cmd("del mat");
 }
 
 /******************************************************************************/
@@ -76,22 +83,21 @@ int main(int argc, char* argv[]) {
   if (import_hermes1d___hermes1d())
       throw std::runtime_error("hermes1d failed to import.");
 
-  /*
-  for(int i=0; i<Ndof; i++) {
-      for(int j=0; j<Ndof; j++)
-          printf("%f ", mat2[i][j]);
-      printf("\n");
-  }
-  */
+  cmd("print 'Python initialized'");
+  insert_matrix(mat1, Ndof); cmd("A = _");
+  insert_matrix(mat2, Ndof); cmd("B = _");
+  cmd("from utils import solve");
+  cmd("v = solve(A, B)");
+  double *v;
+  int n;
+  array_double_numpy2c_inplace(get_symbol("v"), &v, &n);
 
-
-  /*
   Linearizer l(&mesh);
   const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev);
+  l.plot_solution(out_filename, v);
 
   printf("Output written to %s.\n", out_filename);
+  cmd("import plot");
   printf("Done.\n");
-  */
   return 0;
 }
