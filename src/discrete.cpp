@@ -66,8 +66,21 @@ void DiscreteProblem::assemble(double **mat, double *res,
       for(int s=0; s < pts_num; s++) printf("[%g, %g]\n", 
              phys_pts[s], phys_weights[s]);
     }
+
     // evaluate previous solution and its derivative in the quadrature points
-    element_solution(elems + m, y_prev, order, phys_u_prev, phys_du_prevdx); 
+    double coeffs[100];
+    if (m == 0 && elems[m].dof[0] == -1)
+        coeffs[0] = this->mesh->dir_bc_left_values[0];
+    else
+        coeffs[0] = y_prev[elems[m].dof[0]];
+    if (m == this->mesh->get_n_elems()-1 && elems[m].dof[1] == -1)
+        coeffs[1] = this->mesh->dir_bc_right_values[0];
+    else
+        coeffs[1] = y_prev[elems[m].dof[1]];
+    for (int j=1; j<=elems[m].p-1; j++)
+        coeffs[j] = y_prev[elems[m].dof[j]];
+    element_solution(elems + m, order, coeffs, phys_u_prev, phys_du_prevdx); 
+
     // loop over test functions (rows)
     for(int i=0; i<elems[m].p + 1; i++) {
       // if i-th test function is active
@@ -174,8 +187,9 @@ void element_shapefn(double a, double b,
 
 // evaluate previous solution and its derivative 
 // in the Gauss quadrature points of order 'order'
-void element_solution(Element *e, double *y_prev, int order, 
-                      double *val, double *der) {
+void element_solution(Element *e, int order, double *coeff, double *val,
+        double *der)
+{
   double a = e->v1->x;
   double b = e->v2->x;
   double jac = (b-a)/2.; 
@@ -185,10 +199,9 @@ void element_solution(Element *e, double *y_prev, int order,
   for (int i=0 ; i<pts_num; i++) {
     der[i] = val[i] = 0;
     for(int j=0; j<=p; j++) {
-      val[i] += y_prev[e->dof[j]]*lobatto_fn_tab_1d[j](ref_tab[i][0]);
-      der[i] += y_prev[e->dof[j]]*lobatto_der_tab_1d[j](ref_tab[i][0]);
+      val[i] += coeff[j]*lobatto_fn_tab_1d[j](ref_tab[i][0]);
+      der[i] += coeff[j]*lobatto_der_tab_1d[j](ref_tab[i][0]);
     }
     der[i] /= jac;
   }
-  return;
 } 

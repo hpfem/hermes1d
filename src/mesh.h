@@ -37,13 +37,6 @@ class Mesh {
         void set_dirichlet_bc_left(int eq_n, double val);
         void set_dirichlet_bc_right(int eq_n, double val);
 
-    private:
-        int n_eqn;
-        int n_elem;
-        int n_dof;
-        Vertex *vertices;
-        Element *elems;
-
         // Dirichlet boundary conditions at both endpoints
         // (first integer in pair indicates whether there is 
         // a Dirichlet condition for that equation, the other
@@ -52,6 +45,13 @@ class Mesh {
         double *dir_bc_left_values;
         int *dir_bc_right_active;
         double *dir_bc_right_values;
+
+    private:
+        int n_eqn;
+        int n_elem;
+        int n_dof;
+        Vertex *vertices;
+        Element *elems;
 
 };
 
