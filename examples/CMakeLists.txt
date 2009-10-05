@@ -4,6 +4,7 @@ find_package(BLAS REQUIRED)
 
 add_subdirectory(laplace)
 add_subdirectory(laplace_bc_neumann)
+add_subdirectory(laplace_bc_newton)
 
 if(WITH_PYTHON)
     add_subdirectory(schroedinger)

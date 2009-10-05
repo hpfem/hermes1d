@@ -13,10 +13,11 @@ int P_INIT = 1;                        // initial polynomal degree
 
 // boundary conditions
 double val_dir_left = 0;
-double val_neum_right = 1;
+double val_newton_alpha = 1;
+double val_newton_beta = 1;
 
 // Tolerance for Newton's method
-double TOL = 1e-8;
+double TOL = 1e-5;
 
 // right-hand side
 double f(double x) {
@@ -79,25 +80,17 @@ double residual_vol(int num, double *x, double *weights,
   return val;
 };
 
-double residual_surf_right(double x, double u_prev, double du_prevdx,
-        double v, double dvdx, void *user_data)
+double jacobian_surf_right(double x, double u, double dudx,
+        double v, double dvdx, double u_prev, double du_prevdx,
+        void *user_data)
 {
-    // FIXME: Later, the value 'val_neum_right' will enter through user_data,
-    // not as a global variable
-    // NOTE: the minus sign here is due to the fact that the surface
-    // integral -\int_{\partial \Omega} \partial u/\partial nu times v
-    // has a negative sign in front of it. But the convention for 
-    // defining weak forms in Hermes1D is that all of them are with 
-    // positive signs. 
-    // NOTE: the Neumann boundary condition deals with the outer
-    // normal derivative. At the right end of the interval (a, b), this 
-    // is equal to the x-derivative, but at the left end point of (a, b)
-    // this is minus one times the x-derivative. In other words, if you 
-    // want your solution to be increasing with slope 1 at 'b', the normal
-    // derivative at 'b' needs to be 1. If you want the solution to be 
-    // increasing with slope 1 at 'a', then the normal derivative at 'a'
-    // needs to be -1.   
-    return -val_neum_right * v; 
+  return (1/val_newton_alpha)*u*v;
+}
+
+double residual_surf_right(double x, double u_prev, double du_prevdx, double v,
+        double dvdx, void *user_data)
+{
+  return -(val_newton_beta/val_newton_alpha) * v; 
 }
 
 /******************************************************************************/
@@ -116,6 +109,7 @@ int main() {
   DiscreteProblem dp(NUM_EQ, &mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual_vol);
+  dp.add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
   dp.add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
   // variable for the total number of DOF 
@@ -130,6 +124,7 @@ int main() {
   // zero initial condition for the Newton's method
   for(int i=0; i<Ndof; i++) y_prev[i] = 0; 
 
+  int newton_iterations = 0;
   // Newton's loop
   while (1) {
     // zero the matrix:
@@ -150,12 +145,14 @@ int main() {
 
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
+    printf("Residual L2 norm: %.15f\n", res_norm);
+    printf("TOL: %.15f\n", TOL);
     if(res_norm < TOL) break;
 
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
-    mat->print();
+    //mat->print();
 
     // solving the matrix system
     solve_linear_system(mat, res);
@@ -171,7 +168,11 @@ int main() {
 
     // updating y_prev by new solution which is in res
     for(int i=0; i<Ndof; i++) y_prev[i] += res[i];
+    newton_iterations++;
+    /*if (newton_iterations == 2)
+        break;*/
   }
+  printf("Total number of Newton iterations: %d\n", newton_iterations);
 
   Linearizer l(&mesh);
   const char *out_filename = "solution.gp";

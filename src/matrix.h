@@ -253,7 +253,7 @@ class DenseMatrix : public Matrix {
         }
         virtual void add(int m, int n, double v) {
             this->mat[m][n] += v;
-            printf("calling add: %d %d %f\n", m, n, v);
+            //printf("calling add: %d %d %f\n", m, n, v);
         }
         virtual double get(int m, int n) {
             return this->mat[m][n];
