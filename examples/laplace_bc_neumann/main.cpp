@@ -40,14 +40,7 @@ double jacobian(int num, double *x, double *weights,
   return val;
 };
 
-// (nonlinear) form for the residual vector
-// num...number of Gauss points in element
-// x[]...Gauss points
-// weights[]...Gauss weights for points in x[]
-// u...approximate solution
-// v...test function
-// u_prev...previous solution
-double residual(int num, double *x, double *weights, 
+double residual_vol(int num, double *x, double *weights, 
                 double *u_prev, double *du_prevdx, double *v, double *dvdx,
                 void *user_data)
 {
@@ -82,20 +75,28 @@ double residual(int num, double *x, double *weights,
   return val;
 };
 
+double residual_surf(double x, double u_prev, double du_prevdx,
+        double v, double dvdx, void *user_data)
+{
+    double neumann_value = 1; // later this will be created from the user_data
+    return neumann_value * v;
+}
+
 /******************************************************************************/
 int main() {
   // create mesh
   Mesh mesh(NUM_EQ);
   mesh.create(A, B, Nelem);
   mesh.set_poly_orders(P_INIT);
-  mesh.set_dirichlet_bc_left(0, 1);
-  mesh.set_dirichlet_bc_right(0, 5);
+  mesh.set_bc_natural_right(0);
+  mesh.set_bc_dirichlet_left(0, 1);
   mesh.assign_dofs();
 
   // register weak forms
   DiscreteProblem dp(NUM_EQ, &mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual);
+  dp.add_vector_form_surf(0, residual_surf, BOUNDARY_RIGHT);
 
   // variable for the total number of DOF 
   int Ndof = mesh.get_n_dof();

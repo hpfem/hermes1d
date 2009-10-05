@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define BOUNDARY_LEFT 0
+#define BOUNDARY_RIGHT 1
+
 void error(const char *msg);
 
 typedef double scalar;
