@@ -128,7 +128,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
               element_shapefn(elems[m].v1->x, elems[m].v2->x,  
 		 	      j, order, phys_u, phys_dudx); 
               // evaluate the bilinear form
-              double val_ji = this->_matrix_form(pts_num, phys_pts,
+              double val_ji = this->matrix_forms_vol[0].fn(pts_num, phys_pts,
                         phys_weights, phys_u, phys_dudx, phys_v, phys_dvdx,
                         phys_u_prev, phys_du_prevdx, NULL); 
               // add the result to the matrix
@@ -138,7 +138,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
         }
         // contribute to residual vector
         if(matrix_flag == 0 || matrix_flag == 2) {
-     	  double val_i = this->_vector_form(pts_num, phys_pts, phys_weights, 
+     	  double val_i = this->vector_forms_vol[0].fn(pts_num, phys_pts, phys_weights, 
                                   phys_u_prev, phys_du_prevdx, phys_v,
                                   phys_dvdx, NULL);
           // add the contribution to the residual vector
@@ -174,7 +174,16 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
                         i, &phys_v_left, &phys_dvdx_left); 
         // if we are constructing the matrix
         if(matrix_flag == 0 || matrix_flag == 1) {
-          if(this->_matrix_form_surf != NULL) {
+          DiscreteProblem::MatrixFormSurf *matrix_form_surf=NULL;
+          for (int ww = 0; ww < this->matrix_forms_surf.size(); ww++) {
+              DiscreteProblem::MatrixFormSurf *vfs =
+                  &(this->matrix_forms_surf[ww]);
+              if (vfs->bdy_index == BOUNDARY_LEFT) {
+                  matrix_form_surf = vfs;
+                  break;
+              }
+          }
+          if (matrix_form_surf != NULL) {
             // loop over basis functions on first element
             for(int j=0; j < elems[m].p + 1; j++) {
               int pos_j = elems[m].dof[j]; // matrix column index
@@ -185,7 +194,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
                                       elems[m].v2->x, j, &phys_u_left, 
                                       &phys_dudx_left); 
                 // evaluate the surface bilinear form
-                double val_ji_surf = this->_matrix_form_surf(elems[m].v1->x,
+                double val_ji_surf = matrix_form_surf->fn(elems[m].v1->x,
                         phys_u_left, phys_dudx_left, phys_v_left, 
                         phys_dvdx_left, phys_u_prev_left, phys_du_prevdx_left, 
                         NULL); 
@@ -245,7 +254,16 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
           
 	// if we are constructing the matrix
         if(matrix_flag == 0 || matrix_flag == 1) {
-          if(this->_matrix_form_surf != NULL) {
+          DiscreteProblem::MatrixFormSurf *matrix_form_surf=NULL;
+          for (int ww = 0; ww < this->matrix_forms_surf.size(); ww++) {
+              DiscreteProblem::MatrixFormSurf *vfs =
+                  &(this->matrix_forms_surf[ww]);
+              if (vfs->bdy_index == BOUNDARY_RIGHT) {
+                  matrix_form_surf = vfs;
+                  break;
+              }
+          }
+          if(matrix_form_surf != NULL) {
             // loop over basis functions on first element
 	    for(int j=0; j < elems[m].p + 1; j++) {
 	      int pos_j = elems[m].dof[j]; // matrix column index
@@ -255,7 +273,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
 	        element_shapefn_point(x_right_ref, elems[m].v1->x, 
                           elems[m].v2->x, j, &phys_u_right, &phys_dudx_right); 
 	        // evaluate the surface bilinear form
-	        double val_ji_surf = this->_matrix_form_surf(elems[m].v1->x,
+	        double val_ji_surf = matrix_form_surf->fn(elems[m].v1->x,
 	      	  phys_u_right, phys_dudx_right, phys_v_right, 
 	      	  phys_dvdx_right, phys_u_prev_right, phys_du_prevdx_right, 
                   NULL); 
