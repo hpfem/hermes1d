@@ -79,7 +79,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
   double *phys_du_prevdx = new double[100];
 
   // volumetric part - element loop
-  printf("XX: nelems=%d\n", this->mesh->get_n_elems());
+  //printf("XX: nelems=%d\n", this->mesh->get_n_elems());
   for(int m=0; m < this->mesh->get_n_elems(); m++) {
     // decide quadrature order and set up 
     // quadrature weights and points in element m
