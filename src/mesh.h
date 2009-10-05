@@ -13,15 +13,15 @@ class Mesh {
             n_calls++;
             if (n_calls == 1) intro();
             this->n_eqn = n_eqn;
-            this->dir_bc_left_active = new int[n_eqn];
-            this->dir_bc_left_values = new double[n_eqn];
-            this->dir_bc_right_active = new int[n_eqn];
-            this->dir_bc_right_values = new double[n_eqn];
+            this->bc_left_dir = new int[n_eqn];
+            this->bc_left_dir_values = new double[n_eqn];
+            this->bc_right_dir = new int[n_eqn];
+            this->bc_right_dir_values = new double[n_eqn];
             for (int i=0; i<n_eqn; i++) {
-                this->dir_bc_left_active[i] = 0;
-                this->dir_bc_left_values[i] = 0;
-                this->dir_bc_right_active[i] = 0;
-                this->dir_bc_right_values[i] = 0;
+                this->bc_left_dir[i] = BC_INVALID;
+                this->bc_left_dir_values[i] = 0;
+                this->bc_right_dir[i] = BC_INVALID;
+                this->bc_right_dir_values[i] = 0;
             }
         }
         void create(double A, double B, int n);
@@ -39,17 +39,21 @@ class Mesh {
         int get_n_dof() {
             return this->n_dof;
         }
-        void set_dirichlet_bc_left(int eq_n, double val);
-        void set_dirichlet_bc_right(int eq_n, double val);
+        void set_bc_left_dirichlet(int eq_n, double val);
+        void set_bc_left_natural(int eqn);
+        void set_bc_right_dirichlet(int eq_n, double val);
+        void set_bc_right_natural(int eqn);
 
         // Dirichlet boundary conditions at both endpoints
         // (first integer in pair indicates whether there is 
         // a Dirichlet condition for that equation, the other
         // one tells the value)
-        int *dir_bc_left_active;
-        double *dir_bc_left_values;
-        int *dir_bc_right_active;
-        double *dir_bc_right_values;
+        int *bc_left_dir; //1...Dirichlet (essential) BC at left end point
+                          //0...natural BC (Neumann, Newton, none)
+        double *bc_left_dir_values; // values for the Dirichlet condition
+        int *bc_right_dir; //1...Dirichlet (essential) BC at right end point
+                           //0...natural BC (Neumann, Newton, none)
+        double *bc_right_dir_values; // values for the Dirichlet condition
 
     private:
         int n_eqn;
@@ -78,5 +82,8 @@ class Linearizer {
 
 void element_solution(Element *e, double *coeff, int pts_num, 
         double *pts_array, double *val, double *der);
+
+void element_solution_point(double x_ref, Element *e, 
+			    double *coeff, double *val, double *der);
 
 #endif

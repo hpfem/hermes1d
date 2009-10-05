@@ -7,16 +7,20 @@ int DEBUG = 1;
 
 // general input:
 static int NUM_EQ = 1;
-int Nelem = 3;                         // number of elements
-double A = 0, B = 2*M_PI;                // domain end points
-int P_INIT = 2;                        // initial polynomal degree
+int Nelem = 2;                         // number of elements
+double A = 0, B = 2;              // domain end points
+int P_INIT = 1;                        // initial polynomal degree
+
+// boundary conditions
+double val_dir_left = 0;
+double val_neum_right = 0;
 
 // Tolerance for Newton's method
 double TOL = 1e-8;
 
 // right-hand side
 double f(double x) {
-  return sin(x);
+  return 1;
   //return 1;
 }
 
@@ -75,11 +79,11 @@ double residual_vol(int num, double *x, double *weights,
   return val;
 };
 
-double residual_surf(double x, double u_prev, double du_prevdx,
+double residual_surf_right(double x, double u_prev, double du_prevdx,
         double v, double dvdx, void *user_data)
 {
-    double neumann_value = 1; // later this will be created from the user_data
-    return neumann_value * v;
+    // later this will be created from the user_data
+    return val_neum_right * v; 
 }
 
 /******************************************************************************/
@@ -88,18 +92,21 @@ int main() {
   Mesh mesh(NUM_EQ);
   mesh.create(A, B, Nelem);
   mesh.set_poly_orders(P_INIT);
-  mesh.set_bc_natural_right(0);
-  mesh.set_bc_dirichlet_left(0, 1);
+
+  // boundary conditions
+  mesh.set_bc_left_dirichlet(0, val_dir_left);
+  mesh.set_bc_right_natural(0);
   mesh.assign_dofs();
 
   // register weak forms
   DiscreteProblem dp(NUM_EQ, &mesh);
   dp.add_matrix_form(0, 0, jacobian);
-  dp.add_vector_form(0, residual);
-  dp.add_vector_form_surf(0, residual_surf, BOUNDARY_RIGHT);
+  dp.add_vector_form(0, residual_vol);
+  dp.add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
   // variable for the total number of DOF 
   int Ndof = mesh.get_n_dof();
+  printf("Ndof = %d\n", Ndof);
 
   // allocate Jacobi matrix and residual
   Matrix *mat;
@@ -116,7 +123,7 @@ int main() {
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
-
+  
     // calculate L2 norm of residual vector
     double res_norm = 0;
     for(int i=0; i<Ndof; i++) res_norm += res[i]*res[i];
@@ -129,8 +136,10 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
+    mat->print();
+
     // solving the matrix system
-    solve_linear_system_umfpack((CooMatrix*)mat, res);
+    solve_linear_system((CooMatrix*)mat, res);
 
     // DEBUG: print solution
     if(DEBUG) {

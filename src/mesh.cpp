@@ -32,7 +32,7 @@ void Mesh::assign_dofs()
   // (so far only for zero Dirichlet conditions)
   // (a) enumerate vertex dofs
   int count = 0;
-  if (this->dir_bc_left_active[0])
+  if (this->bc_left_dir[0])
       elems[0].dof[0] = -1;        // Dirichlet BC on the left
   else {
       elems[0].dof[0] = count;        // No Dirichlet BC on the left
@@ -46,7 +46,7 @@ void Mesh::assign_dofs()
   }
   elems[n_elem-1].dof[0] = count;
   count++;
-  if (this->dir_bc_right_active[0])
+  if (this->bc_right_dir[0])
       elems[n_elem-1].dof[1] = -1;      // Dirichlet BC on the right
   else {
       elems[n_elem-1].dof[1] = count;        // No Dirichlet BC on the right
@@ -89,6 +89,8 @@ void Linearizer::eval_approx(Element *e, double x_ref, double *y, double &x_phys
   return;
 }
 
+void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double *coeffs);
+
 void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plotting_elem_subdivision)
 {
   // Plot solution in Gnuplot format
@@ -99,16 +101,20 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
   double *phys_du_prevdx = new double[plotting_elem_subdivision + 1];
   for(int m=0; m<this->mesh->get_n_elems(); m++) {
     double coeffs[100];
+    calculate_elem_coeffs(this->mesh, m, y_prev, coeffs); 
+
+    /*
     if (m == 0 && elems[m].dof[0] == -1)
-        coeffs[0] = this->mesh->dir_bc_left_values[0];
+        coeffs[0] = this->mesh->bc_left_dir_values[0];
     else
         coeffs[0] = y_prev[elems[m].dof[0]];
     if (m == this->mesh->get_n_elems()-1 && elems[m].dof[1] == -1)
-        coeffs[1] = this->mesh->dir_bc_right_values[0];
+        coeffs[1] = this->mesh->bc_right_dir_values[0];
     else
         coeffs[1] = y_prev[elems[m].dof[1]];
     for (int j=2; j<=elems[m].p; j++)
         coeffs[j] = y_prev[elems[m].dof[j]];
+    */
     double pts_array[plotting_elem_subdivision+1];
     double h = 2./plotting_elem_subdivision;
     //double h = (elems[m].v2->x - elems[m].v1->x)/plotting_elem_subdivision;
@@ -123,14 +129,25 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
   fclose(f);
 }
 
-void Mesh::set_dirichlet_bc_left(int eq_n, double val)
+void Mesh::set_bc_left_dirichlet(int eq_n, double val)
 {
-    this->dir_bc_left_active[eq_n] = 1;
-    this->dir_bc_left_values[eq_n] = val;
+    this->bc_left_dir[eq_n] = 1;
+    this->bc_left_dir_values[eq_n] = val;
 }
 
-void Mesh::set_dirichlet_bc_right(int eq_n, double val)
+void Mesh::set_bc_right_dirichlet(int eq_n, double val)
 {
-    this->dir_bc_right_active[eq_n] = 1;
-    this->dir_bc_right_values[eq_n] = val;
+    this->bc_right_dir[eq_n] = 1;
+    this->bc_right_dir_values[eq_n] = val;
 }
+
+void Mesh::set_bc_left_natural(int eq_n)
+{
+    this->bc_left_dir[eq_n] = 0;
+}
+
+void Mesh::set_bc_right_natural(int eq_n)
+{
+    this->bc_right_dir[eq_n] = 0;
+}
+

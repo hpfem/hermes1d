@@ -62,8 +62,8 @@ int main() {
   Mesh mesh(NUM_EQ);
   mesh.create(A, B, Nelem);
   mesh.set_poly_orders(P_INIT);
-  mesh.set_dirichlet_bc_left(0, 1);
-  mesh.set_dirichlet_bc_right(0, 5);
+  mesh.set_bc_left_dirichlet(0, 1);
+  mesh.set_bc_right_dirichlet(0, 5);
   mesh.assign_dofs();
 
   // register weak forms
