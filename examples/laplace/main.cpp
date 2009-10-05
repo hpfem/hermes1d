@@ -7,9 +7,9 @@ int DEBUG = 1;
 
 // general input:
 static int NUM_EQ = 1;
-int Nelem = 3;                         // number of elements
+int Nelem = 5;                         // number of elements
 double A = 0, B = 2*M_PI;                // domain end points
-int P_INIT = 2;                        // initial polynomal degree
+int P_INIT = 3;                        // initial polynomal degree
 
 // Tolerance for Newton's method
 double TOL = 1e-8;
@@ -140,8 +140,8 @@ int main() {
     u->solve(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
             csr->get_A(), false, res, vec);
 
-    exit(1);
-    solve_linear_system(mat, res);
+    //solve_linear_system(mat, res);
+    res = vec;
 
     // DEBUG: print solution
     if(DEBUG) {

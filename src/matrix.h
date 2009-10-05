@@ -322,7 +322,7 @@ class CSRMatrix : public Matrix {
             this->IA = new int[this->size+1];
             this->JA = new int[this->nnz];
             int count = 0;
-            this->IA[0] = 1;
+            this->IA[0] = 0;
             for(int i = 0; i < this->size; i++) {
                 for(int j = 0; j < this->size; j++) {
                     double v = m->get(i, j);
@@ -332,7 +332,7 @@ class CSRMatrix : public Matrix {
                         count++;
                     }
                 }
-                this->IA[i+1] = count+1;
+                this->IA[i+1] = count;
             }
         }
 
