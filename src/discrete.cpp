@@ -61,7 +61,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
               double *y_prev, int matrix_flag) {
   int ndof = this->mesh->get_n_dof();
   Element *elems = this->mesh->get_elems();
-  int DEBUG = 0;
+  int DEBUG = 1;
 
   // erase residual vector
   if(matrix_flag == 0 || matrix_flag == 2) 
@@ -80,6 +80,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
   double *phys_du_prevdx = new double[100];
 
   // volumetric part - element loop
+  printf("XX: nelems=%d\n", this->mesh->get_n_elems());
   for(int m=0; m < this->mesh->get_n_elems(); m++) {
     // decide quadrature order and set up 
     // quadrature weights and points in element m
@@ -145,6 +146,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
         }
       }
     }
+  }
 
     if(this->mesh->bc_left_dir[0] != 1) {
       // evaluate previous solution and its derivative in the left end point
@@ -206,7 +208,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
     if(this->mesh->bc_right_dir[0] != 1) {
       // evaluate previous solution and its derivative in the right end point
       double phys_u_prev_right, phys_du_prevdx_right; // at right end point
-      m = this->mesh->get_n_elems()-1; // last element
+      int m = this->mesh->get_n_elems()-1; // last element
       double coeffs_right[100];
       calculate_elem_coeffs(this->mesh, m, y_prev, coeffs_right); 
       double x_right_ref = 1; 
@@ -261,7 +263,6 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
 	}
       } // end of adding surface integrals
     }
-  }
 
   // DEBUG: print Jacobi matrix
   if(DEBUG && (matrix_flag == 0 || matrix_flag == 1)) {

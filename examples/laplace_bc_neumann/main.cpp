@@ -119,7 +119,7 @@ int main() {
   // Newton's loop
   while (1) {
     // zero the matrix:
-    mat = new CooMatrix(Ndof);
+    mat = new DenseMatrix(Ndof);
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
@@ -139,7 +139,7 @@ int main() {
     mat->print();
 
     // solving the matrix system
-    solve_linear_system((CooMatrix*)mat, res);
+    solve_linear_system(mat, res);
 
     // DEBUG: print solution
     if(DEBUG) {
