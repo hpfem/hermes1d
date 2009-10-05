@@ -197,8 +197,18 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
         }
         // contribute to residual vector
         if(matrix_flag == 0 || matrix_flag == 2) {
-          if(this->_vector_form_surf != NULL) {
-       	    double val_i_surf = this->_vector_form_surf(elems[m].v1->x,  
+          DiscreteProblem::VectorFormSurf *vector_form_surf=NULL;
+          for (int ww = 0; ww < this->vector_forms_surf.size(); ww++) {
+              DiscreteProblem::VectorFormSurf *vfs =
+                  &(this->vector_forms_surf[ww]);
+              if (vfs->bdy_index == BOUNDARY_LEFT) {
+                  vector_form_surf = vfs;
+                  break;
+              }
+          }
+          //if (vector_form_surf == NULL) error("Surface form not found.");
+          if (vector_form_surf != NULL) {
+       	    double val_i_surf = vector_form_surf->fn(elems[m].v1->x,  
                                     phys_u_prev_left, phys_du_prevdx_left, 
                                     phys_v_left, phys_dvdx_left, NULL);
             // add the contribution to the residual vector
@@ -257,8 +267,17 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
         }
         // contribute to residual vector
 	if(matrix_flag == 0 || matrix_flag == 2) {
-          if(this->_vector_form_surf != NULL) {
-	    double val_i_surf = this->_vector_form_surf(elems[m].v1->x,  
+          DiscreteProblem::VectorFormSurf *vector_form_surf=NULL;
+          for (int ww = 0; ww < this->vector_forms_surf.size(); ww++) {
+              DiscreteProblem::VectorFormSurf *vfs =
+                  &(this->vector_forms_surf[ww]);
+              if (vfs->bdy_index == BOUNDARY_RIGHT) {
+                  vector_form_surf = vfs;
+                  break;
+              }
+          }
+          if(vector_form_surf != NULL) {
+	    double val_i_surf = vector_form_surf->fn(elems[m].v1->x,  
 				    phys_u_prev_right, phys_du_prevdx_right, 
                                     phys_v_right, phys_dvdx_right, NULL);
             // add the contribution to the residual vector
