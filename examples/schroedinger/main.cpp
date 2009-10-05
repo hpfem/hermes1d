@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
   Mesh mesh(NUM_EQ);
   mesh.create(A, B, Nelem);
   mesh.set_poly_orders(P_INIT);
-  mesh.set_dirichlet_bc_left(0, 0);
+  mesh.set_bc_left_dirichlet(0, 0);
   mesh.assign_dofs();
 
   // register weak forms
