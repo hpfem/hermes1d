@@ -366,6 +366,16 @@ class CSRMatrix : public Matrix {
             printf("\n");
         }
 
+        int *get_IA() {
+            return this->IA;
+        }
+        int *get_JA() {
+            return this->JA;
+        }
+        double *get_A() {
+            return this->A;
+        }
+
     private:
         int size;
         int nnz;

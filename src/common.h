@@ -7,6 +7,8 @@
 
 void error(const char *msg);
 
+typedef double scalar;
+
 typedef double double2[2];
 
 typedef int int2[2];
@@ -29,5 +31,8 @@ void intro();
 void throw_exception(char *text);
 
 #define MEM_CHECK(var) if (var == NULL) { printf("Out of memory."); exit(1); }
+
+#define verbose(msg)
+#define warn(msg)
 
 #endif

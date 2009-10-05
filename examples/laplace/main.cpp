@@ -1,4 +1,5 @@
 #include "hermes1d.h"
+#include "solver_umfpack.h"
 
 int DEBUG = 1;
 
@@ -126,6 +127,20 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
+    CSRMatrix *csr = new CSRMatrix((CooMatrix*)mat);
+    csr->print();
+    UmfpackSolver *u = new UmfpackSolver();
+    void *slv_ctx=u->new_context(false);
+    double *vec = (double*) malloc(csr->get_size() * sizeof(double));
+
+    u->analyze(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
+            csr->get_A(), false);
+    u->factorize(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
+            csr->get_A(), false);
+    u->solve(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
+            csr->get_A(), false, res, vec);
+
+    exit(1);
     solve_linear_system(mat, res);
 
     // DEBUG: print solution
