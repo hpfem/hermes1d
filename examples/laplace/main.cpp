@@ -1,8 +1,6 @@
 #include "hermes1d.h"
 #include "solver_umfpack.h"
 
-int DEBUG = 1;
-
 // ********************************************************************
 
 // general input:
@@ -55,30 +53,6 @@ double residual(int num, double *x, double *weights,
   for(int i = 0; i<num; i++) {
     val += (du_prevdx[i]*dvdx[i] - f(x[i])*v[i])*weights[i];
   }
-  if(DEBUG) {
-    /*printf("u = ");
-    for(int i=0; i<num; i++) printf("%g, ", u[i]);
-    printf("\n");
-    printf("dudx = ");
-    for(int i=0; i<num; i++) printf("%g, ", dudx[i]);
-    printf("\n");*/
-    printf("v = ");
-    for(int i=0; i<num; i++) printf("%g, ", v[i]);
-    printf("\n");
-    printf("dvdx = ");
-    for(int i=0; i<num; i++) printf("%g, ", dvdx[i]);
-    printf("\n");
-    printf("u_prev = ");
-    for(int i=0; i<num; i++) printf("%g, ", u_prev[i]);
-    printf("\n");
-    printf("du_prevdx = ");
-    for(int i=0; i<num; i++) printf("%g, ", du_prevdx[i]);
-    printf("\n");
-    printf("f = ");
-    for(int i=0; i<num; i++) printf("%g, ", f(x[i]));
-    printf("\n");
-    printf("val = %g\n", val);
-  }
   return val;
 };
 
@@ -130,15 +104,6 @@ int main() {
 
     // solving the matrix system
     solve_linear_system_umfpack((CooMatrix*)mat, res);
-
-    // DEBUG: print solution
-    if(DEBUG) {
-      printf("New Y:\n");
-      for(int i=0; i<Ndof; i++) {
-        printf("%g ", res[i]);
-      }
-      printf("\n");
-    }
 
     // updating y_prev by new solution which is in res
     for(int i=0; i<Ndof; i++) y_prev[i] += res[i];
