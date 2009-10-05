@@ -7,9 +7,9 @@ int DEBUG = 1;
 
 // general input:
 static int NUM_EQ = 1;
-int Nelem = 5;                         // number of elements
+int Nelem = 3;                         // number of elements
 double A = 0, B = 2*M_PI;                // domain end points
-int P_INIT = 3;                        // initial polynomal degree
+int P_INIT = 2;                        // initial polynomal degree
 
 // Tolerance for Newton's method
 double TOL = 1e-8;
@@ -127,21 +127,8 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
-    CSRMatrix *csr = new CSRMatrix((CooMatrix*)mat);
-    csr->print();
-    UmfpackSolver *u = new UmfpackSolver();
-    void *slv_ctx=u->new_context(false);
-    double *vec = (double*) malloc(csr->get_size() * sizeof(double));
-
-    u->analyze(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
-            csr->get_A(), false);
-    u->factorize(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
-            csr->get_A(), false);
-    u->solve(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
-            csr->get_A(), false, res, vec);
-
-    //solve_linear_system(mat, res);
-    res = vec;
+    // solving the matrix system
+    solve_linear_system_umfpack((CooMatrix*)mat, res);
 
     // DEBUG: print solution
     if(DEBUG) {

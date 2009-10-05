@@ -161,6 +161,19 @@ public:
 
 };
 
+void solve_linear_system_umfpack(CooMatrix *mat, double *res) {
+    CSRMatrix *csr = new CSRMatrix(mat);
+    UmfpackSolver *u = new UmfpackSolver();
+    void *slv_ctx=u->new_context(false);
+    double *vec = (double*) malloc(csr->get_size() * sizeof(double));
 
+    u->analyze(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
+            csr->get_A(), false);
+    u->factorize(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
+            csr->get_A(), false);
+    u->solve(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
+            csr->get_A(), false, res, vec);
+    memcpy(res, vec, csr->get_size() * sizeof(double));
+}
 
 #endif
