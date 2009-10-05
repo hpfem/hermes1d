@@ -23,58 +23,59 @@ double f(double x) {
 // ********************************************************************
 
 // bilinear form for the Jacobi matrix 
-// pts_num...number of Gauss points in element
-// pts[]...Gauss points
-// weights[]...Gauss weights for points in pts[]
+// num...number of Gauss points in element
+// x[]...Gauss points
+// weights[]...Gauss weights for points in x[]
 // u...basis function
 // v...test function
 // u_prev...previous solution
-double jacobian(int pts_num, double *pts, double *weights, 
+double jacobian(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx)
+                double *u_prev, double *du_prevdx, void *user_data)
 {
   double val = 0;
-  for(int i = 0; i<pts_num; i++) {
+  for(int i = 0; i<num; i++) {
     val += dudx[i]*dvdx[i]*weights[i];
   }
   return val;
 };
 
 // (nonlinear) form for the residual vector
-// pts_num...number of Gauss points in element
-// pts[]...Gauss points
-// weights[]...Gauss weights for points in pts[]
+// num...number of Gauss points in element
+// x[]...Gauss points
+// weights[]...Gauss weights for points in x[]
 // u...approximate solution
 // v...test function
 // u_prev...previous solution
-double residual(int pts_num, double *pts, double *weights, 
-                double *u_prev, double *du_prevdx, double *v, double *dvdx)
+double residual(int num, double *x, double *weights, 
+                double *u_prev, double *du_prevdx, double *v, double *dvdx,
+                void *user_data)
 {
   double val = 0;
-  for(int i = 0; i<pts_num; i++) {
-    val += (du_prevdx[i]*dvdx[i] - f(pts[i])*v[i])*weights[i];
+  for(int i = 0; i<num; i++) {
+    val += (du_prevdx[i]*dvdx[i] - f(x[i])*v[i])*weights[i];
   }
   if(DEBUG) {
     /*printf("u = ");
-    for(int i=0; i<pts_num; i++) printf("%g, ", u[i]);
+    for(int i=0; i<num; i++) printf("%g, ", u[i]);
     printf("\n");
     printf("dudx = ");
-    for(int i=0; i<pts_num; i++) printf("%g, ", dudx[i]);
+    for(int i=0; i<num; i++) printf("%g, ", dudx[i]);
     printf("\n");*/
     printf("v = ");
-    for(int i=0; i<pts_num; i++) printf("%g, ", v[i]);
+    for(int i=0; i<num; i++) printf("%g, ", v[i]);
     printf("\n");
     printf("dvdx = ");
-    for(int i=0; i<pts_num; i++) printf("%g, ", dvdx[i]);
+    for(int i=0; i<num; i++) printf("%g, ", dvdx[i]);
     printf("\n");
     printf("u_prev = ");
-    for(int i=0; i<pts_num; i++) printf("%g, ", u_prev[i]);
+    for(int i=0; i<num; i++) printf("%g, ", u_prev[i]);
     printf("\n");
     printf("du_prevdx = ");
-    for(int i=0; i<pts_num; i++) printf("%g, ", du_prevdx[i]);
+    for(int i=0; i<num; i++) printf("%g, ", du_prevdx[i]);
     printf("\n");
     printf("f = ");
-    for(int i=0; i<pts_num; i++) printf("%g, ", f(pts[i]));
+    for(int i=0; i<num; i++) printf("%g, ", f(x[i]));
     printf("\n");
     printf("val = %g\n", val);
   }

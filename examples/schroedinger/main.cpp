@@ -9,27 +9,27 @@ int P_INIT = 2;                        // initial polynomal degree
 
 double l = 1;
 
-double lhs(int pts_num, double *pts, double *weights, 
+double lhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx)
+                double *u_prev, double *du_prevdx, void *user_data)
 {
     double val = 0;
-    for(int i = 0; i<pts_num; i++) {
+    for(int i = 0; i<num; i++) {
         double coeff;
-        coeff = 0.5*pts[i]*pts[i]*dudx[i]*dvdx[i] -u[i]*v[i]*pts[i]
+        coeff = 0.5*x[i]*x[i]*dudx[i]*dvdx[i] -u[i]*v[i]*x[i]
             + 0.5 * (l + 1)*l *u[i]*v[i];
         val += coeff*weights[i];
     }
     return val;
 }
 
-double rhs(int pts_num, double *pts, double *weights, 
+double rhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx)
+                double *u_prev, double *du_prevdx, void *user_data)
 {
   double val = 0;
-  for(int i = 0; i<pts_num; i++) {
-    val += u[i]*v[i]*pts[i]*pts[i]*weights[i];
+  for(int i = 0; i<num; i++) {
+    val += u[i]*v[i]*x[i]*x[i]*weights[i];
   }
   return val;
 }

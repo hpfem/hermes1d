@@ -99,9 +99,9 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
               element_shapefn(elems[m].v1->x, elems[m].v2->x,  
 			      j, order, phys_u, phys_dudx); 
               // evaluate the bilinear form
-              double val_ji = this->_matrix_form(pts_num, phys_pts, phys_weights, 
-				       phys_u, phys_dudx, phys_v, phys_dvdx, 
-                                       phys_u_prev, phys_du_prevdx); 
+              double val_ji = this->_matrix_form(pts_num, phys_pts,
+                      phys_weights, phys_u, phys_dudx, phys_v, phys_dvdx,
+                      phys_u_prev, phys_du_prevdx, NULL); 
               // add the result to the matrix
               mat->add(pos_j, pos_i, val_ji);
 	    }
@@ -111,7 +111,7 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
         if(matrix_flag == 0 || matrix_flag == 2) {
      	  double val_i = this->_vector_form(pts_num, phys_pts, phys_weights, 
                                   phys_u_prev, phys_du_prevdx, phys_v,
-                                  phys_dvdx);
+                                  phys_dvdx, NULL);
           // add the contribution to the residual vector
           printf("Adding to residual pos %d value %g\n", pos_i, val_i);
           res[pos_i] += val_i;

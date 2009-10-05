@@ -8,10 +8,11 @@
 
 typedef double (*matrix_form) (int pts_num, double *pts, double *weights,
         double *u, double *dudx, double *v, double *dvdx, double *u_prev,
-        double *du_prevdx);
+        double *du_prevdx, void *user_data);
 
 typedef double (*vector_form) (int pts_num, double *pts, double *weights,
-        double *u_prev, double *du_prevdx, double *v, double *dvdx);
+        double *u_prev, double *du_prevdx, double *v, double *dvdx,
+        void *user_data);
 
 class DiscreteProblem {
 
