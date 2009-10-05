@@ -61,7 +61,6 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
               double *y_prev, int matrix_flag) {
   int ndof = this->mesh->get_n_dof();
   Element *elems = this->mesh->get_elems();
-  int DEBUG = 1;
 
   // erase residual vector
   if(matrix_flag == 0 || matrix_flag == 2) 
@@ -141,7 +140,8 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
                                   phys_u_prev, phys_du_prevdx, phys_v,
                                   phys_dvdx, NULL);
           // add the contribution to the residual vector
-          printf("Adding to residual pos %d value %g\n", pos_i, val_i);
+          if (DEBUG)
+              printf("Adding to residual pos %d value %g\n", pos_i, val_i);
           res[pos_i] += val_i;
         }
       }

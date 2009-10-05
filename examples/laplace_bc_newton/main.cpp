@@ -1,8 +1,6 @@
 #include "hermes1d.h"
 #include "solver_umfpack.h"
 
-int DEBUG = 1;
-
 // ********************************************************************
 
 // general input:
@@ -133,10 +131,12 @@ int main() {
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
 
-    printf("RHS:");
-    for(int i=0; i<Ndof; i++)
-        printf("%f ", res[i]);
-    printf("\n");
+    if (DEBUG) {
+        printf("RHS:");
+        for(int i=0; i<Ndof; i++)
+            printf("%f ", res[i]);
+        printf("\n");
+    }
   
     // calculate L2 norm of residual vector
     double res_norm = 0;

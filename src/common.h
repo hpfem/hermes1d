@@ -1,6 +1,8 @@
 #ifndef __HERMES1D_COMMON_H
 #define __HERMES1D_COMMON_H
 
+#define DEBUG 0
+
 #include <stdexcept>
 #include <stdlib.h>
 #include <stdio.h>
