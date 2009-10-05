@@ -7,13 +7,13 @@ int DEBUG = 1;
 
 // general input:
 static int NUM_EQ = 1;
-int Nelem = 2;                         // number of elements
-double A = 0, B = 2;              // domain end points
+int Nelem = 30;                         // number of elements
+double A = 0, B = M_PI;              // domain end points
 int P_INIT = 1;                        // initial polynomal degree
 
 // boundary conditions
 double val_dir_left = 0;
-double val_neum_right = 0;
+double val_neum_right = 1;
 
 // Tolerance for Newton's method
 double TOL = 1e-8;
@@ -79,11 +79,17 @@ double residual_vol(int num, double *x, double *weights,
   return val;
 };
 
+/*
+   We are adding a "-", because that is what is in the weak formulation. And we
+   are specifying the *normal* derivative, which means that is equal to the
+   regular derivative on the right hand side, but minus regular derivative on
+   the LHS.
+   */
 double residual_surf_right(double x, double u_prev, double du_prevdx,
         double v, double dvdx, void *user_data)
 {
     // later this will be created from the user_data
-    return val_neum_right * v; 
+    return -val_neum_right * v; 
 }
 
 /******************************************************************************/
@@ -123,6 +129,11 @@ int main() {
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
+
+    printf("RHS:");
+    for(int i=0; i<Ndof; i++)
+        printf("%f ", res[i]);
+    printf("\n");
   
     // calculate L2 norm of residual vector
     double res_norm = 0;
