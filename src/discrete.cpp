@@ -4,30 +4,30 @@ DiscreteProblem::DiscreteProblem(int neq, Mesh *mesh)
 {
     this->neq = neq;
     this->mesh = mesh;
-    _matrix_form = NULL;
-    _vector_form = NULL;
-    _matrix_form_surf = NULL;
-    _vector_form_surf = NULL;
 }
 
 void DiscreteProblem::add_matrix_form(int i, int j, matrix_form fn)
 {
-    this->_matrix_form = fn;
+    MatrixFormVol form = {i, j, fn};
+    this->matrix_forms_vol.push_back(form);
 }
 
 void DiscreteProblem::add_vector_form(int i, vector_form fn)
 {
-    this->_vector_form = fn;
+    VectorFormVol form = {i, fn};
+    this->vector_forms_vol.push_back(form);
 }
 
 void DiscreteProblem::add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index)
 {
-    this->_matrix_form_surf = fn;
+    MatrixFormSurf form = {i, j, bdy_index, fn};
+    this->matrix_forms_surf.push_back(form);
 }
 
 void DiscreteProblem::add_vector_form_surf(int i, vector_form_surf fn, int bdy_index)
 {
-    this->_vector_form_surf = fn;
+    VectorFormSurf form = {i, bdy_index, fn};
+    this->vector_forms_surf.push_back(form);
 }
 
 

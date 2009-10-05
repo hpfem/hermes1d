@@ -1,6 +1,8 @@
 #ifndef _DISCRETE_H_
 #define _DISCRETE_H_
 
+#include <vector>
+
 #include "mesh.h"
 #include "quad_std.h"
 #include "lobatto.h"
@@ -39,10 +41,27 @@ public:
 private:
     int neq;
     Mesh *mesh;
-    matrix_form _matrix_form;
-    vector_form _vector_form;
-    matrix_form_surf _matrix_form_surf;
-    vector_form_surf _vector_form_surf;
+
+	struct MatrixFormVol {
+		int i, j;
+		matrix_form fn;
+	};
+	struct MatrixFormSurf {
+		int i, j, bdy_index;
+		matrix_form_surf fn;
+	};
+	struct VectorFormVol {
+		int i;
+		vector_form fn;
+	};
+	struct VectorFormSurf {
+		int i, bdy_index;
+		vector_form_surf fn;
+	};
+	std::vector<MatrixFormVol> matrix_forms_vol;
+	std::vector<MatrixFormSurf> matrix_forms_surf;
+	std::vector<VectorFormVol> vector_forms_vol;
+	std::vector<VectorFormSurf> vector_forms_surf;
 };
 
 void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double *coeffs);
