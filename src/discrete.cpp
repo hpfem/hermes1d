@@ -89,8 +89,10 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
 	               order, phys_pts, phys_weights, pts_num); 
     if(DEBUG) {
       printf("--------------------------------------------\n");
-      printf("Element %d     interval (%g, %g)\n", m, elems[m].v1->x, elems[m].v2->x);
-      printf("p = %d      order = %d     pts_num = %d\n", elems[m].p, order, pts_num);
+      printf("Element %d     interval (%g, %g)\n", m, elems[m].v1->x, 
+             elems[m].v2->x);
+      printf("p = %d      order = %d     pts_num = %d\n", elems[m].p, 
+             order, pts_num);
       printf("Pts and weights: \n");
       for(int s=0; s < pts_num; s++) printf("[%g, %g]\n", 
              phys_pts[s], phys_weights[s]);
@@ -148,121 +150,125 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
     }
   }
 
-    if(this->mesh->bc_left_dir[0] != 1) {
-      // evaluate previous solution and its derivative in the left end point
-      double phys_u_prev_left, phys_du_prevdx_left; // at left end point
-      int m = 0; // first element
-      double coeffs_left[100];
-      calculate_elem_coeffs(this->mesh, m, y_prev, coeffs_left); 
-      double x_left_ref = -1; 
-      element_solution_point(x_left_ref, elems + m, coeffs_left,
-                       &phys_u_prev_left, &phys_du_prevdx_left); 
+  // left boundary point
+  if(this->mesh->bc_left_dir[0] != 1) {
+    // evaluate previous solution and its derivative in the left end point
+    double phys_u_prev_left, phys_du_prevdx_left; // at left end point
+    int m = 0; // first element
+    double coeffs_left[100];
+    calculate_elem_coeffs(this->mesh, m, y_prev, coeffs_left); 
+    double x_left_ref = -1; 
+    element_solution_point(x_left_ref, elems + m, coeffs_left,
+                     &phys_u_prev_left, &phys_du_prevdx_left); 
 
-      // surface integrals at the left end point
-      double phys_v_left, phys_dvdx_left; // at left end point
-      double phys_u_left, phys_dudx_left; // at left end point
-      // loop over test functions on left element
-      for(int i=0; i<elems[m].p + 1; i++) {
-        // if i-th test function is active
-        int pos_i = elems[m].dof[i]; // row index in matrix or residual vector
-        if(pos_i != -1) {
-          // transform i-th test function to element 'm'
-          element_shapefn_point(x_left_ref, elems[m].v1->x, elems[m].v2->x,  
-                          i, &phys_v_left, &phys_dvdx_left); 
-          // if we are constructing the matrix
-          if(matrix_flag == 0 || matrix_flag == 1) {
-            if(this->_matrix_form_surf != NULL) {
-              // loop over basis functions on first element
-              for(int j=0; j < elems[m].p + 1; j++) {
-                int pos_j = elems[m].dof[j]; // matrix column index
-                // if j-th basis function is active
-	        if(pos_j != -1) {
-                  // transform j-th basis function to element 'm'
-                  element_shapefn_point(x_left_ref, elems[m].v1->x, elems[m].v2->x,  
-	 	  	      j, &phys_u_left, &phys_dudx_left); 
-                  // evaluate the surface bilinear form
-                  double val_ji_surf = this->_matrix_form_surf(elems[m].v1->x,
-                          phys_u_left, phys_dudx_left, phys_v_left, phys_dvdx_left,
-                            phys_u_prev_left, phys_du_prevdx_left, NULL); 
-                  // add the result to the matrix
-                  mat->add(pos_j, pos_i, val_ji_surf);
-	        }
- 	      }
-            }
+    // surface integrals at the left end point
+    double phys_v_left, phys_dvdx_left; // at left end point
+    double phys_u_left, phys_dudx_left; // at left end point
+    // loop over test functions on left element
+    for(int i=0; i<elems[m].p + 1; i++) {
+      // if i-th test function is active
+      int pos_i = elems[m].dof[i]; // row index in matrix or residual vector
+      if(pos_i != -1) {
+        // transform i-th test function to element 'm'
+        element_shapefn_point(x_left_ref, elems[m].v1->x, elems[m].v2->x,  
+                        i, &phys_v_left, &phys_dvdx_left); 
+        // if we are constructing the matrix
+        if(matrix_flag == 0 || matrix_flag == 1) {
+          if(this->_matrix_form_surf != NULL) {
+            // loop over basis functions on first element
+            for(int j=0; j < elems[m].p + 1; j++) {
+              int pos_j = elems[m].dof[j]; // matrix column index
+              // if j-th basis function is active
+	      if(pos_j != -1) {
+                // transform j-th basis function to element 'm'
+                element_shapefn_point(x_left_ref, elems[m].v1->x, 
+                                      elems[m].v2->x, j, &phys_u_left, 
+                                      &phys_dudx_left); 
+                // evaluate the surface bilinear form
+                double val_ji_surf = this->_matrix_form_surf(elems[m].v1->x,
+                        phys_u_left, phys_dudx_left, phys_v_left, 
+                        phys_dvdx_left, phys_u_prev_left, phys_du_prevdx_left, 
+                        NULL); 
+                // add the result to the matrix
+                mat->add(pos_j, pos_i, val_ji_surf);
+	      }
+ 	    }
           }
-          // contribute to residual vector
-          if(matrix_flag == 0 || matrix_flag == 2) {
-            if(this->_vector_form_surf != NULL) {
-       	      double val_i_surf = this->_vector_form_surf(elems[m].v1->x,  
-                                      phys_u_prev_left, phys_du_prevdx_left, phys_v_left,
-                                      phys_dvdx_left, NULL);
-              // add the contribution to the residual vector
-              printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
-              res[pos_i] += val_i_surf;
-            }
+        }
+        // contribute to residual vector
+        if(matrix_flag == 0 || matrix_flag == 2) {
+          if(this->_vector_form_surf != NULL) {
+       	    double val_i_surf = this->_vector_form_surf(elems[m].v1->x,  
+                                    phys_u_prev_left, phys_du_prevdx_left, 
+                                    phys_v_left, phys_dvdx_left, NULL);
+            // add the contribution to the residual vector
+            printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
+            res[pos_i] += val_i_surf;
           }
         }
       }
     }
+  }
 
-    if(this->mesh->bc_right_dir[0] != 1) {
-      // evaluate previous solution and its derivative in the right end point
-      double phys_u_prev_right, phys_du_prevdx_right; // at right end point
-      int m = this->mesh->get_n_elems()-1; // last element
-      double coeffs_right[100];
-      calculate_elem_coeffs(this->mesh, m, y_prev, coeffs_right); 
-      double x_right_ref = 1; 
-      element_solution_point(x_right_ref, elems + m, coeffs_right,
-		       &phys_u_prev_right, &phys_du_prevdx_right); 
+  // right boundary point
+  if(this->mesh->bc_right_dir[0] != 1) {
+    // evaluate previous solution and its derivative in the right end point
+    double phys_u_prev_right, phys_du_prevdx_right; // at right end point
+    int m = this->mesh->get_n_elems()-1; // last element
+    double coeffs_right[100];
+    calculate_elem_coeffs(this->mesh, m, y_prev, coeffs_right); 
+    double x_right_ref = 1; 
+    element_solution_point(x_right_ref, elems + m, coeffs_right,
+	      &phys_u_prev_right, &phys_du_prevdx_right); 
 
-      // surface integrals at the right end point
-      double phys_v_right, phys_dvdx_right; // at right end point
-      double phys_u_right, phys_dudx_right; // at right end point
-      // loop over test functions on right element
-      for(int i=0; i<elems[m].p + 1; i++) {
-	// if i-th test function is active
-	int pos_i = elems[m].dof[i]; // row index in matrix or residual vector
-	if(pos_i != -1) {
-	  // transform i-th test function to element 'm'
-	  element_shapefn_point(x_right_ref, elems[m].v1->x, elems[m].v2->x,  
-			  i, &phys_v_right, &phys_dvdx_right); 
+    // surface integrals at the right end point
+    double phys_v_right, phys_dvdx_right; // at right end point
+    double phys_u_right, phys_dudx_right; // at right end point
+    // loop over test functions on right element
+    for(int i=0; i<elems[m].p + 1; i++) {
+      // if i-th test function is active
+      int pos_i = elems[m].dof[i]; // row index in matrix or residual vector
+      if(pos_i != -1) {
+	// transform i-th test function to element 'm'
+	element_shapefn_point(x_right_ref, elems[m].v1->x, elems[m].v2->x,  
+       		  i, &phys_v_right, &phys_dvdx_right); 
           
-	  // if we are constructing the matrix
-          if(matrix_flag == 0 || matrix_flag == 1) {
-            if(this->_matrix_form_surf != NULL) {
-	      // loop over basis functions on first element
-	      for(int j=0; j < elems[m].p + 1; j++) {
-		int pos_j = elems[m].dof[j]; // matrix column index
-		// if j-th basis function is active
-		if(pos_j != -1) {
-		  // transform j-th basis function to element 'm'
-		  element_shapefn_point(x_right_ref, elems[m].v1->x, elems[m].v2->x,  
-				  j, &phys_u_right, &phys_dudx_right); 
-		  // evaluate the surface bilinear form
-		  double val_ji_surf = this->_matrix_form_surf(elems[m].v1->x,
-			  phys_u_right, phys_dudx_right, phys_v_right, 
-			  phys_dvdx_right,
-			  phys_u_prev_right, phys_du_prevdx_right, NULL); 
-		  // add the result to the matrix
-		  mat->add(pos_j, pos_i, val_ji_surf);
-		}
-	      }
-	    }
-          }
-	  // contribute to residual vector
-	  if(matrix_flag == 0 || matrix_flag == 2) {
-            if(this->_vector_form_surf != NULL) {
-	      double val_i_surf = this->_vector_form_surf(elems[m].v1->x,  
-				    phys_u_prev_right, phys_du_prevdx_right, phys_v_right,
-				    phys_dvdx_right, NULL);
-	      // add the contribution to the residual vector
-	      printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
-	      res[pos_i] += val_i_surf;
+	// if we are constructing the matrix
+        if(matrix_flag == 0 || matrix_flag == 1) {
+          if(this->_matrix_form_surf != NULL) {
+            // loop over basis functions on first element
+	    for(int j=0; j < elems[m].p + 1; j++) {
+	      int pos_j = elems[m].dof[j]; // matrix column index
+	      // if j-th basis function is active
+	      if(pos_j != -1) {
+	        // transform j-th basis function to element 'm'
+	        element_shapefn_point(x_right_ref, elems[m].v1->x, 
+                          elems[m].v2->x, j, &phys_u_right, &phys_dudx_right); 
+	        // evaluate the surface bilinear form
+	        double val_ji_surf = this->_matrix_form_surf(elems[m].v1->x,
+	      	  phys_u_right, phys_dudx_right, phys_v_right, 
+	      	  phys_dvdx_right, phys_u_prev_right, phys_du_prevdx_right, 
+                  NULL); 
+	        // add the result to the matrix
+	        mat->add(pos_j, pos_i, val_ji_surf);
+              }
             }
-	  }
-	}
-      } // end of adding surface integrals
-    }
+          }
+        }
+        // contribute to residual vector
+	if(matrix_flag == 0 || matrix_flag == 2) {
+          if(this->_vector_form_surf != NULL) {
+	    double val_i_surf = this->_vector_form_surf(elems[m].v1->x,  
+				    phys_u_prev_right, phys_du_prevdx_right, 
+                                    phys_v_right, phys_dvdx_right, NULL);
+            // add the contribution to the residual vector
+            printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
+            res[pos_i] += val_i_surf;
+          }
+        }
+      }
+    } // end of adding surface integrals
+  }
 
   // DEBUG: print Jacobi matrix
   if(DEBUG && (matrix_flag == 0 || matrix_flag == 1)) {
