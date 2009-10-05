@@ -221,7 +221,8 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
                                     phys_u_prev_left, phys_du_prevdx_left, 
                                     phys_v_left, phys_dvdx_left, NULL);
             // add the contribution to the residual vector
-            printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
+            if (DEBUG)
+                printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
             res[pos_i] += val_i_surf;
           }
         }
@@ -299,7 +300,8 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
 				    phys_u_prev_right, phys_du_prevdx_right, 
                                     phys_v_right, phys_dvdx_right, NULL);
             // add the contribution to the residual vector
-            printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
+            if (DEBUG)
+                printf("Adding to residual pos %d value %g\n", pos_i, val_i_surf);
             res[pos_i] += val_i_surf;
           }
         }

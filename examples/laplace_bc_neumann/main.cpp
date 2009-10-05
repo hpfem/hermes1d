@@ -155,7 +155,8 @@ int main() {
     // changing sign of vector res
     for(int i=0; i<Ndof; i++) res[i]*= -1;
 
-    mat->print();
+    if (DEBUG)
+        mat->print();
 
     // solving the matrix system
     solve_linear_system(mat, res);

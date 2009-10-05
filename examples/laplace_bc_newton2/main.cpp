@@ -162,7 +162,8 @@ int main() {
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
     printf("Residual L2 norm: %.15f\n", res_norm);
-    printf("TOL: %.15f\n", TOL);
+    if (DEBUG)
+        printf("TOL: %.15f\n", TOL);
     if(res_norm < TOL) break;
 
     // changing sign of vector res
@@ -185,8 +186,7 @@ int main() {
     // updating y_prev by new solution which is in res
     for(int i=0; i<Ndof; i++) y_prev[i] += res[i];
     newton_iterations++;
-    /*if (newton_iterations == 2)
-        break;*/
+    printf("Finished Newton iteration: %d\n", newton_iterations);
   }
   printf("Total number of Newton iterations: %d\n", newton_iterations);
 
