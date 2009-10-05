@@ -10,9 +10,10 @@ double A = 0, B = 2*M_PI;              // domain end points
 int P_INIT = 1;                        // initial polynomal degree
 
 // boundary conditions
-double val_dir_left = 0;
-double val_newton_alpha = 1;
-double val_newton_beta = 1;
+double val_newton_alpha_left = 2;
+double val_newton_beta_left = -2;
+double val_newton_alpha_right = 1;
+double val_newton_beta_right = 1;
 
 // Tolerance for Newton's method
 double TOL = 1e-5;
@@ -78,17 +79,30 @@ double residual_vol(int num, double *x, double *weights,
   return val;
 };
 
+double jacobian_surf_left(double x, double u, double dudx,
+        double v, double dvdx, double u_prev, double du_prevdx,
+        void *user_data)
+{
+  return (1/val_newton_alpha_left)*u*v;
+}
+
 double jacobian_surf_right(double x, double u, double dudx,
         double v, double dvdx, double u_prev, double du_prevdx,
         void *user_data)
 {
-  return (1/val_newton_alpha)*u*v;
+  return (1/val_newton_alpha_right)*u*v;
+}
+
+double residual_surf_left(double x, double u_prev, double du_prevdx, double v,
+        double dvdx, void *user_data)
+{
+  return -(val_newton_beta_left/val_newton_alpha_left) * v; 
 }
 
 double residual_surf_right(double x, double u_prev, double du_prevdx, double v,
         double dvdx, void *user_data)
 {
-  return -(val_newton_beta/val_newton_alpha) * v; 
+  return -(val_newton_beta_right/val_newton_alpha_right) * v; 
 }
 
 /******************************************************************************/
@@ -99,7 +113,7 @@ int main() {
   mesh.set_poly_orders(P_INIT);
 
   // boundary conditions
-  mesh.set_bc_left_dirichlet(0, val_dir_left);
+  mesh.set_bc_left_natural(0);
   mesh.set_bc_right_natural(0);
   mesh.assign_dofs();
 
@@ -107,6 +121,8 @@ int main() {
   DiscreteProblem dp(NUM_EQ, &mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual_vol);
+  dp.add_matrix_form_surf(0, 0, jacobian_surf_left, BOUNDARY_LEFT);
+  dp.add_vector_form_surf(0, residual_surf_left, BOUNDARY_LEFT);
   dp.add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
   dp.add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
