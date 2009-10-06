@@ -16,14 +16,44 @@ cdef extern from "stdlib.h":
 
 cdef extern from "arrayobject.h":
 
-    ctypedef int intp
+    cdef enum NPY_TYPES:
+        NPY_BOOL
+        NPY_BYTE
+        NPY_UBYTE
+        NPY_SHORT
+        NPY_USHORT
+        NPY_INT
+        NPY_UINT
+        NPY_LONG
+        NPY_ULONG
+        NPY_LONGLONG
+        NPY_ULONGLONG
+        NPY_FLOAT
+        NPY_DOUBLE
+        NPY_LONGDOUBLE
+        NPY_CFLOAT
+        NPY_CDOUBLE
+        NPY_CLONGDOUBLE
+        NPY_OBJECT
+        NPY_STRING
+        NPY_UNICODE
+        NPY_VOID
+        NPY_NTYPES
+        NPY_NOTYPE
+
+    ctypedef int npy_intp
 
     ctypedef extern class numpy.ndarray [object PyArrayObject]:
         cdef char *data
         cdef int nd
-        cdef intp *dimensions
-        cdef intp *strides
+        cdef npy_intp *dimensions
+        cdef npy_intp *strides
         cdef int flags
+
+    object PyArray_SimpleNewFromData(int nd, npy_intp* dims, int typenum,
+            void* data)
+    void import_array()
+
 
 cdef extern from "Python.h":
     ctypedef void PyObject
