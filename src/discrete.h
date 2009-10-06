@@ -33,6 +33,9 @@ public:
     void add_vector_form(int i, vector_form fn);
     void add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index);
     void add_vector_form_surf(int i, vector_form_surf fn, int bdy_index);
+    void process_vol_forms(Matrix *mat, double *res, double *y_prev, int matrix_flag);
+    void process_surf_forms(Matrix *mat, double *res, double *y_prev, 
+                            int matrix_flag, int bdy_index);
     void assemble(Matrix *mat, double *res, double *y_prev, int matrix_flag);
     void assemble_matrix_and_vector(Matrix *mat, double *res, double *y_prev); 
     void assemble_matrix(Matrix *mat, double *y_prev);
@@ -67,7 +70,7 @@ private:
 void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double *coeffs);
 
 void element_quadrature(double a, double b, 
-                        int order, double *pts, double *weights, int &num);
+                        int order, double *pts, double *weights, int *num);
 void element_shapefn(double a, double b, 
 		     int k, int order, double *val, double *der);
 void element_shapefn_point(double x_ref, double a, double b, 
