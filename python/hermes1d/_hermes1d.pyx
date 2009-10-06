@@ -27,6 +27,8 @@ cdef class Mesh:
 
 import sys
 import traceback
+# this is important to be called here, otherwise we can't use the NumPy C/API:
+import_array()
 
 global_namespace = {"verbose": False}
 
@@ -37,68 +39,93 @@ cdef api void cmd(char *text):
 cdef api void set_verbose_cmd(int verbose):
     global_namespace["verbose"] = verbose
 
-cdef api void insert_int(char *name, int i):
+cdef api void insert_object(char *name, object o):
     """
-    Inserts the int "i" into the global namespace.
+    Inserts an object into the global namespace.
 
-    Example:
+    Example 1:
 
-    insert_int("a", 34);
+    insert_object("a", c2py_int(3));
     cmd("print a");
 
-    This prints "34".
-    """
-    global_namespace.update({name: i})
+    This prints "3".
 
-cdef api void insert_double_array(char *name, double *A, int len):
-    """
-    Inserts an array of doubles into the global namespace as a NumPy array.
+    Example 2:
 
-    Example:
+    int a[3] = {1, 5, 3};
+    insert_object("A", c2numpy_int(a, 3));
+    cmd("print A");
+
+    This prints "[1  5  3]" (this is how the NumPy array is printed).
+
+    Example 3:
 
     double a[3] = {1, 5, 3};
-    insert_double_array("A", a, 3);
+    insert_object("A", c2numpy_double(a, 3));
     cmd("print A");
 
     This prints "[ 1.  5.  3.]" (this is how the NumPy array is printed).
     """
-    global_namespace.update({name: array_double_c2numpy(A, len)})
+    global_namespace.update({name: o})
 
-cdef api void insert_int_array(char *name, int *A, int len):
+cdef api object get_object(char *name):
     """
-    Inserts an array of ints into the global namespace as a NumPy array.
+    Retrieves an object from the Python namespace.
 
     Example:
 
+    // put into python:
     int a[3] = {1, 5, 3};
-    insert_double_array("A", a, 3);
-    cmd("print A");
+    insert_object("A", c2numpy_int(a, 3));
 
-    This prints "[1  5  3]" (this is how the NumPy array is printed).
+    // retrieve from python:
+    double *A;
+    int n;
+    numpy2c_double_inplace(get_object("A"), &A, &n);
     """
-    global_namespace.update({name: array_int_c2numpy(A, len)})
-
-cdef api void insert_object(char *name, object o):
-    global_namespace.update({name: o})
-
-cdef api object get_symbol(char *name):
     return global_namespace.get(name)
 
-cdef ndarray array_int_c2numpy(int *A, int len):
+cdef api object c2py_int(int i):
+    return i
+
+cdef api int py2c_int(object i):
+    return i
+
+cdef api object c2numpy_int(int *A, int len):
+    """
+    Construct the integer NumPy array by copying the data.
+    """
     from numpy import empty
     cdef ndarray vec = empty([len], dtype="int32")
     cdef int *pvec = <int *>vec.data
     memcpy(pvec, A, len*sizeof(int))
     return vec
 
-cdef ndarray array_double_c2numpy(double *A, int len):
+cdef api object c2numpy_int_inplace(int *A, int len):
+    """
+    Construct the integer NumPy array inplace (don't copy any data).
+    """
+    cdef npy_intp dim = len
+    return PyArray_SimpleNewFromData(1, &dim, NPY_INT, A)
+
+cdef api object c2numpy_double(double *A, int len):
+    """
+    Construct the double NumPy array by copying the data.
+    """
     from numpy import empty
     cdef ndarray vec = empty([len], dtype="double")
     cdef double *pvec = <double *>vec.data
     memcpy(pvec, A, len*sizeof(double))
     return vec
 
-cdef api void array_double_numpy2c_inplace(object A_n, double **A_c, int *n):
+cdef api object c2numpy_double_inplace(double *A, int len):
+    """
+    Construct the double NumPy array inplace (don't copy any data).
+    """
+    cdef npy_intp dim = len
+    return PyArray_SimpleNewFromData(1, &dim, NPY_DOUBLE, A)
+
+cdef api void numpy2c_double_inplace(object A_n, double **A_c, int *n):
     cdef ndarray A = A_n
     if not (A.nd == 1 and A.strides[0] == sizeof(double)):
         from numpy import array

@@ -36,12 +36,12 @@ double rhs(int num, double *x, double *weights,
 
 void insert_matrix(DenseMatrix *mat, int len)
 {
-  insert_int("len", len);
   double _mat[len*len];
   for(int i=0; i<len; i++)
       for(int j=0; j<len; j++)
           _mat[i*len+j] = mat->get(i, j);
-  insert_double_array("mat", _mat, len*len);
+  insert_object("len", c2py_int(len));
+  insert_object("mat", c2numpy_double(_mat, len*len));
   cmd("_ = mat.reshape((len, len))");
   cmd("del len");
   cmd("del mat");
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
   cmd("v = solve(A, B)");
   double *v;
   int n;
-  array_double_numpy2c_inplace(get_symbol("v"), &v, &n);
+  numpy2c_double_inplace(get_object("v"), &v, &n);
 
   Linearizer l(&mesh);
   const char *out_filename = "solution.gp";
