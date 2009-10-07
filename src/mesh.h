@@ -7,26 +7,26 @@
 
 class Mesh {
     public:
-        Mesh(int n_eqn) {
+        Mesh(int n_eq) {
             // Print the banner (only once)
             static int n_calls = 0;
             n_calls++;
             if (n_calls == 1) intro();
-            this->n_eqn = n_eqn;
-            this->bc_left_dir = new int[n_eqn];
-            this->bc_left_dir_values = new double[n_eqn];
-            this->bc_right_dir = new int[n_eqn];
-            this->bc_right_dir_values = new double[n_eqn];
-            for (int i=0; i<n_eqn; i++) {
+            this->n_eq = n_eq;
+            this->bc_left_dir = new int[n_eq];
+            this->bc_left_dir_values = new double[n_eq];
+            this->bc_right_dir = new int[n_eq];
+            this->bc_right_dir_values = new double[n_eq];
+            for (int i=0; i<n_eq; i++) {
                 this->bc_left_dir[i] = BC_INVALID;
                 this->bc_left_dir_values[i] = 0;
                 this->bc_right_dir[i] = BC_INVALID;
                 this->bc_right_dir_values[i] = 0;
             }
         }
-        void create(double A, double B, int n);
+        void create(double a, double b, int n_elem);
         void set_poly_orders(int poly_order);
-        void assign_dofs();
+        void assign_dofs(int n_eq);
         Vertex *get_vertices() {
             return this->vertices;
         }
@@ -56,7 +56,7 @@ class Mesh {
         double *bc_right_dir_values; // values for the Dirichlet condition
 
     private:
-        int n_eqn;
+        int n_eq;
         int n_elem;
         int n_dof;
         Vertex *vertices;
@@ -71,8 +71,8 @@ class Linearizer {
         }
         // evaluate approximate solution at element 'm' at reference 
         // point 'x_ref'. Here 'y' is the global vector of coefficients
-        void eval_approx(Element *e, double x_ref, double *y, double &x_phys,
-                double &val);
+        void eval_approx(Element *e, double x_ref, double *y, double *x_phys,
+			 double *val);
         void plot_solution(const char *out_filename, double *y_prev, int
                 plotting_elem_subdivision=100);
 

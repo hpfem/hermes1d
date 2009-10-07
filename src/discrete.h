@@ -9,19 +9,19 @@
 #include "matrix.h"
 
 typedef double (*matrix_form) (int num, double *x, double *weights,
-        double *u, double *dudx, double *v, double *dvdx, double *u_prev,
-        double *du_prevdx, void *user_data);
+        double *u, double *dudx, double *v, double *dvdx, double **u_prev,
+        double **du_prevdx, void *user_data);
 
 typedef double (*vector_form) (int num, double *x, double *weights,
-        double *u_prev, double *du_prevdx, double *v, double *dvdx,
+        double **u_prev, double **du_prevdx, double *v, double *dvdx,
         void *user_data);
 
 typedef double (*matrix_form_surf) (double x, double u, double dudx, 
-        double v, double dvdx, double u_prev, double du_prevdx, 
+        double v, double dvdx, double *u_prev, double *du_prevdx, 
         void *user_data);
 
-typedef double (*vector_form_surf) (double x, double u_prev, 
-        double du_prevdx, double v, double dvdx,
+typedef double (*vector_form_surf) (double x, double *u_prev, 
+        double *du_prevdx, double v, double dvdx,
         void *user_data);
 
 class DiscreteProblem {
@@ -67,12 +67,15 @@ private:
 	std::vector<VectorFormSurf> vector_forms_surf;
 };
 
-void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double *coeffs);
+// c is solution component
+void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double *coeffs, int c);
 
 void element_quadrature(double a, double b, 
                         int order, double *pts, double *weights, int *num);
+
 void element_shapefn(double a, double b, 
 		     int k, int order, double *val, double *der);
+
 void element_shapefn_point(double x_ref, double a, double b, 
 			   int k, double *val, double *der);
 
