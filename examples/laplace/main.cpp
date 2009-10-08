@@ -4,13 +4,13 @@
 // ********************************************************************
 
 // general input:
-static int NUM_EQ = 1;
-int Nelem = 3;                         // number of elements
+static int N_eq = 1;
+int N_elem = 3;                         // number of elements
 double A = 0, B = 2*M_PI;                // domain end points
-int P_INIT = 2;                        // initial polynomal degree
+int P_init = 2;                        // initial polynomal degree
 
 // Tolerance for Newton's method
-double TOL = 1e-8;
+double TOL = 1e-5;
 
 // right-hand side
 double f(double x) {
@@ -59,40 +59,41 @@ double residual(int num, double *x, double *weights,
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(NUM_EQ);
-  mesh.create(A, B, Nelem);
-  mesh.set_poly_orders(P_INIT);
+  Mesh mesh(N_eq);
+  mesh.create(A, B, N_elem);
+  mesh.set_poly_orders(P_init);
   mesh.set_bc_left_dirichlet(0, 1);
   mesh.set_bc_right_dirichlet(0, 5);
   mesh.assign_dofs();
 
   // register weak forms
-  DiscreteProblem dp(NUM_EQ, &mesh);
+  DiscreteProblem dp(&mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual);
 
   // variable for the total number of DOF 
-  int Ndof = mesh.get_n_dof();
+  int N_dof = mesh.get_n_dof();
+  printf("N_dof = %d\n", N_dof);
 
   // allocate Jacobi matrix and residual
   Matrix *mat;
-  double *y_prev = new double[Ndof];
-  double *res = new double[Ndof];
+  double *y_prev = new double[N_dof];
+  double *res = new double[N_dof];
 
   // zero initial condition for the Newton's method
-  for(int i=0; i<Ndof; i++) y_prev[i] = 0; 
+  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Newton's loop
   while (1) {
     // zero the matrix:
-    mat = new CooMatrix(Ndof);
+    mat = new CooMatrix(N_dof);
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
 
     // calculate L2 norm of residual vector
     double res_norm = 0;
-    for(int i=0; i<Ndof; i++) res_norm += res[i]*res[i];
+    for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
     res_norm = sqrt(res_norm);
 
     // if residual norm less than TOL, quit
@@ -100,13 +101,13 @@ int main() {
     if(res_norm < TOL) break;
 
     // changing sign of vector res
-    for(int i=0; i<Ndof; i++) res[i]*= -1;
+    for(int i=0; i<N_dof; i++) res[i]*= -1;
 
     // solving the matrix system
     solve_linear_system_umfpack((CooMatrix*)mat, res);
 
     // updating y_prev by new solution which is in res
-    for(int i=0; i<Ndof; i++) y_prev[i] += res[i];
+    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
   }
 
   Linearizer l(&mesh);

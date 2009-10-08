@@ -3,7 +3,18 @@
 
 #include "common.h"
 #include "lobatto.h"
+#include "quad_std.h"
 
+struct Vertex {
+  double x;
+};
+
+class Element {
+public:
+  Vertex *v1, *v2;  // endpoints
+  int p;            // poly degree
+  int **dof;        // connectivity array of length p+1 for every solution component
+};
 
 class Mesh {
     public:
@@ -25,8 +36,8 @@ class Mesh {
             }
         }
         void create(double a, double b, int n_elem);
-        void set_poly_orders(int poly_order);
-        void assign_dofs(int n_eq);
+        void set_uniform_poly_order(int poly_order);
+        void assign_dofs();
         Vertex *get_vertices() {
             return this->vertices;
         }
@@ -39,6 +50,18 @@ class Mesh {
         int get_n_dof() {
             return this->n_dof;
         }
+        int get_n_eq() {
+            return this->n_eq;
+        }
+        void calculate_elem_coeffs(int m, double *y_prev, double coeffs[10][100]);
+        void element_solution(Element *e, double coeff[10][100], int pts_num, 
+		      double pts_array[100], double val[10][100], double der[10][100]);
+        void element_solution_point(double x_ref, Element *e, 
+			    double coeff[10][100], double *val, double *der);
+        void element_shapefn(double a, double b, 
+			     int k, int order, double *val, double *der);
+        void element_shapefn_point(double x_ref, double a, double b, 
+				   int k, double *val, double *der);
         void set_bc_left_dirichlet(int eq_n, double val);
         void set_bc_left_natural(int eqn);
         void set_bc_right_dirichlet(int eq_n, double val);
@@ -74,16 +97,11 @@ class Linearizer {
         void eval_approx(Element *e, double x_ref, double *y, double *x_phys,
 			 double *val);
         void plot_solution(const char *out_filename, double *y_prev, int
-                plotting_elem_subdivision=100);
+			   plotting_elem_subdivision=50);  
+        //FIXME: code needs to be fixed to allow plotting_elem_subdivision to be 100 and more
 
     private:
         Mesh *mesh;
 };
-
-void element_solution(Element *e, double *coeff, int pts_num, 
-        double *pts_array, double *val, double *der);
-
-void element_solution_point(double x_ref, Element *e, 
-			    double *coeff, double *val, double *der);
 
 #endif

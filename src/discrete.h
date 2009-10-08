@@ -9,11 +9,11 @@
 #include "matrix.h"
 
 typedef double (*matrix_form) (int num, double *x, double *weights,
-        double *u, double *dudx, double *v, double *dvdx, double **u_prev,
-        double **du_prevdx, void *user_data);
+        double *u, double *dudx, double *v, double *dvdx, double u_prev[10][100],
+        double du_prevdx[10][100], void *user_data);
 
 typedef double (*vector_form) (int num, double *x, double *weights,
-        double **u_prev, double **du_prevdx, double *v, double *dvdx,
+        double u_prev[10][100], double du_prevdx[10][100], double *v, double *dvdx,
         void *user_data);
 
 typedef double (*matrix_form_surf) (double x, double u, double dudx, 
@@ -27,22 +27,24 @@ typedef double (*vector_form_surf) (double x, double *u_prev,
 class DiscreteProblem {
 
 public:
-    DiscreteProblem(int neq, Mesh *mesh);
+    DiscreteProblem(Mesh *mesh);
 
     void add_matrix_form(int i, int j, matrix_form fn);
     void add_vector_form(int i, vector_form fn);
     void add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index);
     void add_vector_form_surf(int i, vector_form_surf fn, int bdy_index);
-    void process_vol_forms(Matrix *mat, double *res, double *y_prev, int matrix_flag);
+    // c is solution component
+    void process_vol_forms(Matrix *mat, double *res, double *y_prev, int matrix_flag, int c);
+    // c is solution component
     void process_surf_forms(Matrix *mat, double *res, double *y_prev, 
-                            int matrix_flag, int bdy_index);
+                            int matrix_flag, int bdy_index, int c);
     void assemble(Matrix *mat, double *res, double *y_prev, int matrix_flag);
     void assemble_matrix_and_vector(Matrix *mat, double *res, double *y_prev); 
     void assemble_matrix(Matrix *mat, double *y_prev);
     void assemble_vector(double *res, double *y_prev);
 
 private:
-    int neq;
+    int n_eq;
     Mesh *mesh;
 
 	struct MatrixFormVol {
@@ -67,8 +69,9 @@ private:
 	std::vector<VectorFormSurf> vector_forms_surf;
 };
 
-// c is solution component
-void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double *coeffs, int c);
+// return coefficients for all shape functions on the element m,
+// for all solution components
+void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double **coeffs, int n_eq);
 
 void element_quadrature(double a, double b, 
                         int order, double *pts, double *weights, int *num);

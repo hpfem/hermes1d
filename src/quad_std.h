@@ -1674,16 +1674,10 @@ static int std_np_1d[] =
   sizeof(std_pts_98_99_1d) / sizeof(double2)
 };
 
+extern Quad1DStd g_quad_1d_std;
 
-Quad1DStd::Quad1DStd()
-{
-  tables = std_tables_1d;
-  np = std_np_1d;
-  ref_vert[0] = -1.0;
-  ref_vert[1] = 1.0;
-  max_order = 99;
-}
-
-Quad1DStd g_quad_1d_std;
-
+// transformation of quadrature to physical element
+void create_element_quadrature(double a, double b, 
+                        int order, double *pts, 
+			       double *weights, int *num);
 #endif

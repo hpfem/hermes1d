@@ -20,3 +20,15 @@ void throw_exception(char *text)
 {
     throw std::runtime_error(text);
 }
+
+double **dmalloc(int n_eq) {
+    double **pointer = (double**)malloc(n_eq*sizeof(double*));
+    if(pointer == NULL) error("dmalloc failed.");
+    return pointer;
+}
+
+int **imalloc(int n_eq) {
+    int **pointer = (int**)malloc(n_eq*sizeof(int*));
+    if(pointer == NULL) error("imalloc failed.");
+    return pointer;
+}

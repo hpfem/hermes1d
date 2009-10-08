@@ -4,10 +4,10 @@
 // ********************************************************************
 
 // general input:
-static int NUM_EQ = 1;
-int Nelem = 30;                         // number of elements
+static int N_eq = 1;
+int N_elem = 30;                         // number of elements
 double A = 0, B = 2*M_PI;              // domain end points
-int P_INIT = 1;                        // initial polynomal degree
+int P_init = 1;                        // initial polynomal degree
 
 // boundary conditions
 double val_dir_left = 0;
@@ -94,9 +94,9 @@ double residual_surf_right(double x, double u_prev, double du_prevdx, double v,
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(NUM_EQ);
-  mesh.create(A, B, Nelem);
-  mesh.set_poly_orders(P_INIT);
+  Mesh mesh(N_eq);
+  mesh.create(A, B, N_elem);
+  mesh.set_poly_orders(P_init);
 
   // boundary conditions
   mesh.set_bc_left_dirichlet(0, val_dir_left);
@@ -104,43 +104,43 @@ int main() {
   mesh.assign_dofs();
 
   // register weak forms
-  DiscreteProblem dp(NUM_EQ, &mesh);
+  DiscreteProblem dp(&mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual_vol);
   dp.add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
   dp.add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
   // variable for the total number of DOF 
-  int Ndof = mesh.get_n_dof();
-  printf("Ndof = %d\n", Ndof);
+  int N_dof = mesh.get_n_dof();
+  printf("N_dof = %d\n", N_dof);
 
   // allocate Jacobi matrix and residual
   Matrix *mat;
-  double *y_prev = new double[Ndof];
-  double *res = new double[Ndof];
+  double *y_prev = new double[N_dof];
+  double *res = new double[N_dof];
 
   // zero initial condition for the Newton's method
-  for(int i=0; i<Ndof; i++) y_prev[i] = 0; 
+  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   int newton_iterations = 1;
   // Newton's loop
   while (1) {
     // zero the matrix:
-    mat = new DenseMatrix(Ndof);
+    mat = new DenseMatrix(N_dof);
 
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
 
     if (DEBUG) {
         printf("RHS:");
-        for(int i=0; i<Ndof; i++)
+        for(int i=0; i<N_dof; i++)
             printf("%f ", res[i]);
         printf("\n");
     }
   
     // calculate L2 norm of residual vector
     double res_norm = 0;
-    for(int i=0; i<Ndof; i++) res_norm += res[i]*res[i];
+    for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
     res_norm = sqrt(res_norm);
 
     // if residual norm less than TOL, quit
@@ -151,7 +151,7 @@ int main() {
     if(res_norm < TOL) break;
 
     // changing sign of vector res
-    for(int i=0; i<Ndof; i++) res[i]*= -1;
+    for(int i=0; i<N_dof; i++) res[i]*= -1;
 
     //mat->print();
 
@@ -161,14 +161,14 @@ int main() {
     // DEBUG: print solution
     if(DEBUG) {
       printf("New Y:\n");
-      for(int i=0; i<Ndof; i++) {
+      for(int i=0; i<N_dof; i++) {
         printf("%g ", res[i]);
       }
       printf("\n");
     }
 
     // updating y_prev by new solution which is in res
-    for(int i=0; i<Ndof; i++) y_prev[i] += res[i];
+    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
     printf("Finished Newton iteration: %d\n", newton_iterations);
     newton_iterations++;
   }
