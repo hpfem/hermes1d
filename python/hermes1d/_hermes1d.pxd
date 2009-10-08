@@ -95,3 +95,8 @@ cdef extern from "hermes1d.h":
         void set_dirichlet_bc_left(int eq_n, double val)
         void set_dirichlet_bc_right(int eq_n, double val)
     c_Mesh *new_Mesh "new Mesh" (int eq_num)
+
+    cdef struct c_Linearizer "Linearizer":
+        void plot_solution(char *out_filename, double *y_prev,
+                int plotting_elem_subdivision)
+    c_Linearizer *new_Linearizer "new Linearizer" (c_Mesh *mesh)

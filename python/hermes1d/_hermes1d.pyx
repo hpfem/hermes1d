@@ -24,6 +24,21 @@ cdef class Mesh:
     def __dealloc__(self):
         delete(self.thisptr)
 
+cdef class Linearizer:
+    cdef c_Linearizer *thisptr
+
+    def __cinit__(self, Mesh mesh):
+        self.thisptr = new_Linearizer(mesh.thisptr)
+
+    def plot_solution(self, out_filename, y_prev, plotting_elem_subdivision):
+        cdef double *A
+        cdef int n
+        numpy2c_double_inplace(y_prev, &A, &n)
+        self.thisptr.plot_solution(out_filename, A, plotting_elem_subdivision)
+
+
+#-----------------------------------------------------------------------
+# Common C++ <-> Python+NumPy conversion tools:
 
 import sys
 import traceback
