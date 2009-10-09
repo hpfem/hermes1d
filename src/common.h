@@ -13,6 +13,9 @@
 #define BC_NATURAL 0
 #define BC_DIRICHLET 1
 
+const int MAX_EQN = 10;
+const int MAX_POINTS = 101;  // refers both to plotting subdivision and Gauss quadrature points
+
 void error(const char *msg);
 
 typedef double scalar;
