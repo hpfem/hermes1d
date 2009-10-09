@@ -19,4 +19,5 @@ def solve(A, B):
             break
         print w
     vec0 = r[0][1]
-    return vec0
+    E = r[0][0]
+    return E, vec0

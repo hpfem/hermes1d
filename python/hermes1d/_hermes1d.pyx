@@ -91,6 +91,9 @@ cdef api object c2py_int(int i):
 cdef api int py2c_int(object i):
     return i
 
+cdef api double py2c_double(object i):
+    return i
+
 cdef api object c2numpy_int(int *A, int len):
     """
     Construct the integer NumPy array by copying the data.

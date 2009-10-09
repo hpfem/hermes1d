@@ -10,7 +10,6 @@
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
 
-#define BC_INVALID -1
 #define BC_NATURAL 0
 #define BC_DIRICHLET 1
 

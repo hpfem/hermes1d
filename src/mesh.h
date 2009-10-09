@@ -29,9 +29,9 @@ class Mesh {
             this->bc_right_dir = new int[n_eq];
             this->bc_right_dir_values = new double[n_eq];
             for (int i=0; i<n_eq; i++) {
-                this->bc_left_dir[i] = BC_INVALID;
+                this->bc_left_dir[i] = BC_NATURAL;
                 this->bc_left_dir_values[i] = 0;
-                this->bc_right_dir[i] = BC_INVALID;
+                this->bc_right_dir[i] = BC_NATURAL;
                 this->bc_right_dir_values[i] = 0;
             }
         }

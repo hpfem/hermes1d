@@ -128,7 +128,7 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
 	  }
 	}
       }
-      }
+      }}
 
     // volumetric part of residual
     if(matrix_flag == 0 || matrix_flag == 2) {
@@ -167,7 +167,6 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
       }
     } 
   }
-}
 }
 
 // process boundary weak forms

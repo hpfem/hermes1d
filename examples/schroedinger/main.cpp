@@ -2,12 +2,12 @@
 
 #include "_hermes1d_api.h"
 
-static int NUM_EQ = 1;
-int Nelem = 100;                         // number of elements
-double A = 0, B = 30;                // domain end points
-int P_INIT = 2;                        // initial polynomal degree
+static int N_eq = 1;
+int N_elem = 10;                         // number of elements
+double A = 0, B = 10;                // domain end points
+int P_init = 2;                        // initial polynomal degree
 
-double l = 1;
+double l = 0;
 
 double lhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
@@ -34,6 +34,25 @@ double rhs(int num, double *x, double *weights,
   return val;
 }
 
+double E;
+
+double residual(int num, double *x, double *weights, double u_prev[10][100],
+        double du_prevdx[10][100], double *v, double *dvdx, void *user_data)
+{
+    double *u = &u_prev[0][0];
+    double *dudx = &du_prevdx[0][0];
+    double val = 0;
+    for(int i = 0; i<num; i++) {
+        double coeff;
+        coeff = 0.5*x[i]*x[i]*dudx[i]*dvdx[i] -u[i]*v[i]*x[i]
+            + 0.5 * (l + 1)*l *u[i]*v[i];
+        coeff -= E*u[i]*v[i]*x[i]*x[i];
+        val += coeff*weights[i];
+    }
+    return val;
+}
+
+
 void insert_matrix(DenseMatrix *mat, int len)
 {
   double _mat[len*len];
@@ -50,11 +69,13 @@ void insert_matrix(DenseMatrix *mat, int len)
 /******************************************************************************/
 int main(int argc, char* argv[]) {
   // create mesh
-  Mesh mesh(NUM_EQ);
-  mesh.create(A, B, Nelem);
-  mesh.set_uniform_poly_order(P_INIT);
-  mesh.set_bc_left_dirichlet(0, 0);
-  mesh.assign_dofs();
+  Mesh mesh(N_eq);
+  mesh.create(A, B, N_elem);
+  mesh.set_uniform_poly_order(P_init);
+
+  // variable for the total number of DOF 
+  int N_dof = mesh.assign_dofs();
+  printf("ndofs: %d", N_dof);
 
   // register weak forms
   DiscreteProblem dp1(&mesh);
@@ -62,16 +83,16 @@ int main(int argc, char* argv[]) {
   DiscreteProblem dp2(&mesh);
   dp2.add_matrix_form(0, 0, rhs);
 
-  // variable for the total number of DOF 
-  int Ndof = mesh.get_n_dof();
+  DiscreteProblem dp3(&mesh);
+  dp3.add_vector_form(0, residual);
 
   // allocate Jacobi matrix and residual
-  DenseMatrix *mat1 = new DenseMatrix(Ndof);
-  DenseMatrix *mat2 = new DenseMatrix(Ndof);
-  double *y_prev = new double[Ndof];
+  DenseMatrix *mat1 = new DenseMatrix(N_dof);
+  DenseMatrix *mat2 = new DenseMatrix(N_dof);
+  double *y_prev = new double[N_dof];
 
   // zero initial condition for the Newton's method
-  for(int i=0; i<Ndof; i++) y_prev[i] = 0; 
+  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   dp1.assemble_matrix(mat1, y_prev);
   dp2.assemble_matrix(mat2, y_prev);
@@ -84,19 +105,32 @@ int main(int argc, char* argv[]) {
       throw std::runtime_error("hermes1d failed to import.");
 
   cmd("print 'Python initialized'");
-  insert_matrix(mat1, Ndof); cmd("A = _");
-  insert_matrix(mat2, Ndof); cmd("B = _");
+  insert_matrix(mat1, N_dof); cmd("A = _");
+  insert_matrix(mat2, N_dof); cmd("B = _");
   cmd("from utils import solve");
-  cmd("v = solve(A, B)");
+  cmd("E, v = solve(A, B)");
+  //cmd("print 'v[0]', v[0]");
+  //cmd("print E");
   double *v;
   int n;
   numpy2c_double_inplace(get_object("v"), &v, &n);
+
+  double *res = new double[N_dof];
+  E = py2c_double(get_object("E"));
+  printf("E=%.10f\n", E);
+  E = -0.5;
+  dp3.assemble_vector(res, v);
+  // calculate L2 norm of residual vector
+  double res_norm = 0;
+  for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
+  res_norm = sqrt(res_norm);
+  printf("L2 norm of the residual: %f\n", res_norm);
+
 
   Linearizer l(&mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, v);
 
-  printf("Output written to %s.\n", out_filename);
   cmd("import plot");
   printf("Done.\n");
   return 0;

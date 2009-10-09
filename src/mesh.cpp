@@ -68,7 +68,7 @@ int Mesh::assign_dofs()
   this->n_dof = count;
 
   // test (print element connectivities)
-  if(DEBUG) {
+  if(0) {
     printf("Printing element DOF arrays:\n");
     printf("Elements = %d\n", this->n_elem);
     printf("DOF = %d", this->n_dof);
