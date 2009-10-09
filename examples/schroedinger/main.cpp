@@ -11,7 +11,7 @@ double l = 1;
 
 double lhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx, void *user_data)
+                double u_prev[10][100], double du_prevdx[10][100], void *user_data)
 {
     double val = 0;
     for(int i = 0; i<num; i++) {
@@ -25,7 +25,7 @@ double lhs(int num, double *x, double *weights,
 
 double rhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx, void *user_data)
+                double u_prev[10][100], double du_prevdx[10][100], void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
@@ -52,14 +52,14 @@ int main(int argc, char* argv[]) {
   // create mesh
   Mesh mesh(NUM_EQ);
   mesh.create(A, B, Nelem);
-  mesh.set_poly_orders(P_INIT);
+  mesh.set_uniform_poly_order(P_INIT);
   mesh.set_bc_left_dirichlet(0, 0);
   mesh.assign_dofs();
 
   // register weak forms
-  DiscreteProblem dp1(NUM_EQ, &mesh);
+  DiscreteProblem dp1(&mesh);
   dp1.add_matrix_form(0, 0, lhs);
-  DiscreteProblem dp2(NUM_EQ, &mesh);
+  DiscreteProblem dp2(&mesh);
   dp2.add_matrix_form(0, 0, rhs);
 
   // variable for the total number of DOF 
