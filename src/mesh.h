@@ -37,7 +37,7 @@ class Mesh {
         }
         void create(double a, double b, int n_elem);
         void set_uniform_poly_order(int poly_order);
-        void assign_dofs();
+        int assign_dofs();
         Vertex *get_vertices() {
             return this->vertices;
         }

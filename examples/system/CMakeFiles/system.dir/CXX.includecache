@@ -4,6 +4,8 @@
 
 #IncludeRegexComplain: ^$
 
+#IncludeRegexTransform: 
+
 /home/pavel/hermes1d/examples/system/main.cpp
 hermes1d.h
 /home/pavel/hermes1d/examples/system/hermes1d.h

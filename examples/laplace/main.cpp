@@ -3,16 +3,24 @@
 
 // ********************************************************************
 
-// general input:
+// This example solves the Poisson equation -u'' - f = 0 in
+// an interval (A, B), equipped with Dirichlet boundary
+// conditions on both end points. 
+
+// General input:
 static int N_eq = 1;
 int N_elem = 3;                         // number of elements
-double A = 0, B = 2*M_PI;                // domain end points
-int P_init = 2;                        // initial polynomal degree
+double A = 0, B = 2*M_PI;               // domain end points
+int P_init = 2;                         // initial polynomal degree
 
-// Tolerance for Newton's method
+// Boundary conditions
+double Val_dir_left = 1;                // Dirichlet condition left
+double Val_dir_right = 1;               // Dirichlet condition right
+
+// Tolerance for the Newton's method
 double TOL = 1e-5;
 
-// right-hand side
+// Function f(x)
 double f(double x) {
   return sin(x);
   //return 1;
@@ -26,10 +34,11 @@ double f(double x) {
 // weights[]...Gauss weights for points in x[]
 // u...basis function
 // v...test function
-// u_prev...previous solution
+// u_prev...previous solution (all solution components)
 double jacobian(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx, void *user_data)
+                double u_prev[10][100], double du_prevdx[10][100], 
+                void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
@@ -44,14 +53,14 @@ double jacobian(int num, double *x, double *weights,
 // weights[]...Gauss weights for points in x[]
 // u...approximate solution
 // v...test function
-// u_prev...previous solution
+// u_prev...previous solution (all solution components)
 double residual(int num, double *x, double *weights, 
-                double *u_prev, double *du_prevdx, double *v, double *dvdx,
-                void *user_data)
+                double u_prev[10][100], double du_prevdx[10][100], 
+                double *v, double *dvdx, void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (du_prevdx[i]*dvdx[i] - f(x[i])*v[i])*weights[i];
+    val += (du_prevdx[0][i]*dvdx[i] - f(x[i])*v[i])*weights[i];
   }
   return val;
 };
@@ -61,19 +70,16 @@ int main() {
   // create mesh
   Mesh mesh(N_eq);
   mesh.create(A, B, N_elem);
-  mesh.set_poly_orders(P_init);
-  mesh.set_bc_left_dirichlet(0, 1);
-  mesh.set_bc_right_dirichlet(0, 5);
-  mesh.assign_dofs();
+  mesh.set_uniform_poly_order(P_init);
+  mesh.set_bc_left_dirichlet(0, Val_dir_left);
+  mesh.set_bc_right_dirichlet(0, Val_dir_right);
+  int N_dof = mesh.assign_dofs();
+  printf("N_dof = %d\n", N_dof);
 
   // register weak forms
   DiscreteProblem dp(&mesh);
   dp.add_matrix_form(0, 0, jacobian);
   dp.add_vector_form(0, residual);
-
-  // variable for the total number of DOF 
-  int N_dof = mesh.get_n_dof();
-  printf("N_dof = %d\n", N_dof);
 
   // allocate Jacobi matrix and residual
   Matrix *mat;
@@ -114,7 +120,6 @@ int main() {
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
-  printf("Output written to %s.\n", out_filename);
   printf("Done.\n");
   return 1;
 }

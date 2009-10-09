@@ -3,21 +3,25 @@
 
 // ********************************************************************
 
-// general input:
+// This example solves the Poisson equation -u'' - f = 0 in
+// an interval (A, B), equipped with a Dirichlet boundary
+// condition on the left and a Newton BC on the right. 
+
+// General input:
 static int N_eq = 1;
-int N_elem = 30;                         // number of elements
+int N_elem = 30;                       // number of elements
 double A = 0, B = 2*M_PI;              // domain end points
 int P_init = 1;                        // initial polynomal degree
 
-// boundary conditions
-double val_dir_left = 0;
-double val_newton_alpha = 1;
-double val_newton_beta = 1;
+// Boundary conditions
+double Val_dir_left = 0;
+double Val_newton_alpha = 1;   // must be nonzero
+double Val_newton_beta = 1;
 
-// Tolerance for Newton's method
+// Tolerance for the Newton's method
 double TOL = 1e-5;
 
-// right-hand side
+// Function f(x)
 double f(double x) {
   return sin(x);
   //return 1;
@@ -32,9 +36,10 @@ double f(double x) {
 // u...basis function
 // v...test function
 // u_prev...previous solution
-double jacobian(int num, double *x, double *weights, 
+double jacobian_vol(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double *u_prev, double *du_prevdx, void *user_data)
+                double u_prev[10][100], double du_prevdx[10][100], 
+                void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
@@ -44,12 +49,12 @@ double jacobian(int num, double *x, double *weights,
 };
 
 double residual_vol(int num, double *x, double *weights, 
-                double *u_prev, double *du_prevdx, double *v, double *dvdx,
-                void *user_data)
+                double u_prev[10][100], double du_prevdx[10][100], 
+                double *v, double *dvdx, void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (du_prevdx[i]*dvdx[i] - f(x[i])*v[i])*weights[i];
+    val += (du_prevdx[0][i]*dvdx[i] - f(x[i])*v[i])*weights[i];
   }
   if(DEBUG) {
     /*printf("u = ");
@@ -65,10 +70,10 @@ double residual_vol(int num, double *x, double *weights,
     for(int i=0; i<num; i++) printf("%g, ", dvdx[i]);
     printf("\n");
     printf("u_prev = ");
-    for(int i=0; i<num; i++) printf("%g, ", u_prev[i]);
+    for(int i=0; i<num; i++) printf("%g, ", u_prev[0][i]);
     printf("\n");
     printf("du_prevdx = ");
-    for(int i=0; i<num; i++) printf("%g, ", du_prevdx[i]);
+    for(int i=0; i<num; i++) printf("%g, ", du_prevdx[0][i]);
     printf("\n");
     printf("f = ");
     for(int i=0; i<num; i++) printf("%g, ", f(x[i]));
@@ -79,16 +84,17 @@ double residual_vol(int num, double *x, double *weights,
 };
 
 double jacobian_surf_right(double x, double u, double dudx,
-        double v, double dvdx, double u_prev, double du_prevdx,
-        void *user_data)
+        double v, double dvdx, double u_prev[10], 
+        double du_prevdx[10], void *user_data)
 {
-  return (1/val_newton_alpha)*u*v;
+  return (1./Val_newton_alpha)*u*v;
 }
 
-double residual_surf_right(double x, double u_prev, double du_prevdx, double v,
+double residual_surf_right(double x, double u_prev[10], 
+        double du_prevdx[10], double v,
         double dvdx, void *user_data)
 {
-  return -(val_newton_beta/val_newton_alpha) * v; 
+  return -(Val_newton_beta/Val_newton_alpha) * v; 
 }
 
 /******************************************************************************/
@@ -96,23 +102,20 @@ int main() {
   // create mesh
   Mesh mesh(N_eq);
   mesh.create(A, B, N_elem);
-  mesh.set_poly_orders(P_init);
+  mesh.set_uniform_poly_order(P_init);
 
   // boundary conditions
-  mesh.set_bc_left_dirichlet(0, val_dir_left);
+  mesh.set_bc_left_dirichlet(0, Val_dir_left);
   mesh.set_bc_right_natural(0);
-  mesh.assign_dofs();
+  int N_dof = mesh.assign_dofs();
+  printf("N_dof = %d\n", N_dof);
 
   // register weak forms
   DiscreteProblem dp(&mesh);
-  dp.add_matrix_form(0, 0, jacobian);
+  dp.add_matrix_form(0, 0, jacobian_vol);
   dp.add_vector_form(0, residual_vol);
   dp.add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
   dp.add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
-
-  // variable for the total number of DOF 
-  int N_dof = mesh.get_n_dof();
-  printf("N_dof = %d\n", N_dof);
 
   // allocate Jacobi matrix and residual
   Matrix *mat;
@@ -178,7 +181,6 @@ int main() {
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
-  printf("Output written to %s.\n", out_filename);
   printf("Done.\n");
   return 1;
 }

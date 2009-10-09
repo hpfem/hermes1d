@@ -34,10 +34,10 @@ public:
     void add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index);
     void add_vector_form_surf(int i, vector_form_surf fn, int bdy_index);
     // c is solution component
-    void process_vol_forms(Matrix *mat, double *res, double *y_prev, int matrix_flag, int c);
+    void process_vol_forms(Matrix *mat, double *res, double *y_prev, int matrix_flag);
     // c is solution component
     void process_surf_forms(Matrix *mat, double *res, double *y_prev, 
-                            int matrix_flag, int bdy_index, int c);
+                            int matrix_flag, int bdy_index);
     void assemble(Matrix *mat, double *res, double *y_prev, int matrix_flag);
     void assemble_matrix_and_vector(Matrix *mat, double *res, double *y_prev); 
     void assemble_matrix(Matrix *mat, double *y_prev);

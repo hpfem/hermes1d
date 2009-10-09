@@ -30,7 +30,7 @@ void Mesh::set_uniform_poly_order(int poly_order)
   }
 }
 
-void Mesh::assign_dofs()
+int Mesh::assign_dofs()
 {
   // define element connectivities
   // (so far only for zero Dirichlet conditions)
@@ -40,7 +40,7 @@ void Mesh::assign_dofs()
     if (this->bc_left_dir[c])
         elems[0].dof[c][0] = -1;        // Dirichlet BC on the left
     else {
-        elems[0].dof[c][0] = count;        // No Dirichlet BC on the left
+        elems[0].dof[c][0] = count;     // No Dirichlet BC on the left
         count++;
     }
     elems[0].dof[c][1] = count;         // first vertex dof
@@ -52,15 +52,15 @@ void Mesh::assign_dofs()
     elems[this->n_elem-1].dof[c][0] = count;
     count++;
     if (this->bc_right_dir[c])
-        elems[this->n_elem-1].dof[c][1] = -1;      // Dirichlet BC on the right
+        elems[this->n_elem-1].dof[c][1] = -1;    // Dirichlet BC on the right
     else {
-        elems[this->n_elem-1].dof[c][1] = count;        // No Dirichlet BC on the right
+        elems[this->n_elem-1].dof[c][1] = count; // No Dirichlet BC on the right
         count++;
     }
     // (b) enumerate bubble dofs
     for(int i=0; i<this->n_elem; i++) {
       for(int j=2; j<=elems[i].p; j++) {
-        elems[i].dof[c][j] = count;     // enumerating higher-order dofs
+        elems[i].dof[c][j] = count;              // enumerating higher-order dofs
         count++;
       }
     }
@@ -81,12 +81,16 @@ void Mesh::assign_dofs()
       }
     }
     printf("\n"); 
+    exit(0);
   }
+
+  return this->n_dof;
 }
 
 // return coefficients for all shape functions on the element m,
 // for all solution components
-void Mesh::calculate_elem_coeffs(int m, double *y_prev, double coeffs[10][100])
+void Mesh::calculate_elem_coeffs(int m, double *y_prev, 
+                                 double coeffs[10][100])
 {
   for(int c=0; c<n_eq; c++) {
     if (m == 0 && elems[m].dof[c][0] == -1) {
@@ -110,7 +114,8 @@ void Mesh::calculate_elem_coeffs(int m, double *y_prev, double coeffs[10][100])
 // evaluate previous solution and its derivative 
 // in the "pts_array" points
 void Mesh::element_solution(Element *e, double coeff[10][100], int pts_num, 
-		            double pts_array[100], double val[10][100], double der[10][100])
+		            double pts_array[100], double val[10][100], 
+                            double der[10][100])
 {
   double a = e->v1->x;
   double b = e->v2->x;
@@ -196,7 +201,8 @@ void Mesh::set_bc_right_natural(int eq_n)
 // Tvaluate (vector-valued) approximate solution at reference 
 // point 'x_ref' in element 'm'. Here 'y' is the global vector 
 // of coefficients. The result is a vector of length mesh->n_eq
-void Linearizer::eval_approx(Element *e, double x_ref, double *y, double *x_phys, double *val) {
+void Linearizer::eval_approx(Element *e, double x_ref, double *y, 
+                             double *x_phys, double *val) {
   int n_eq = this->mesh->get_n_eq();
   for(int c=0; c<n_eq; c++) { // loop over solution components
     val[c] = 0;
@@ -211,7 +217,8 @@ void Linearizer::eval_approx(Element *e, double x_ref, double *y, double *x_phys
 }
 
 // Plot solution in Gnuplot format
-void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plotting_elem_subdivision)
+void Linearizer::plot_solution(const char *out_filename, 
+                               double *y_prev, int plotting_elem_subdivision)
 {
   int n_eq = this->mesh->get_n_eq();
   int n_elem = this->mesh->get_n_elems();  
@@ -221,13 +228,14 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
   FILE *f[10];
   char final_filename[10][200];
   for(int c=0; c<n_eq; c++) {
-    if(n_eq == 0) sprintf(final_filename[c], "%s", out_filename);
+    if(n_eq == 1) sprintf(final_filename[c], "%s", out_filename);
     else sprintf(final_filename[c], "%s_%d", out_filename, c);
     f[c] = fopen(final_filename[c], "wb");
     if(f[c] == NULL) error("problem opening file in plot_solution().");
   }
   // FIXME
-  if(plotting_elem_subdivision > 1000) error ("plotting_elem_subdivision too high in plot_solution()."); 
+  if(plotting_elem_subdivision > 100) 
+  error ("plotting_elem_subdivision too high in plot_solution()."); 
   double phys_u_prev[10][100];
   double phys_du_prevdx[10][100];
   for(int m=0; m<n_elem; m++) {
@@ -236,7 +244,7 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
     double coeffs[10][100];
     this->mesh->calculate_elem_coeffs(m, y_prev, coeffs); 
 
-    double pts_array[1000];
+    double pts_array[100];
     double h = 2./plotting_elem_subdivision;
 
     for (int j=0; j<plotting_elem_subdivision+1; j++) pts_array[j] = -1 + j*h;
@@ -247,13 +255,14 @@ void Linearizer::plot_solution(const char *out_filename, double *y_prev, int plo
     // loop over solution components
     for(int c=0; c<n_eq; c++) {
       for (int j=0; j<plotting_elem_subdivision+1; j++) {
-        fprintf(f[c], "%g %g\n", (a + b)/2 + pts_array[j] * (b-a)/2, phys_u_prev[c][j]);
+        fprintf(f[c], "%g %g\n", (a + b)/2  
+                + pts_array[j] * (b-a)/2, phys_u_prev[c][j]);
       }
     }
-    for(int c=0; c<n_eq; c++) {
-      printf("Output written to %s.\n", final_filename[c]);
-      fclose(f[c]);
-    }
+  }
+  for(int c=0; c<n_eq; c++) {
+    printf("Output written to %s.\n", final_filename[c]);
+    fclose(f[c]);
   }
 }
 
