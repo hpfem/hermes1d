@@ -1,1 +1,0 @@
-/usr/bin/c++      CMakeFiles/laplace.dir/main.cpp.o  -o laplace -rdynamic ../../src/libhermes1d.so -lumfpack -lamd -lblas -Wl,-rpath,/home/pavel/hermes1d/src 
