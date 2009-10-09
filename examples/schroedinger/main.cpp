@@ -11,7 +11,8 @@ double l = 0;
 
 double lhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[10][100], double du_prevdx[10][100], void *user_data)
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                void *user_data)
 {
     double val = 0;
     for(int i = 0; i<num; i++) {
@@ -25,7 +26,8 @@ double lhs(int num, double *x, double *weights,
 
 double rhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[10][100], double du_prevdx[10][100], void *user_data)
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
@@ -36,8 +38,8 @@ double rhs(int num, double *x, double *weights,
 
 double E;
 
-double residual(int num, double *x, double *weights, double u_prev[10][100],
-        double du_prevdx[10][100], double *v, double *dvdx, void *user_data)
+double residual(int num, double *x, double *weights, double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
+        double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], double *v, double *dvdx, void *user_data)
 {
     double *u = &u_prev[0][0];
     double *dudx = &du_prevdx[0][0];

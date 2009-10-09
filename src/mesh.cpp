@@ -90,7 +90,7 @@ int Mesh::assign_dofs()
 // return coefficients for all shape functions on the element m,
 // for all solution components
 void Mesh::calculate_elem_coeffs(int m, double *y_prev, 
-                                 double coeffs[10][100])
+                                 double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM])
 {
   for(int c=0; c<n_eq; c++) {
     if (m == 0 && elems[m].dof[c][0] == -1) {
@@ -113,9 +113,9 @@ void Mesh::calculate_elem_coeffs(int m, double *y_prev,
 
 // evaluate previous solution and its derivative 
 // in the "pts_array" points
-void Mesh::element_solution(Element *e, double coeff[10][100], int pts_num, 
-		            double pts_array[100], double val[10][100], 
-                            double der[10][100])
+void Mesh::element_solution(Element *e, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], int pts_num, 
+		            double pts_array[MAX_PTS_NUM], double val[MAX_EQN_NUM][MAX_PTS_NUM], 
+                            double der[MAX_EQN_NUM][MAX_PTS_NUM])
 {
   double a = e->v1->x;
   double b = e->v2->x;
@@ -136,7 +136,7 @@ void Mesh::element_solution(Element *e, double coeff[10][100], int pts_num,
 // evaluate previous solution and its derivative 
 // at the reference point x_ref to element 'e'.
 void Mesh::element_solution_point(double x_ref, Element *e, 
-			    double coeff[10][100], double *val, double *der)
+			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], double *val, double *der)
 {
   double a = e->v1->x;
   double b = e->v2->x;
@@ -225,8 +225,8 @@ void Linearizer::plot_solution(const char *out_filename,
   Element *elems = this->mesh->get_elems();
   // FIXME: 
   if(n_eq > 10) error ("number of equations too high in plot_solution()."); 
-  FILE *f[10];
-  char final_filename[10][200];
+  FILE *f[MAX_EQN_NUM];
+  char final_filename[MAX_EQN_NUM][100];
   for(int c=0; c<n_eq; c++) {
     if(n_eq == 1) sprintf(final_filename[c], "%s", out_filename);
     else sprintf(final_filename[c], "%s_%d", out_filename, c);
@@ -236,15 +236,15 @@ void Linearizer::plot_solution(const char *out_filename,
   // FIXME
   if(plotting_elem_subdivision > 100) 
   error ("plotting_elem_subdivision too high in plot_solution()."); 
-  double phys_u_prev[10][100];
-  double phys_du_prevdx[10][100];
+  double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];
   for(int m=0; m<n_elem; m++) {
     // FIXME:
     if(elems[m].p > 90) error ("element degree too hign in plot(solution)."); 
-    double coeffs[10][100];
+    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
     this->mesh->calculate_elem_coeffs(m, y_prev, coeffs); 
 
-    double pts_array[100];
+    double pts_array[MAX_PTS_NUM];
     double h = 2./plotting_elem_subdivision;
 
     for (int j=0; j<plotting_elem_subdivision+1; j++) pts_array[j] = -1 + j*h;

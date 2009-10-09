@@ -37,7 +37,7 @@ double f(double x) {
 // u_prev...previous solution
 double jacobian_vol(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[10][100], double du_prevdx[10][100], 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
                 void *user_data)
 {
   double val = 0;
@@ -48,7 +48,7 @@ double jacobian_vol(int num, double *x, double *weights,
 };
 
 double residual_vol(int num, double *x, double *weights, 
-                double u_prev[10][100], double du_prevdx[10][100], 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
                 double *v, double *dvdx, void *user_data)
 {
   double val = 0;
@@ -82,7 +82,7 @@ double residual_vol(int num, double *x, double *weights,
   return val;
 };
 
-double residual_surf_right(double x, double u_prev[10], double du_prevdx[10],
+double residual_surf_right(double x, double u_prev[MAX_EQN_NUM], double du_prevdx[MAX_EQN_NUM],
         double v, double dvdx, void *user_data)
 {
     // FIXME: Later, the value 'Val_neum_right' will enter through user_data,

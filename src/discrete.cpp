@@ -38,19 +38,19 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
   for(int m=0; m < n_elem; m++) {
     //printf("Processing elem %d\n", m);
     // variables to store quadrature data
-    // FIXME: now maximum number of Gauss points is 100
+    // FIXME: now maximum number of Gauss points is [MAX_EQN_NUM][MAX_PTS_NUM]0
     int    pts_num = 0;       // num of quad points
-    double phys_pts[100];     // quad points
-    double phys_weights[100]; // quad weights
-    double phys_u[100];       // basis function 
-    double phys_dudx[100];    // basis function x-derivative
-    double phys_v[100];       // test function
-    double phys_dvdx[100];    // test function x-derivative
-    // FIXME: now maximum limit of equations is 10, 
-    // and number of Gauss points is limited to 100
-    if(n_eq > 10) error("number of equations too high in process_vol_forms().");
-    double phys_u_prev[10][100];     // previous solution, all components
-    double phys_du_prevdx[10][100];  // previous solution x-derivative, all components
+    double phys_pts[MAX_PTS_NUM];                  // quad points
+    double phys_weights[MAX_PTS_NUM];              // quad weights
+    double phys_u[MAX_PTS_NUM];                    // basis function 
+    double phys_dudx[MAX_PTS_NUM];                 // basis function x-derivative
+    double phys_v[MAX_PTS_NUM];                    // test function
+    double phys_dvdx[MAX_PTS_NUM];                 // test function x-derivative
+    // FIXME: now maximum limit of equations is [MAX_EQN_NUM][MAX_PTS_NUM], 
+    // and number of Gauss points is limited to [MAX_EQN_NUM][MAX_PTS_NUM]0
+    if(n_eq > MAX_EQN_NUM) error("number of equations too high in process_vol_forms().");
+    double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];     // previous solution, all components
+    double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];  // previous solution x-derivative, all components
     // decide quadrature order and set up 
     // quadrature weights and points in element m
     // FIXME: for some equations this may not be enough!
@@ -61,14 +61,14 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
 	               order, phys_pts, phys_weights, &pts_num); 
 
     // prepare quadrature points in reference interval (-1, 1)
-    double ref_pts_array[100];
+    double ref_pts_array[MAX_PTS_NUM];
     double2 *ref_tab = g_quad_1d_std.get_points(order);
     for (int j=0; j<pts_num; j++) ref_pts_array[j] = ref_tab[j][0];
 
     // evaluate previous solution and its derivative 
     // at all quadrature points in the element, 
     // for every solution component
-    double coeffs[10][100];
+    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
     this->mesh->calculate_elem_coeffs(m, y_prev, coeffs); 
     this->mesh->element_solution(elems + m, coeffs, pts_num, 
                      ref_pts_array, phys_u_prev, phys_du_prevdx); 
@@ -175,8 +175,9 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
                                          int bdy_index) {
   Element *elems = this->mesh->get_elems();
   // evaluate previous solution and its derivative at the end point
-  // FIXME: maximum number of equations limited by 10
-  double phys_u_prev[10], phys_du_prevdx[10]; // at the end point
+  // FIXME: maximum number of equations limited by [MAX_EQN_NUM][MAX_PTS_NUM]
+  double phys_u_prev[MAX_EQN_NUM], 
+         phys_du_prevdx[MAX_EQN_NUM]; // at the end point
 
   // decide whether we are on the left-most or right-most one
   int m;
@@ -184,7 +185,7 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
   else m = this->mesh->get_n_elems() - 1; // last element
 
   // calculate coefficients of shape functions on element m
-  double coeffs[10][100];
+  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
   this->mesh->calculate_elem_coeffs(m, y_prev, coeffs); 
   double x_ref; 
   if(bdy_index == BOUNDARY_LEFT) x_ref = -1; // left end of reference element

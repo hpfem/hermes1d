@@ -37,7 +37,7 @@ double f(double x) {
 // u_prev...previous solution (all solution components)
 double jacobian(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[10][100], double du_prevdx[10][100], 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
                 void *user_data)
 {
   double val = 0;
@@ -55,7 +55,7 @@ double jacobian(int num, double *x, double *weights,
 // v...test function
 // u_prev...previous solution (all solution components)
 double residual(int num, double *x, double *weights, 
-                double u_prev[10][100], double du_prevdx[10][100], 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],  
                 double *v, double *dvdx, void *user_data)
 {
   double val = 0;

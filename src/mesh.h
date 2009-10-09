@@ -23,6 +23,9 @@ class Mesh {
             static int n_calls = 0;
             n_calls++;
             if (n_calls == 1) intro();
+            // check maximum number of equations
+            if(n_eq > MAX_EQN_NUM) 
+              error("Maximum number of equations exceeded (set in common.h)");
             this->n_eq = n_eq;
             this->bc_left_dir = new int[n_eq];
             this->bc_left_dir_values = new double[n_eq];
@@ -53,11 +56,12 @@ class Mesh {
         int get_n_eq() {
             return this->n_eq;
         }
-        void calculate_elem_coeffs(int m, double *y_prev, double coeffs[10][100]);
-        void element_solution(Element *e, double coeff[10][100], int pts_num, 
-		      double pts_array[100], double val[10][100], double der[10][100]);
+        void calculate_elem_coeffs(int m, double *y_prev, double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM]);
+        void element_solution(Element *e, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], int pts_num, 
+		      double pts_array[MAX_PTS_NUM], double val[MAX_EQN_NUM][MAX_PTS_NUM], 
+                      double der[MAX_EQN_NUM][MAX_PTS_NUM]);
         void element_solution_point(double x_ref, Element *e, 
-			    double coeff[10][100], double *val, double *der);
+			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], double *val, double *der);
         void element_shapefn(double a, double b, 
 			     int k, int order, double *val, double *der);
         void element_shapefn_point(double x_ref, double a, double b, 

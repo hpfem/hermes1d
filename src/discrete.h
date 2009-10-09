@@ -9,11 +9,12 @@
 #include "matrix.h"
 
 typedef double (*matrix_form) (int num, double *x, double *weights,
-        double *u, double *dudx, double *v, double *dvdx, double u_prev[10][100],
-        double du_prevdx[10][100], void *user_data);
+        double *u, double *dudx, double *v, double *dvdx, double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
+        double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], void *user_data);
 
 typedef double (*vector_form) (int num, double *x, double *weights,
-        double u_prev[10][100], double du_prevdx[10][100], double *v, double *dvdx,
+        double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+               double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], double *v, double *dvdx,
         void *user_data);
 
 typedef double (*matrix_form_surf) (double x, double u, double dudx, 
