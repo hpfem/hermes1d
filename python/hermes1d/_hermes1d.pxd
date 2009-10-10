@@ -99,4 +99,6 @@ cdef extern from "hermes1d.h":
     cdef struct c_Linearizer "Linearizer":
         void plot_solution(char *out_filename, double *y_prev,
                 int plotting_elem_subdivision)
+        void get_xy(double *y_prev, int comp, int plotting_elem_subdivision,
+                double **x, double **y, int *n)
     c_Linearizer *new_Linearizer "new Linearizer" (c_Mesh *mesh)

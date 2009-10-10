@@ -3,8 +3,8 @@
 #include "_hermes1d_api.h"
 
 static int N_eq = 1;
-int N_elem = 10;                         // number of elements
-double A = 0, B = 10;                // domain end points
+int N_elem = 100;                         // number of elements
+double A = 0, B = 20;                // domain end points
 int P_init = 2;                        // initial polynomal degree
 
 double l = 0;
@@ -74,6 +74,8 @@ int main(int argc, char* argv[]) {
   Mesh mesh(N_eq);
   mesh.create(A, B, N_elem);
   mesh.set_uniform_poly_order(P_init);
+  // you can set the zero dirichlet at the right hand side
+  //mesh.set_bc_right_dirichlet(0, 0);
 
   // variable for the total number of DOF 
   int N_dof = mesh.assign_dofs();
@@ -110,7 +112,8 @@ int main(int argc, char* argv[]) {
   insert_matrix(mat1, N_dof); cmd("A = _");
   insert_matrix(mat2, N_dof); cmd("B = _");
   cmd("from utils import solve");
-  cmd("E, v = solve(A, B)");
+  cmd("eigs = solve(A, B)");
+  cmd("E, v = eigs[0]");
   //cmd("print 'v[0]', v[0]");
   //cmd("print E");
   double *v;
@@ -133,7 +136,12 @@ int main(int argc, char* argv[]) {
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, v);
 
-  cmd("import plot");
+  printf("still ok\n");
+  insert_object("mesh", c2py_mesh(&mesh));
+  printf("2\n");
+  cmd("from plot import plot_eigs, plot_file");
+  cmd("plot_eigs(mesh, eigs)");
+  //cmd("plot_eigs(eigs)");
   printf("Done.\n");
   return 0;
 }

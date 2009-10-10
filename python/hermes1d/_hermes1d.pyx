@@ -18,7 +18,7 @@ cdef class Element:
 cdef class Mesh:
     cdef c_Mesh *thisptr
 
-    def __cinit__(self, int eq_num):
+    def __init__(self, int eq_num):
         self.thisptr = new_Mesh(eq_num)
 
     def __dealloc__(self):
@@ -36,6 +36,23 @@ cdef class Linearizer:
         numpy2c_double_inplace(y_prev, &A, &n)
         self.thisptr.plot_solution(out_filename, A, plotting_elem_subdivision)
 
+    def get_xy(self, y_prev, int comp, int plotting_elem_subdivision):
+        """
+        Returns (x, y), where x, y are arrays of points.
+
+        y_prev is the input array of points.
+        """
+        cdef double *A
+        cdef int nA
+        numpy2c_double_inplace(y_prev, &A, &nA)
+        cdef double *x
+        cdef double *y
+        cdef int n
+        self.thisptr.get_xy(A, comp, plotting_elem_subdivision,
+                &x, &y, &n)
+        x_numpy = c2numpy_double(x, n)
+        y_numpy = c2numpy_double(y, n)
+        return x_numpy, y_numpy
 
 #-----------------------------------------------------------------------
 # Common C++ <-> Python+NumPy conversion tools:
@@ -108,6 +125,15 @@ cdef api int py2c_int(object i):
 
 cdef api double py2c_double(object i):
     return i
+
+cdef api object c2py_mesh(c_Mesh *m):
+    cdef Mesh mesh
+    print "ok1"
+    mesh = <Mesh>PY_NEW(Mesh)
+    print "ok2"
+    mesh.thisptr = <c_Mesh *>m
+    print "ok3"
+    return mesh
 
 cdef api object c2numpy_int(int *A, int len):
     """

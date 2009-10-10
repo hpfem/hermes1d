@@ -223,8 +223,9 @@ void Linearizer::plot_solution(const char *out_filename,
   int n_eq = this->mesh->get_n_eq();
   int n_elem = this->mesh->get_n_elems();  
   Element *elems = this->mesh->get_elems();
-  // FIXME: 
-  if(n_eq > 10) error ("number of equations too high in plot_solution()."); 
+  // FIXME:
+  if(n_eq > MAX_EQN_NUM)
+      error("number of equations too high in plot_solution().");
   FILE *f[MAX_EQN_NUM];
   char final_filename[MAX_EQN_NUM][100];
   for(int c=0; c<n_eq; c++) {
@@ -266,3 +267,58 @@ void Linearizer::plot_solution(const char *out_filename,
   }
 }
 
+// Returns pointers to x and y coordinates in **x and **y
+// you should free it yourself when you don't need it anymore
+// y_prev --- the solution coefficients (all equations)
+// comp --- which component you want to process
+// plotting_elem_subdivision --- the number of subdivision of the element
+// x, y --- the doubles list of x,y
+// n --- the number of points
+
+void Linearizer::get_xy(double *y_prev, int comp,
+        int plotting_elem_subdivision,
+        double **x, double **y, int *n)
+{
+    int n_eq = this->mesh->get_n_eq();
+    int n_elem = this->mesh->get_n_elems();
+    Element *elems = this->mesh->get_elems();
+
+    *n = n_elem * (plotting_elem_subdivision+1);
+    double *x_out = new double[*n];
+    double *y_out = new double[*n];
+
+    // FIXME:
+    if(n_eq > MAX_EQN_NUM)
+        error("number of equations too high in plot_solution().");
+    // FIXME
+    if(plotting_elem_subdivision > MAX_PTS_NUM)
+        error("plotting_elem_subdivision too high in plot_solution().");
+    double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];
+    double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];
+    for(int m=0; m<n_elem; m++) {
+        // FIXME:
+        if(elems[m].p > 90)
+            error("element degree too hign in plot(solution).");
+        double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
+        this->mesh->calculate_elem_coeffs(m, y_prev, coeffs);
+
+        double pts_array[MAX_PTS_NUM];
+        double h = 2./plotting_elem_subdivision;
+
+        for (int j=0; j<plotting_elem_subdivision+1; j++)
+            pts_array[j] = -1 + j*h;
+        this->mesh->element_solution(elems + m, coeffs,
+                plotting_elem_subdivision+1, pts_array,
+                phys_u_prev, phys_du_prevdx);
+        double a = elems[m].v1->x;
+        double b = elems[m].v2->x;
+        for (int j=0; j<plotting_elem_subdivision+1; j++) {
+            x_out[m*(plotting_elem_subdivision+1) + j] =
+                (a + b)/2 + pts_array[j] * (b-a)/2;
+            y_out[m*(plotting_elem_subdivision+1) + j] =
+                phys_u_prev[comp][j];
+        }
+    }
+    *x = x_out;
+    *y = y_out;
+}

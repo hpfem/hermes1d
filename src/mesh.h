@@ -96,13 +96,19 @@ class Linearizer {
         Linearizer(Mesh *mesh) {
             this->mesh = mesh;
         }
-        // evaluate approximate solution at element 'm' at reference 
+
+        // evaluate approximate solution at element 'm' at reference
         // point 'x_ref'. Here 'y' is the global vector of coefficients
         void eval_approx(Element *e, double x_ref, double *y, double *x_phys,
 			 double *val);
+
         void plot_solution(const char *out_filename, double *y_prev, int
-			   plotting_elem_subdivision=50);  
-        //FIXME: code needs to be fixed to allow plotting_elem_subdivision to be 100 and more
+                // FIXME: code needs to be fixed to allow
+                // plotting_elem_subdivision to be 100 and more
+                plotting_elem_subdivision=50);
+
+        void get_xy(double *y_prev, int comp, int plotting_elem_subdivision,
+                double **x, double **y, int *n);
 
     private:
         Mesh *mesh;

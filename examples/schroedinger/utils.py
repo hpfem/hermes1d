@@ -12,12 +12,12 @@ def solve(A, B):
     for i in range(len(w)):
         vec = v[:, i]
         r.append((w[i], vec))
-        r.sort(key=lambda x: x[0])
+    r.sort(key=lambda x: x[0])
     print "eigenvalues:"
+    eigs = []
     for w, vec in r:
         if w > 0:
             break
         print w
-    vec0 = r[0][1]
-    E = r[0][0]
-    return E, vec0
+        eigs.append(vec)
+    return r
