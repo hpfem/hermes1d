@@ -2,6 +2,7 @@ enable_language(Fortran)
 find_package(UMFPACK REQUIRED)
 find_package(BLAS REQUIRED)
 
+add_subdirectory(first_order_general)
 add_subdirectory(laplace_bc_dirichlet)
 add_subdirectory(laplace_bc_neumann)
 add_subdirectory(laplace_bc_newton)
