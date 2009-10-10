@@ -17,6 +17,7 @@ const int MAX_EQN_NUM = 10;            // maximum number of equations in the sys
 const int MAX_PTS_NUM = 101;           // refers both to plotting subdivision and Gauss quadrature points
 const int MAX_P = 50;                  // this is the maximum polynomial degree allowed in elements
 const int MAX_COEFFS_NUM = MAX_P + 1;  // this is the maximum polynomial degree allowed in elements
+const int MAX_STRING_LENGTH = 100;     // maximum string length 
 
 void error(const char *msg);
 

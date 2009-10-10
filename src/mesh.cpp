@@ -227,7 +227,7 @@ void Linearizer::plot_solution(const char *out_filename,
   if(n_eq > MAX_EQN_NUM)
       error("number of equations too high in plot_solution().");
   FILE *f[MAX_EQN_NUM];
-  char final_filename[MAX_EQN_NUM][100];
+  char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
   for(int c=0; c<n_eq; c++) {
     if(n_eq == 1) sprintf(final_filename[c], "%s", out_filename);
     else sprintf(final_filename[c], "%s_%d", out_filename, c);
