@@ -5,14 +5,16 @@
 
 // This example solves the general first-order equation 
 // y' = f(y, x) in an interval (A, B), equipped with the 
-// initial condition y(A) = YA.
+// initial condition y(A) = YA. The function f can be linear
+// or nonlinear in 'y', as long as it is differentiable
+// with respect to this variable (needed for the Newton's method). 
 
 // General input:
 static int N_eq = 1;                    // number of equations
-int N_elem = 3;                         // number of elements
+int N_elem = 10;                         // number of elements
 double A = 0, B = 10;                   // domain end points
 double YA = 1;                          // equation parameter
-int P_init = 2;                         // initial polynomal degree
+int P_init = 4;                         // initial polynomal degree
 
 // Tolerance for the Newton's method
 double TOL = 1e-5;
@@ -44,7 +46,7 @@ double jacobian(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (dvdx[i]*u[i] - dfdy(u_prev[i], x[i])*v[i]*u[i])*weights[i];
+    val += (dudx[i]*v[i] - dfdy(u_prev[0][i], x[i])*u[i]*v[i])*weights[i];
   }
   return val;
 };
@@ -63,7 +65,7 @@ double residual(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (du_prevdx[0][i]*v[i] - f(u_prev[i], x[i])*v[i])*weights[i];
+    val += (du_prevdx[0][i]*v[i] - f(u_prev[0][i], x[i])*v[i])*weights[i];
   }
   return val;
 };
@@ -92,6 +94,7 @@ int main() {
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Newton's loop
+  int newton_iterations = 0;
   while (1) {
     // zero the matrix:
     mat = new CooMatrix(N_dof);
@@ -106,6 +109,9 @@ int main() {
 
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
+    printf("Residual L2 norm: %.15f\n", res_norm);
+    if (DEBUG)
+        printf("TOL: %.15f\n", TOL);
     if(res_norm < TOL) break;
 
     // changing sign of vector res
@@ -116,6 +122,9 @@ int main() {
 
     // updating y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+
+    newton_iterations++;
+    printf("Finished Newton iteration: %d\n", newton_iterations);
   }
 
   Linearizer l(&mesh);
