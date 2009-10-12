@@ -3,7 +3,8 @@ Welcome to Hermes1D!
 Hermes1D is a C++/Python library for the solution of (systems of) ordinary
 differential equations (ODE) via higher-order finite element methods (hp-FEM).
 
-Hermes1D is distributed under the BSD license, see the LICENSE file for a
+Hermes1D is distributed under the BSD license (it covers all files in the
+Hermes1D repository unless stated otherwise.), see the LICENSE file for a
 copyright/license information and the AUTHORS file for the list of authors.
 
 This is a README file for Linux.
