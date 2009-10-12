@@ -12,7 +12,8 @@ This is a README file for UNIX like systems (Linux, Mac).
 Compilation
 ===========
 
-If you are using a Debian-based system, install the required libraries first:
+Install the required libraries first, if you are using a Debian-based system,
+do:
 
 $ apt-get install cmake g++
 
@@ -29,6 +30,13 @@ gnuplot> plot './solution.gp' w l
 
 Documentation
 =============
+
+Install the required libraries first, if you are using a Debian-based system,
+do:
+
+$ apt-get install python-sphinx
+
+then:
 
 $ cd doc
 $ make html
