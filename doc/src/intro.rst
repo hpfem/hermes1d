@@ -110,7 +110,7 @@ sense, all basis functions corresponding to the solution component $u_i$ are
 zero where $u_i$ has a Dirichlet boundary condition.  The vector $\bfY = (y_1,
 y_2, \ldots, y_N)$ comprises all unknown coefficients of the finite element
 basis functions for all solution components. The meshes for the solution
-components $u_1, u_2, \ldots, u_m$ could (more precisely: {\em should}) be
+components $u_1, u_2, \ldots, u_m$ could (more precisely: *should*) be
 different but for now we assume that they are the same.
 
 Newton's method
@@ -118,7 +118,8 @@ Newton's method
 
 
 We will drive the residual vector $\bfR = (R_1, R_2, \ldots, R_N)$ to zero
-using the Newton's method. For that, we need the Jacobi matrix D$\bfR/$D$\bfY$.
+using the Newton's method. For that, we need the Jacobi matrix
+$D\bfR/D\bfY$.
 
 Let $1 \le i, j \le N$.
 It is easy to calculate that
@@ -205,8 +206,8 @@ The weak formulation is:
 
      R_2(\bfY) = \int_0^T f_2(u_1, u_2, u'_1, u'_2, x)v_1 \, \d t = \int_0^T (-u_2'-u_1)v_2 \, \d t =0,
 
-To evaluate the Jacobi matrix D$\bfR/$D$\bfY$ for the Newton's iteration, we need the following
-Jacobians:
+To evaluate the Jacobi matrix $D\bfR/D\bfY$ for the Newton's iteration, we need
+the following Jacobians:
 
 .. math::
 
