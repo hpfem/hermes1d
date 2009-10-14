@@ -3,7 +3,7 @@
 
 // ********************************************************************
 // This example solves the mathematical pendulum equation 
-// y'' + sin(y) = 0 in an interval (A, B), equipped with the 
+// y'' + k**2 * sin(y) = 0 in an interval (A, B), equipped with the 
 // initial conditions y(A) = Init_angle, y'(0) = Init_vel. The 
 // system is decomposed into two first order ODE and solved via 
 // the Newton's method starting from zero initial condition.
@@ -14,8 +14,9 @@
 // General input:
 static int N_eq = 2;
 int N_elem = 1292;          // number of elements
-double A = 0, B = 30;     // domain end points
+double A = 0, B = 10;     // domain end points
 int P_init = 1;            // initial polynomal degree
+double k = 0.5;
 
 // Tolerance for the Newton's method
 double TOL = 1e-5;
@@ -65,7 +66,7 @@ double jacobian_1_0(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += cos(u_prev[0][i])*u[i]*v[i]*weights[i];
+    val += k*k * cos(u_prev[0][i])*u[i]*v[i]*weights[i];
   }
   return val;
 };
