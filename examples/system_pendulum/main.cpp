@@ -118,7 +118,7 @@ double residual_1(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (sin(u_prev[0][i])*v[i] + du_prevdx[1][i]*v[i])*weights[i];
+    val += (k*k*sin(u_prev[0][i])*v[i] + du_prevdx[1][i]*v[i])*weights[i];
   }
   return val;
 };
