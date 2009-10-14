@@ -10,6 +10,18 @@
 // Note that the method diverges for longer time intervals, 
 // depending on the interval length, number of elements, and 
 // the initial polynomial degree.
+//
+// Derivation:
+// m*l*u'' = -m*g*sin(u)
+// so:
+// u'' + k^2 * sin(u) = 0
+// with k^2 = g/l
+// so we have to solve a system of two nonlinear second-order equations
+// v' + k^2 sin u = 0
+// u' - v = 0
+// in an interval (0, 2*pi) equipped with Dirichlet bdy conditions
+// u(0) = 0, v(0) = k
+// The approximate (linearized) solution is u(x) = sin(k*x), v(x) = k*cos(k*x)
 
 // General input:
 static int N_eq = 2;
