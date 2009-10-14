@@ -59,7 +59,7 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
     // decide quadrature order and set up 
     // quadrature weights and points in element m
     // FIXME: for some equations this may not be enough!
-    int order = 2*elems[m].p;
+    int order = 20; // 2*elems[m].p;
 
     // prepare quadrature points and weights in physical element m
     create_element_quadrature(elems[m].v1->x, elems[m].v2->x,  

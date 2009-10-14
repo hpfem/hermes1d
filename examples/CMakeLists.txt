@@ -9,6 +9,7 @@ add_subdirectory(laplace_bc_newton)
 add_subdirectory(laplace_bc_newton2)
 add_subdirectory(system_exp)
 add_subdirectory(system_sin)
+add_subdirectory(system_pendulum)
 
 if(WITH_PYTHON)
     add_subdirectory(schroedinger)
