@@ -68,9 +68,7 @@ double residual(int num, double *x, double *weights,
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(N_eq);
-  mesh.create(A, B, N_elem);
-  mesh.set_uniform_poly_order(P_init);
+  Mesh mesh(A, B, N_elem, P_init, N_eq);
   mesh.set_bc_left_dirichlet(0, Val_dir_left);
   mesh.set_bc_right_dirichlet(0, Val_dir_right);
   int N_dof = mesh.assign_dofs();
@@ -90,6 +88,7 @@ int main() {
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Newton's loop
+  int newton_iterations = 0;
   while (1) {
     // zero the matrix:
     mat = new CooMatrix(N_dof);
@@ -104,6 +103,7 @@ int main() {
 
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
+    printf("Residual L2 norm: %.15f\n", res_norm);
     if(res_norm < TOL) break;
 
     // changing sign of vector res
@@ -114,6 +114,9 @@ int main() {
 
     // updating y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+
+    newton_iterations++;
+    printf("Finished Newton iteration: %d\n", newton_iterations);
   }
 
   Linearizer l(&mesh);

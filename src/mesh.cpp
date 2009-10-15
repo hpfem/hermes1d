@@ -5,33 +5,59 @@
 
 #include "mesh.h"
 
-void Mesh::create(double a, double b, int n_elem)
+void Element::refine(int p_left, int p_right, int n_eq) 
 {
-  this->n_elem = n_elem;
-  this->vertices = new Vertex[this->n_elem+1]; // allocate array of vertices
-  double h = (b - a)/this->n_elem;
-  for(int i = 0; i < this->n_elem+1; i++) {
-    this->vertices[i].x = a + i*h;             // so far equidistant division only
-  }
-  this->elems = new Element[this->n_elem];     // allocate array of elements
-  for(int i=0; i<this->n_elem; i++) {
-    this->elems[i].p = -1;
-    this->elems[i].v1 = this->vertices + i;
-    this->elems[i].v2 = this->vertices + i + 1;
-    this->elems[i].dof = imalloc(n_eq);
-  }
+  double x1 = this->x1;
+  double x2 = this->x2;
+  double midpoint = (x1 + x2)/2.; 
+  this->sons[0] = new Element(x1, midpoint, p_left, n_eq);
+  this->sons[1] = new Element(midpoint, x2, p_right, n_eq);
+  this->active = 0;
 }
 
-// sets uniform polynomial degrees in the mesh
-// and allocates elememnt dof arrays
-void Mesh::set_uniform_poly_order(int poly_order)
+Mesh::Mesh(double a, double b, int n_elem, int p_init, int n_eq)
 {
-  for(int i=0; i < this->n_elem; i++) {
-    this->elems[i].p = poly_order;
+  // domain end points
+  left_endpoint = a;
+  right_endpoint = b;
+  // number of equations
+  this->n_eq = n_eq;
+  // print the banner (only once)
+  static int n_calls = 0;
+  n_calls++;
+  if (n_calls == 1) intro();
+  // check maximum number of equations
+  if(n_eq > MAX_EQN_NUM) 
+  error("Maximum number of equations exceeded (set in common.h)");
+  // arrays for boundary conditions
+  this->bc_left_dir = new int[n_eq];
+  this->bc_left_dir_values = new double[n_eq];
+  this->bc_right_dir = new int[n_eq];
+  this->bc_right_dir_values = new double[n_eq];
+  for (int i=0; i<n_eq; i++) {
+    this->bc_left_dir[i] = BC_NATURAL;
+    this->bc_left_dir_values[i] = 0;
+    this->bc_right_dir[i] = BC_NATURAL;
+    this->bc_right_dir_values[i] = 0;
+  }
+  // number of elements
+  this->n_elem = n_elem;
+  // allocate element array
+  this->elems = new Element[this->n_elem];     
+  if (elems == NULL) error("Not enough memory in Mesh::create().");
+  // fill element array
+  double h = (b - a)/this->n_elem;             // element length
+  for(int i=0; i<this->n_elem; i++) {          // loop over elements
+    this->elems[i].p = p_init;
+    // allocate dof arrays
+    this->elems[i].dof = imalloc(n_eq);
     // c is solution component
     for(int c=0; c<this->n_eq; c++) {
-      this->elems[i].dof[c] = new int[poly_order+1];
+      this->elems[i].dof[c] = new int[p_init+1];
     }
+    this->elems[i].x1 = a + i*h;
+    this->elems[i].x2 = this->elems[i].x1 + h;
+    if (elems[i].dof == NULL) error("Not enough memory in Mesh::create().");
   }
 }
 
@@ -122,8 +148,8 @@ void Mesh::element_solution(Element *e, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM
 		            double pts_array[MAX_PTS_NUM], double val[MAX_EQN_NUM][MAX_PTS_NUM], 
                             double der[MAX_EQN_NUM][MAX_PTS_NUM])
 {
-  double a = e->v1->x;
-  double b = e->v2->x;
+  double a = e->x1;
+  double b = e->x2;
   double jac = (b-a)/2.; 
   int p = e->p;
   for(int c=0; c<n_eq; c++) { 
@@ -143,8 +169,8 @@ void Mesh::element_solution(Element *e, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM
 void Mesh::element_solution_point(double x_ref, Element *e, 
 			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], double *val, double *der)
 {
-  double a = e->v1->x;
-  double b = e->v2->x;
+  double a = e->x1;
+  double b = e->x2;
   double jac = (b-a)/2.; 
   int p = e->p;
   for(int c=0; c<n_eq; c++) {
@@ -215,8 +241,8 @@ void Linearizer::eval_approx(Element *e, double x_ref, double *y,
       if(e->dof[c][i] >= 0) val[c] += y[e->dof[c][i]]*lobatto_fn_tab_1d[i](x_ref);
     }
   }
-  double a = e->v1->x;
-  double b = e->v2->x;
+  double a = e->x1;
+  double b = e->x2;
   *x_phys = (a+b)/2 + x_ref*(b-a)/2;
   return;
 }
@@ -256,8 +282,8 @@ void Linearizer::plot_solution(const char *out_filename,
     for (int j=0; j<plotting_elem_subdivision+1; j++) pts_array[j] = -1 + j*h;
     this->mesh->element_solution(elems + m, coeffs, plotting_elem_subdivision+1, 
                        pts_array, phys_u_prev, phys_du_prevdx); 
-    double a = elems[m].v1->x;
-    double b = elems[m].v2->x;
+    double a = elems[m].x1;
+    double b = elems[m].x2;
     // loop over solution components
     for(int c=0; c<n_eq; c++) {
       for (int j=0; j<plotting_elem_subdivision+1; j++) {
@@ -315,8 +341,8 @@ void Linearizer::get_xy(double *y_prev, int comp,
         this->mesh->element_solution(elems + m, coeffs,
                 plotting_elem_subdivision+1, pts_array,
                 phys_u_prev, phys_du_prevdx);
-        double a = elems[m].v1->x;
-        double b = elems[m].v2->x;
+        double a = elems[m].x1;
+        double b = elems[m].x2;
         for (int j=0; j<plotting_elem_subdivision+1; j++) {
             x_out[m*(plotting_elem_subdivision+1) + j] =
                 (a + b)/2 + pts_array[j] * (b-a)/2;

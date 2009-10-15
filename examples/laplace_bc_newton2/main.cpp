@@ -57,30 +57,6 @@ double residual_vol(int num, double *x, double *weights,
   for(int i = 0; i<num; i++) {
     val += (du_prevdx[0][i]*dvdx[i] - f(x[i])*v[i])*weights[i];
   }
-  if(DEBUG) {
-    /*printf("u = ");
-    for(int i=0; i<num; i++) printf("%g, ", u[i]);
-    printf("\n");
-    printf("dudx = ");
-    for(int i=0; i<num; i++) printf("%g, ", dudx[i]);
-    printf("\n");*/
-    printf("v = ");
-    for(int i=0; i<num; i++) printf("%g, ", v[i]);
-    printf("\n");
-    printf("dvdx = ");
-    for(int i=0; i<num; i++) printf("%g, ", dvdx[i]);
-    printf("\n");
-    printf("u_prev = ");
-    for(int i=0; i<num; i++) printf("%g, ", u_prev[0][i]);
-    printf("\n");
-    printf("du_prevdx = ");
-    for(int i=0; i<num; i++) printf("%g, ", du_prevdx[0][i]);
-    printf("\n");
-    printf("f = ");
-    for(int i=0; i<num; i++) printf("%g, ", f(x[i]));
-    printf("\n");
-    printf("val = %g\n", val);
-  }
   return val;
 };
 
@@ -115,9 +91,7 @@ double residual_surf_right(double x, double u_prev[MAX_EQN_NUM],
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(N_eq);
-  mesh.create(A, B, N_elem);
-  mesh.set_uniform_poly_order(P_init);
+  Mesh mesh(A, B, N_elem, P_init, N_eq);
 
   // boundary conditions
   mesh.set_bc_left_natural(0);
@@ -151,13 +125,6 @@ int main() {
     // construct residual vector
     dp.assemble_matrix_and_vector(mat, res, y_prev); 
 
-    if (DEBUG) {
-        printf("RHS:");
-        for(int i=0; i<N_dof; i++)
-            printf("%f ", res[i]);
-        printf("\n");
-    }
-  
     // calculate L2 norm of residual vector
     double res_norm = 0;
     for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
@@ -166,8 +133,6 @@ int main() {
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
     printf("Residual L2 norm: %.15f\n", res_norm);
-    if (DEBUG)
-        printf("TOL: %.15f\n", TOL);
     if(res_norm < TOL) break;
 
     // changing sign of vector res
@@ -178,21 +143,11 @@ int main() {
     // solving the matrix system
     solve_linear_system(mat, res);
 
-    // DEBUG: print solution
-    if(DEBUG) {
-      printf("New Y:\n");
-      for(int i=0; i<N_dof; i++) {
-        printf("%g ", res[i]);
-      }
-      printf("\n");
-    }
-
     // updating y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
     newton_iterations++;
     printf("Finished Newton iteration: %d\n", newton_iterations);
   }
-  printf("Total number of Newton iterations: %d\n", newton_iterations);
 
   Linearizer l(&mesh);
   const char *out_filename = "solution.gp";

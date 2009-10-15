@@ -119,9 +119,7 @@ double residual_1(int num, double *x, double *weights,
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(N_eq);
-  mesh.create(A, B, N_elem);
-  mesh.set_uniform_poly_order(P_init);
+  Mesh mesh(A, B, N_elem, P_init, N_eq);
   mesh.set_bc_left_dirichlet(0, Val_dir_left_0);
   mesh.set_bc_right_dirichlet(0, Val_dir_right_0);
   mesh.set_bc_left_dirichlet(1, Val_dir_left_1);
@@ -160,8 +158,6 @@ int main() {
     for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
     res_norm = sqrt(res_norm);
     printf("Residual L2 norm: %g\n", res_norm);
-    // DEBUG
-    if(newton_iterations == 2) break;
 
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
@@ -175,11 +171,6 @@ int main() {
 
     // updating y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-
-    // DEBUG
-    printf("New Y:\n");
-    for (int i=0; i<N_dof; i++) printf("%g ", y_prev[i]);
-    printf("\n");
 
     newton_iterations++;
     printf("Finished Newton iteration: %d\n", newton_iterations);

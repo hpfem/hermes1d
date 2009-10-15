@@ -10,45 +10,36 @@
 #include "lobatto.h"
 #include "quad_std.h"
 
-struct Vertex {
-  double x;
-};
-
 class Element {
 public:
-  Vertex *v1, *v2;  // endpoints
-  int p;            // poly degree
-  int **dof;        // connectivity array of length p+1 for every solution component
+  Element() {
+    x1 = x2 = 0;
+    p = 0; 
+    dof = NULL;
+    //sons = NULL; 
+    active = 1;
+  }
+  Element(double x_left, double x_right, int deg, int n_eq) {
+    x1 = x_left;
+    x2 = x_right;
+    p = deg; 
+    dof = imalloc(n_eq);
+    if (dof == NULL) error("Not enough memory in Element().");
+    //sons = NULL; 
+    active = 1;
+  }
+  void refine(int p_left, int p_right, int n_eq);
+  unsigned active:1; // flag used by assembling algorithm
+  double x1, x2;     // endpoints
+  int p;             // poly degree
+  int **dof;         // connectivity array of length p+1 for every solution component
+  Element *sons[2];  // for refinement
 };
 
 class Mesh {
     public:
-        Mesh(int n_eq) {
-            // Print the banner (only once)
-            static int n_calls = 0;
-            n_calls++;
-            if (n_calls == 1) intro();
-            // check maximum number of equations
-            if(n_eq > MAX_EQN_NUM) 
-              error("Maximum number of equations exceeded (set in common.h)");
-            this->n_eq = n_eq;
-            this->bc_left_dir = new int[n_eq];
-            this->bc_left_dir_values = new double[n_eq];
-            this->bc_right_dir = new int[n_eq];
-            this->bc_right_dir_values = new double[n_eq];
-            for (int i=0; i<n_eq; i++) {
-                this->bc_left_dir[i] = BC_NATURAL;
-                this->bc_left_dir_values[i] = 0;
-                this->bc_right_dir[i] = BC_NATURAL;
-                this->bc_right_dir_values[i] = 0;
-            }
-        }
-        void create(double a, double b, int n_elem);
-        void set_uniform_poly_order(int poly_order);
+        Mesh(double a, double b, int n_elem, int p_init, int n_eq);
         int assign_dofs();
-        Vertex *get_vertices() {
-            return this->vertices;
-        }
         Element *get_elems() {
             return this->elems;
         }
@@ -86,14 +77,13 @@ class Mesh {
         int *bc_right_dir; //1...Dirichlet (essential) BC at right end point
                            //0...natural BC (Neumann, Newton, none)
         double *bc_right_dir_values; // values for the Dirichlet condition
+        double left_endpoint, right_endpoint;
 
     private:
         int n_eq;
         int n_elem;
         int n_dof;
-        Vertex *vertices;
         Element *elems;
-
 };
 
 class Linearizer {

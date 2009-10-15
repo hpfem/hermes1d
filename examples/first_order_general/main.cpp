@@ -73,9 +73,7 @@ double residual(int num, double *x, double *weights,
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(N_eq);
-  mesh.create(A, B, N_elem);
-  mesh.set_uniform_poly_order(P_init);
+  Mesh mesh(A, B, N_elem, P_init, N_eq);
   mesh.set_bc_left_dirichlet(0, YA);
   int N_dof = mesh.assign_dofs();
   printf("N_dof = %d\n", N_dof);
@@ -110,8 +108,6 @@ int main() {
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
     printf("Residual L2 norm: %.15f\n", res_norm);
-    if (DEBUG)
-        printf("TOL: %.15f\n", TOL);
     if(res_norm < TOL) break;
 
     // changing sign of vector res
