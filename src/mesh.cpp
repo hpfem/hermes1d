@@ -323,55 +323,26 @@ void Linearizer::eval_approx(Element *e, double x_ref, double *y,
 void Linearizer::plot_solution(const char *out_filename, 
                                double *y_prev, int plotting_elem_subdivision)
 {
-  int n_eq = this->mesh->get_n_eq();
-  int n_elem = this->mesh->get_n_elems();  
-  Iterator *I = new Iterator(this->mesh);
-
-  // FIXME:
-  if(n_eq > MAX_EQN_NUM)
-      error("number of equations too high in plot_solution().");
-  FILE *f[MAX_EQN_NUM];
-  char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
-  for(int c=0; c<n_eq; c++) {
-    if(n_eq == 1) sprintf(final_filename[c], "%s", out_filename);
-    else sprintf(final_filename[c], "%s_%d", out_filename, c);
-    f[c] = fopen(final_filename[c], "wb");
-    if(f[c] == NULL) error("problem opening file in plot_solution().");
-  }
-  // FIXME
-  if(plotting_elem_subdivision > MAX_PTS_NUM - 1) 
-    error ("plotting_elem_subdivision too high in plot_solution()."); 
-  double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];
-
-  Element *e;
-  while ((e = I->next_active_element()) != NULL) {
-    // FIXME:
-    if(e->p > MAX_POLYORDER) 
-      error ("element degree too hign in plot(solution)."); 
-    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-    this->mesh->calculate_elem_coeffs(e, y_prev, coeffs); 
-
-    double pts_array[MAX_PTS_NUM];
-    double h = 2./plotting_elem_subdivision;
-
-    for (int j=0; j<plotting_elem_subdivision+1; j++) pts_array[j] = -1 + j*h;
-    this->mesh->element_solution(e, coeffs, plotting_elem_subdivision+1, 
-                       pts_array, phys_u_prev, phys_du_prevdx); 
-    double a = e->x1;
-    double b = e->x2;
-    // loop over solution components
+    int n_eq = this->mesh->get_n_eq();
+    FILE *f[MAX_EQN_NUM];
+    char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
     for(int c=0; c<n_eq; c++) {
-      for (int j=0; j<plotting_elem_subdivision+1; j++) {
-        fprintf(f[c], "%g %g\n", (a + b)/2  
-                + pts_array[j] * (b-a)/2, phys_u_prev[c][j]);
-      }
+        if(n_eq == 1)
+            sprintf(final_filename[c], "%s", out_filename);
+        else
+            sprintf(final_filename[c], "%s_%d", out_filename, c);
+        f[c] = fopen(final_filename[c], "wb");
+        if(f[c] == NULL) error("problem opening file in plot_solution().");
+        int n;
+        double *x, *y;
+        this->get_xy(y_prev, c, plotting_elem_subdivision, &x, &y, &n);
+        for (int i=0; i < n; i++)
+            fprintf(f[c], "%g %g\n", x[i], y[i]);
+        delete[] x;
+        delete[] y;
+        printf("Output written to %s.\n", final_filename[c]);
+        fclose(f[c]);
     }
-  }
-  for(int c=0; c<n_eq; c++) {
-    printf("Output written to %s.\n", final_filename[c]);
-    fclose(f[c]);
-  }
 }
 
 // Returns pointers to x and y coordinates in **x and **y
