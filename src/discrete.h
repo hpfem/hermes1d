@@ -12,14 +12,17 @@
 #include "quad_std.h"
 #include "lobatto.h"
 #include "matrix.h"
+#include "iterator.h"
 
 typedef double (*matrix_form) (int num, double *x, double *weights,
-        double *u, double *dudx, double *v, double *dvdx, double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
+        double *u, double *dudx, double *v, double *dvdx, 
+        double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
         double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], void *user_data);
 
 typedef double (*vector_form) (int num, double *x, double *weights,
         double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-               double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], double *v, double *dvdx,
+               double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+               double *v, double *dvdx,
         void *user_data);
 
 typedef double (*matrix_form_surf) (double x, double u, double dudx, 
@@ -40,7 +43,8 @@ public:
     void add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index);
     void add_vector_form_surf(int i, vector_form_surf fn, int bdy_index);
     // c is solution component
-    void process_vol_forms(Matrix *mat, double *res, double *y_prev, int matrix_flag);
+    void process_vol_forms(Matrix *mat, double *res, 
+                           double *y_prev, int matrix_flag);
     // c is solution component
     void process_surf_forms(Matrix *mat, double *res, double *y_prev, 
                             int matrix_flag, int bdy_index);
@@ -77,7 +81,8 @@ private:
 
 // return coefficients for all shape functions on the element m,
 // for all solution components
-void calculate_elem_coeffs(Mesh *mesh, int m, double *y_prev, double **coeffs, int n_eq);
+void calculate_elem_coeffs(Element *e, double *y_prev, 
+                           double **coeffs, int n_eq);
 
 void element_quadrature(double a, double b, 
                         int order, double *pts, double *weights, int *num);

@@ -94,8 +94,6 @@ int main() {
   Mesh mesh(A, B, N_elem, P_init, N_eq);
 
   // boundary conditions
-  mesh.set_bc_left_natural(0);
-  mesh.set_bc_right_natural(0);
   int N_dof = mesh.assign_dofs();
   printf("N_dof = %d\n", N_dof);
 

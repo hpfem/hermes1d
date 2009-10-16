@@ -11,10 +11,10 @@
 
 // General input:
 static int N_eq = 1;                    // number of equations
-int N_elem = 10;                         // number of elements
+int N_elem = 10;                        // number of elements
 double A = 0, B = 10;                   // domain end points
 double YA = 1;                          // equation parameter
-int P_init = 4;                         // initial polynomal degree
+int P_init = 2;                         // initial polynomal degree
 
 // Tolerance for the Newton's method
 double TOL = 1e-5;

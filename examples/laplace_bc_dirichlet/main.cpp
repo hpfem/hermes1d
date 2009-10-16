@@ -11,7 +11,7 @@
 static int N_eq = 1;
 int N_elem = 3;                         // number of elements
 double A = 0, B = 2*M_PI;               // domain end points
-int P_init = 2;                         // initial polynomal degree
+int P_init = 3;                         // initial polynomal degree
 
 // Boundary conditions
 double Val_dir_left = 1;                // Dirichlet condition left

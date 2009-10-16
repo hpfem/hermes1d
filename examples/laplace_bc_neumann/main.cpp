@@ -37,7 +37,8 @@ double f(double x) {
 // u_prev...previous solution
 double jacobian_vol(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
                 void *user_data)
 {
   double val = 0;
@@ -48,7 +49,8 @@ double jacobian_vol(int num, double *x, double *weights,
 };
 
 double residual_vol(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
                 double *v, double *dvdx, void *user_data)
 {
   double val = 0;
@@ -58,8 +60,9 @@ double residual_vol(int num, double *x, double *weights,
   return val;
 };
 
-double residual_surf_right(double x, double u_prev[MAX_EQN_NUM], double du_prevdx[MAX_EQN_NUM],
-        double v, double dvdx, void *user_data)
+double residual_surf_right(double x, double u_prev[MAX_EQN_NUM], 
+                           double du_prevdx[MAX_EQN_NUM],
+                           double v, double dvdx, void *user_data)
 {
     // FIXME: Later, the value 'Val_neum_right' will enter through user_data,
     // not as a global variable
@@ -86,7 +89,6 @@ int main() {
 
   // boundary conditions
   mesh.set_bc_left_dirichlet(0, Val_dir_left);
-  mesh.set_bc_right_natural(0);
   int N_dof = mesh.assign_dofs();
   printf("N_dof = %d\n", N_dof);
 

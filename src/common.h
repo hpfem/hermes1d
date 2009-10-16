@@ -7,6 +7,7 @@
 #define __HERMES1D_COMMON_H
 
 #define DEBUG 0
+#define DEBUG_ELEM_DOF 0
 
 #include <stdexcept>
 #include <stdlib.h>
@@ -15,8 +16,7 @@
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
 
-#define BC_NATURAL 0
-#define BC_DIRICHLET 1
+const int MAX_POLYORDER = 100;         // maximum polynomial degree on elements
 
 const int MAX_EQN_NUM = 10;            // maximum number of equations in the system
 const int MAX_PTS_NUM = 101;           // refers both to plotting subdivision and Gauss quadrature points
@@ -42,10 +42,5 @@ void throw_exception(char *text);
 
 #define verbose(msg)
 #define warn(msg)
-
-double **dmalloc(int n_eq);
-   
-int **imalloc(int n_eq);
-
 
 #endif

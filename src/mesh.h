@@ -12,27 +12,16 @@
 
 class Element {
 public:
-  Element() {
-    x1 = x2 = 0;
-    p = 0; 
-    dof = NULL;
-    //sons = NULL; 
-    active = 1;
-  }
-  Element(double x_left, double x_right, int deg, int n_eq) {
-    x1 = x_left;
-    x2 = x_right;
-    p = deg; 
-    dof = imalloc(n_eq);
-    if (dof == NULL) error("Not enough memory in Element().");
-    //sons = NULL; 
-    active = 1;
-  }
+  Element();
+  Element(double x_left, double x_right, int deg, int n_eq);
+  void dof_alloc(int n_eq);
   void refine(int p_left, int p_right, int n_eq);
-  unsigned active:1; // flag used by assembling algorithm
+  unsigned is_active();
+  unsigned active;   // flag used by assembling algorithm
   double x1, x2;     // endpoints
   int p;             // poly degree
   int **dof;         // connectivity array of length p+1 for every solution component
+  unsigned level;    // refinement level (zero for initial mesh elements) 
   Element *sons[2];  // for refinement
 };
 
@@ -41,18 +30,18 @@ class Mesh {
         Mesh(double a, double b, int n_elem, int p_init, int n_eq);
         int assign_dofs();
         Element *get_elems() {
-            return this->elems;
+	  return this->elems;
         }
         int get_n_elems() {
-            return this->n_elem;
+	  return this->n_elem;
         }
         int get_n_dof() {
-            return this->n_dof;
+	  return this->n_dof;
         }
         int get_n_eq() {
-            return this->n_eq;
+	  return this->n_eq;
         }
-        void calculate_elem_coeffs(int m, double *y_prev, double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM]);
+        void calculate_elem_coeffs(Element *e, double *y_prev, double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM]);
         void element_solution(Element *e, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], int pts_num, 
 		      double pts_array[MAX_PTS_NUM], double val[MAX_EQN_NUM][MAX_PTS_NUM], 
                       double der[MAX_EQN_NUM][MAX_PTS_NUM]);
@@ -63,20 +52,24 @@ class Mesh {
         void element_shapefn_point(double x_ref, double a, double b, 
 				   int k, double *val, double *der);
         void set_bc_left_dirichlet(int eq_n, double val);
-        void set_bc_left_natural(int eqn);
         void set_bc_right_dirichlet(int eq_n, double val);
+        /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
+        void set_bc_left_natural(int eqn);
         void set_bc_right_natural(int eqn);
+        */
 
         // Dirichlet boundary conditions at both endpoints
         // (first integer in pair indicates whether there is 
         // a Dirichlet condition for that equation, the other
         // one tells the value)
+        /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
         int *bc_left_dir; //1...Dirichlet (essential) BC at left end point
                           //0...natural BC (Neumann, Newton, none)
-        double *bc_left_dir_values; // values for the Dirichlet condition
         int *bc_right_dir; //1...Dirichlet (essential) BC at right end point
                            //0...natural BC (Neumann, Newton, none)
-        double *bc_right_dir_values; // values for the Dirichlet condition
+	*/
+        double *bc_left_dir_values;  // values for the Dirichlet condition left
+        double *bc_right_dir_values; // values for the Dirichlet condition right
         double left_endpoint, right_endpoint;
 
     private:

@@ -83,7 +83,6 @@ int main() {
 
   // boundary conditions
   mesh.set_bc_left_dirichlet(0, Val_dir_left);
-  mesh.set_bc_right_natural(0);
   int N_dof = mesh.assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
