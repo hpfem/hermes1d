@@ -112,6 +112,15 @@ Mesh::Mesh(double a, double b, int n_elem, int p_init, int n_eq)
   }
 }
 
+int Mesh::get_n_active_elems()
+{
+    Iterator *I = new Iterator(this);
+    int count = 0;
+    Element *e;
+    while ((e = I->next_active_element()) != NULL) count++;
+    return count;
+}
+
 void Mesh::set_bc_left_dirichlet(int eq_n, double val)
 {
   /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
