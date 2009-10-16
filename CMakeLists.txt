@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(WITH_PYTHON no)
+set(DEBUG no)
+set(RELEASE yes)
 
 # allow to override the default values in CMake.vars
 if(EXISTS ${PROJECT_SOURCE_DIR}/CMake.vars)
@@ -12,10 +14,25 @@ if(EXISTS ${PROJECT_SOURCE_DIR}/CMake.vars)
 endif(EXISTS ${PROJECT_SOURCE_DIR}/CMake.vars)
 
 
-set(HERMES_BIN hermes1d)
+if(DEBUG)
+        set(HERMES_BIN hermes1d-debug)
+endif(DEBUG)
+
+if(RELEASE)
+        set(HERMES_BIN hermes1d)
+endif(RELEASE)
+
 
 add_subdirectory(src)
 if(WITH_PYTHON)
     add_subdirectory(python)
 endif(WITH_PYTHON)
 add_subdirectory(examples)
+
+
+message("\nConfiguration results:")
+message("----------------------")
+message("Build with Python: ${WITH_PYTHON}")
+message("Build with debug: ${DEBUG}")
+message("Build with release: ${RELEASE}")
+message("\n")
