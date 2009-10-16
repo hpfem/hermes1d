@@ -1,1 +1,1 @@
-from _hermes1d import Vertex, Element, Mesh, Linearizer
+from _hermes1d import Element, Mesh, Linearizer

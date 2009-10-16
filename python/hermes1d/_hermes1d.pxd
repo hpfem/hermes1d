@@ -81,11 +81,8 @@ cdef extern from "hermes1d.h":
     ctypedef int int3[3]
     ctypedef int int2[2]
 
-    cdef struct c_Vertex "Vertex":
-        double x
-
     cdef struct c_Element "Element":
-        c_Vertex* *v1, *v2
+        double x1, x2
         int p
         int *dof
 
@@ -95,11 +92,11 @@ cdef extern from "hermes1d.h":
         int get_n_dofs()
         void set_poly_orders(int poly_order)
         void assign_dofs()
-        c_Vertex *get_vertices()
         c_Element *get_elems()
         void set_dirichlet_bc_left(int eq_n, double val)
         void set_dirichlet_bc_right(int eq_n, double val)
-    c_Mesh *new_Mesh "new Mesh" (int eq_num)
+    c_Mesh *new_Mesh "new Mesh" (double a, double b, int n_elem, int p_init,
+            int eq_num)
 
     cdef struct c_Linearizer "Linearizer":
         void plot_solution(char *out_filename, double *y_prev,

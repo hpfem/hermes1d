@@ -71,9 +71,7 @@ void insert_matrix(DenseMatrix *mat, int len)
 /******************************************************************************/
 int main(int argc, char* argv[]) {
   // create mesh
-  Mesh mesh(N_eq);
-  mesh.create(A, B, N_elem);
-  mesh.set_uniform_poly_order(P_init);
+  Mesh mesh(A, B, N_elem, P_init, N_eq);
   // you can set the zero dirichlet at the right hand side
   //mesh.set_bc_right_dirichlet(0, 0);
 
