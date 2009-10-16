@@ -403,9 +403,9 @@ void Linearizer::get_xy(double *y_prev, int comp,
     double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];
     double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];
         
-    Element *e = I->first_active_element();
+    Element *e;
     int counter = 0;
-    while (e != NULL) {
+    while ((e = I->next_active_element()) != NULL) {
         // FIXME:
         if(e->p > MAX_POLYORDER)
             error("element degree too hign in plot(solution).");
