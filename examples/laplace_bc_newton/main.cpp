@@ -10,14 +10,14 @@
 
 // General input:
 static int N_eq = 1;
-int N_elem = 30;                       // number of elements
+int N_elem = 3;                        // number of elements
 double A = 0, B = 2*M_PI;              // domain end points
-int P_init = 2;                        // initial polynomal degree
+int P_init = 3;                        // initial polynomal degree
 
 // Boundary conditions
 double Val_dir_left = 0;
 double Val_newton_alpha = 1;   // must be nonzero
-double Val_newton_beta = 0.5;
+double Val_newton_beta = 1;
 
 // Tolerance for the Newton's method
 double TOL = 1e-5;
@@ -73,7 +73,7 @@ double residual_surf_right(double x, double u_prev[MAX_EQN_NUM],
         double du_prevdx[MAX_EQN_NUM], double v,
         double dvdx, void *user_data)
 {
-  return -(Val_newton_beta/Val_newton_alpha) * v; 
+  return ((u_prev[0] - Val_newton_beta)/Val_newton_alpha) * v; 
 }
 
 /******************************************************************************/
@@ -127,7 +127,8 @@ int main() {
 
     // solving the matrix system
     solve_linear_system(mat, res);
-
+    //if(newton_iterations == 2) break;
+  
     // updating y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
     printf("Finished Newton iteration: %d\n", newton_iterations);

@@ -274,7 +274,7 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
           // evaluate the surface bilinear form
           double val_i_surf = vfs->fn(x_phys,
                           phys_u_prev, phys_du_prevdx, phys_v, phys_dvdx, 
-                          NULL); 
+                          NULL);
           // truncating
           if(fabs(val_i_surf) < 1e-12) val_i_surf = 0.0; 
           // add the result to the matrix

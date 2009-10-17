@@ -261,7 +261,8 @@ void Mesh::element_solution(Element *e,
 // evaluate previous solution and its derivative 
 // at the reference point x_ref to element 'e'.
 void Mesh::element_solution_point(double x_ref, Element *e, 
-			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], double *val, double *der)
+			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                            double *val, double *der)
 {
   double a = e->x1;
   double b = e->x2;
