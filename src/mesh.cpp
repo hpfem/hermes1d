@@ -14,6 +14,7 @@ Element::Element()
   //sons = NULL; 
   active = 1;
   level = 0;
+  id = -1;
 }
 
 Element::Element(double x_left, double x_right, int deg, int n_eq) 
@@ -26,6 +27,7 @@ Element::Element(double x_left, double x_right, int deg, int n_eq)
   //sons = NULL; 
   active = 1;
   level = 0;
+  id = -1;
 }
 
 unsigned Element::is_active() 
@@ -171,27 +173,28 @@ int Mesh::assign_dofs()
 {
   Iterator *I = new Iterator(this);
   // (1) enumerate vertex dofs
-  int count = 0;
+  int count_dof = 0, count_id = 0;
   // loop over solution components
   for(int c=0; c<this->n_eq; c++) {    
     Element *e;
     I->reset();
     while ((e = I->next_active_element()) != NULL) {
-      if (e->dof[c][0] != -1) e->dof[c][0] = count++; 
-      if (e->dof[c][1] != -1) e->dof[c][1] = count; 
-      else count--;
+      if(c == 0) e->id = count_id++;
+      if (e->dof[c][0] != -1) e->dof[c][0] = count_dof++; 
+      if (e->dof[c][1] != -1) e->dof[c][1] = count_dof; 
+      else count_dof--;
     }
-    count++;
+    count_dof++;
     // (2) enumerate bubble dofs
     I->reset();
     while ((e = I->next_active_element()) != NULL) {
       for(int j=2; j<=e->p; j++) {
-        e->dof[c][j] = count;
-        count++;
+        e->dof[c][j] = count_dof;
+        count_dof++;
       }
     }
   }
-  this->n_dof = count;
+  this->n_dof = count_dof;
 
   // print element connectivities
   if(DEBUG_ELEM_DOF) {
@@ -202,7 +205,7 @@ int Mesh::assign_dofs()
       I->reset();
       Element *e;
       while ((e = I->next_active_element()) != NULL) {
-        printf("\nElement (%g, %g):\n ", e->x1, e->x2); 
+        printf("\nElement (%g, %g), id = %d\n ", e->x1, e->x2, e->id); 
         for(int j = 0; j<e->p + 1; j++) {
           printf("dof[%d][%d] = %d\n ", c, j, e->dof[c][j]);
         }

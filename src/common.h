@@ -7,7 +7,7 @@
 #define __HERMES1D_COMMON_H
 
 #define DEBUG 0
-#define DEBUG_ELEM_DOF 0
+#define DEBUG_ELEM_DOF 1
 
 #include <stdexcept>
 #include <stdlib.h>

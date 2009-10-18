@@ -21,6 +21,7 @@ public:
   double x1, x2;     // endpoints
   int p;             // poly degree
   int **dof;         // connectivity array of length p+1 for every solution component
+  int id;
   unsigned level;    // refinement level (zero for initial mesh elements) 
   Element *sons[2];  // for refinement
 };
