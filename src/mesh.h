@@ -66,6 +66,7 @@ class Mesh {
     private:
         int n_eq;
         int n_base_elem;
+        int n_active_elem;
         int n_dof;
         Element *base_elems;
 };

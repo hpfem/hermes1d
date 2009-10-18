@@ -87,6 +87,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   }
   // number of elements
   this->n_base_elem = n_base_elem;
+  this->n_active_elem = n_base_elem;
   // allocate element array
   this->base_elems = new Element[this->n_base_elem];     
   if (base_elems == NULL) error("Not enough memory in Mesh::create().");
@@ -108,11 +109,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
 
 int Mesh::get_n_active_elems()
 {
-    Iterator *I = new Iterator(this);
-    int count = 0;
-    Element *e;
-    while ((e = I->next_active_element()) != NULL) count++;
-    return count;
+    return this->n_active_elem;
 }
 
 void Mesh::refine_single_elem(int id, int p_left, int p_right)
@@ -122,6 +119,7 @@ void Mesh::refine_single_elem(int id, int p_left, int p_right)
     while ((e = I->next_active_element()) != NULL) {
         if (e->id == id) {
             e->refine(p_left, p_right, this->n_eq);
+            this->n_active_elem++;
             return;
         }
     }
@@ -138,6 +136,7 @@ void Mesh::refine_multi_elems(int n, int *id_array, int2 *p_pair_array)
             if (count >= n)
                 error("refine_multi_elems: not enough elems specified");
             e->refine(p_pair_array[count][0], p_pair_array[count][1], this->n_eq);
+            this->n_active_elem++;
             count++;
         }
     }
