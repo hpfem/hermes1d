@@ -105,6 +105,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
     this->base_elems[i].x1 = a + i*h;
     this->base_elems[i].x2 = this->base_elems[i].x1 + h;
   }
+  this->assign_elem_ids();
 }
 
 int Mesh::get_n_active_elems()
@@ -114,9 +115,10 @@ int Mesh::get_n_active_elems()
 
 void Mesh::refine_single_elem(int id, int p_left, int p_right)
 {
-    Iterator *I = new Iterator(this);
+    Iterator I(this);
     Element *e;
-    while ((e = I->next_active_element()) != NULL) {
+    while ((e = I.next_active_element()) != NULL) {
+        printf("%d %d\n", e->id, id);
         if (e->id == id) {
             e->refine(p_left, p_right, this->n_eq);
             this->n_active_elem++;
@@ -174,13 +176,12 @@ int Mesh::assign_dofs()
 {
   Iterator *I = new Iterator(this);
   // (1) enumerate vertex dofs
-  int count_dof = 0, count_id = 0;
+  int count_dof = 0;
   // loop over solution components
   for(int c=0; c<this->n_eq; c++) {    
     Element *e;
     I->reset();
     while ((e = I->next_active_element()) != NULL) {
-      if(c == 0) e->id = count_id++;
       if (e->dof[c][0] != -1) e->dof[c][0] = count_dof++; 
       if (e->dof[c][1] != -1) e->dof[c][1] = count_dof; 
       else count_dof--;
@@ -196,6 +197,9 @@ int Mesh::assign_dofs()
     }
   }
   this->n_dof = count_dof;
+
+  // enumerate elements
+  this->assign_elem_ids();
 
   // print element connectivities
   if(DEBUG_ELEM_DOF) {
@@ -216,6 +220,17 @@ int Mesh::assign_dofs()
   }
 
   return this->n_dof;
+}
+
+int Mesh::assign_elem_ids()
+{
+    Iterator *I = new Iterator(this);
+    int count_id = 0;
+    Element *e;
+    I->reset();
+    while ((e = I->next_active_element()) != NULL) {
+        e->id = count_id++;
+    }
 }
 
 // return coefficients for all shape functions on the element m,
@@ -363,10 +378,10 @@ void Linearizer::get_xy(double *y_prev, int comp,
         double **x, double **y, int *n)
 {
     int n_eq = this->mesh->get_n_eq();
-    int n_base_elem = this->mesh->get_n_base_elems();
+    int n_active_elem = this->mesh->get_n_active_elems();
     Iterator *I = new Iterator(this->mesh);
 
-    *n = n_base_elem * (plotting_elem_subdivision+1);
+    *n = n_active_elem * (plotting_elem_subdivision+1);
     double *x_out = new double[*n];
     double *y_out = new double[*n];
 
@@ -382,6 +397,8 @@ void Linearizer::get_xy(double *y_prev, int comp,
     Element *e;
     int counter = 0;
     while ((e = I->next_active_element()) != NULL) {
+        if (counter >= n_active_elem)
+            error("Internal error: wrong n_active_elem");
         // FIXME:
         if(e->p > MAX_POLYORDER)
             error("element degree too hign in plot(solution).");

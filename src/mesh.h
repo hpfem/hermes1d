@@ -69,6 +69,8 @@ class Mesh {
         int n_active_elem;
         int n_dof;
         Element *base_elems;
+
+        int assign_elem_ids();
 };
 
 class Linearizer {
