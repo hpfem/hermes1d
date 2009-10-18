@@ -142,16 +142,13 @@ int main() {
 
     // Replicate current mesh
     mesh_ref = mesh.replicate();
-    //double pts_array[6] = {0, 0.5, 1, 2, 3, 4};
-    //int p_array[5] = {2, 2, 1, 1, 1};
-    //mesh_ref = new Mesh(N_elem+1, pts_array, p_array, N_eq); 
 
     // Refines 'num_to_ref' elements starting with element 'start_elem_id'
     // For now, refine entire mesh uniformly in 'h' and 'p'
     int start_elem_id = 0; 
     int num_to_ref = mesh.get_n_active_elem();
-    //mesh_ref->refine_elems(start_elem_id, num_to_ref);
-    mesh_ref->refine_elems(0, 1);
+    //mesh_ref->refine_elems(0, 1);
+    mesh_ref->refine_elems(start_elem_id, num_to_ref);
 
     // Enumerate DOF in the reference mesh
     int N_dof_ref = mesh_ref->assign_dofs();
