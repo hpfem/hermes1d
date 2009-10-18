@@ -72,6 +72,7 @@ Mesh::Mesh() {
   base_elems = NULL;
 }
 
+// creates equidistant mesh with uniform polynomial degree of elements
 Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
 {
   // domain end points
@@ -114,6 +115,52 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
     // define element end points
     this->base_elems[i].x1 = a + i*h;
     this->base_elems[i].x2 = this->base_elems[i].x1 + h;
+  }
+  this->assign_elem_ids();
+}
+
+// creates mesh using a given array of n_base_elem+1 points (pts_array)
+// and an array of n_base_elem polynomial degrees (p_array)
+Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
+{
+  // domain end points
+  left_endpoint = pts_array[0];
+  right_endpoint = pts_array[n_base_elem];
+  // number of equations
+  this->n_eq = n_eq;
+  // print the banner (only once)
+  static int n_calls = 0;
+  n_calls++;
+  if (n_calls == 1) intro();
+  // check maximum number of equations
+  if(n_eq > MAX_EQN_NUM) 
+  error("Maximum number of equations exceeded (set in common.h)");
+  // arrays for boundary conditions
+  this->bc_left_dir_values = new double[n_eq];
+  this->bc_right_dir_values = new double[n_eq];
+  for (int i=0; i<n_eq; i++) {
+    this->bc_left_dir_values[i] = 0;
+    this->bc_right_dir_values[i] = 0;
+  }
+  // number of base elements
+  this->n_base_elem = n_base_elem;
+  // number of active elements
+  this->n_active_elem = n_base_elem;
+  // allocate element array
+  this->base_elems = new Element[this->n_base_elem];     
+  if (base_elems == NULL) error("Not enough memory in Mesh::create().");
+  // fill initial element array
+  for(int i=0; i<this->n_base_elem; i++) {
+    if (p_array[i] > MAX_POLYORDER) 
+      error("Max element order exceeded (set in common.h).");
+    // polynomial degree
+    this->base_elems[i].p = p_array[i];
+    // allocate element dof arrays for all solution components 
+    // and length MAX_POLYORDER
+    this->base_elems[i].dof_alloc(n_eq);
+    // define element end points
+    this->base_elems[i].x1 = pts_array[i];
+    this->base_elems[i].x2 = pts_array[i+1];
   }
   this->assign_elem_ids();
 }
@@ -237,7 +284,8 @@ int Mesh::assign_dofs()
       I->reset();
       Element *e;
       while ((e = I->next_active_element()) != NULL) {
-        printf("\nElement (%g, %g), id = %d\n ", e->x1, e->x2, e->id); 
+        printf("\nElement (%g, %g), id = %d, p = %d\n ", 
+               e->x1, e->x2, e->id, e->p); 
         for(int j = 0; j<e->p + 1; j++) {
           printf("dof[%d][%d] = %d\n ", c, j, e->dof[c][j]);
         }

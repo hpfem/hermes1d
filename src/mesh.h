@@ -31,6 +31,7 @@ class Mesh {
     public:
         Mesh();
         Mesh(double a, double b, int n_elem, int p_init, int n_eq);
+	Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq);
         int assign_dofs();
         Element *get_base_elems() {
 	  return this->base_elems;
