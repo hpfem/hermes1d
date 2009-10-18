@@ -13,7 +13,7 @@ void Iterator::reset() {
 
 Element* Iterator::first_active_element()
 {
-  Element *e = this->mesh->get_elems();
+  Element *e = this->mesh->get_base_elems();
   while(!e->is_active()) {
     e = e->sons[0];
   }
@@ -25,16 +25,16 @@ Element* Iterator::next_active_element()
   Element *e;
   // find the first element that has not been visited
   if(current_coarse_elem_index == -1) { //either it is the first coarse mesh element
-    e = this->mesh->get_elems();
+    e = this->mesh->get_base_elems();
     current_coarse_elem_index = 0; 
   }
   else { // or we take it from the stack
     if(S.empty()) {
-      if(current_coarse_elem_index == this->mesh->get_n_elems()-1) { // there is no new element to visit
+      if(current_coarse_elem_index == this->mesh->get_n_base_elems()-1) { // there is no new element to visit
         return NULL;
       }
       else { // we take the next coarse mesh element
-        e = this->mesh->get_elems() + current_coarse_elem_index +1;
+        e = this->mesh->get_base_elems() + current_coarse_elem_index +1;
         current_coarse_elem_index++; 
       }
     }
@@ -56,8 +56,8 @@ Element* Iterator::next_active_element()
 
 Element* Iterator::last_active_element()
 {
-  int n_elem = this->mesh->get_n_elems();
-  Element *e = this->mesh->get_elems() + n_elem - 1;
+  int n_elem = this->mesh->get_n_base_elems();
+  Element *e = this->mesh->get_base_elems() + n_elem - 1;
   while(!e->is_active()) {
     e = e->sons[1];
   }

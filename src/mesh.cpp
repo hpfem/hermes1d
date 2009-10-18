@@ -64,7 +64,7 @@ void Element::dof_alloc(int n_eq)
   }
 }
 
-Mesh::Mesh(double a, double b, int n_elem, int p_init, int n_eq)
+Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
 {
   // domain end points
   left_endpoint = a;
@@ -94,23 +94,23 @@ Mesh::Mesh(double a, double b, int n_elem, int p_init, int n_eq)
     this->bc_right_dir_values[i] = 0;
   }
   // number of elements
-  this->n_elem = n_elem;
+  this->n_base_elem = n_base_elem;
   // allocate element array
-  this->elems = new Element[this->n_elem];     
-  if (elems == NULL) error("Not enough memory in Mesh::create().");
+  this->base_elems = new Element[this->n_base_elem];     
+  if (base_elems == NULL) error("Not enough memory in Mesh::create().");
   if (p_init > MAX_POLYORDER) 
     error("Max element order exceeded (set in common.h).");
   // element length
-  double h = (b - a)/this->n_elem;          
+  double h = (b - a)/this->n_base_elem;          
   // fill initial element array
-  for(int i=0; i<this->n_elem; i++) {         
+  for(int i=0; i<this->n_base_elem; i++) {         
     // polynomial degree
-    this->elems[i].p = p_init;
+    this->base_elems[i].p = p_init;
     // allocate element dof arrays
-    this->elems[i].dof_alloc(n_eq);
+    this->base_elems[i].dof_alloc(n_eq);
     // define element end points
-    this->elems[i].x1 = a + i*h;
-    this->elems[i].x2 = this->elems[i].x1 + h;
+    this->base_elems[i].x1 = a + i*h;
+    this->base_elems[i].x2 = this->base_elems[i].x1 + h;
   }
 }
 
@@ -132,7 +132,7 @@ void Mesh::set_bc_left_dirichlet(int eq_n, double val)
   // deactivate the corresponding dof for the left-most
   // element and all his descendants adjacent to the 
   // left boundary
-  Element *e = &(this->elems[0]);
+  Element *e = &(this->base_elems[0]);
   do {
     e->dof[eq_n][0] = -1;
     e = e->sons[0];
@@ -148,7 +148,7 @@ void Mesh::set_bc_right_dirichlet(int eq_n, double val)
   // deactivate the corresponding dof for the right-most
   // element and all his descendants adjacent to the 
   // right boundary
-  Element *e = &(this->elems[this->n_elem-1]);
+  Element *e = &(this->base_elems[this->n_base_elem-1]);
   do {
     e->dof[eq_n][1] = -1;
     e = e->sons[1];
@@ -199,7 +199,7 @@ int Mesh::assign_dofs()
   // print element connectivities
   if(DEBUG_ELEM_DOF) {
     printf("Printing element DOF arrays:\n");
-    printf("Elements = %d\n", this->n_elem);
+    printf("Elements = %d\n", this->n_base_elem);
     printf("DOF = %d", this->n_dof);
     for(int c = 0; c<this->n_eq; c++) {
       I->reset();
@@ -362,10 +362,10 @@ void Linearizer::get_xy(double *y_prev, int comp,
         double **x, double **y, int *n)
 {
     int n_eq = this->mesh->get_n_eq();
-    int n_elem = this->mesh->get_n_elems();
+    int n_base_elem = this->mesh->get_n_base_elems();
     Iterator *I = new Iterator(this->mesh);
 
-    *n = n_elem * (plotting_elem_subdivision+1);
+    *n = n_base_elem * (plotting_elem_subdivision+1);
     double *x_out = new double[*n];
     double *y_out = new double[*n];
 

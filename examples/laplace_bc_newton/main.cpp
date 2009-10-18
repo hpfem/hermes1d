@@ -80,6 +80,8 @@ double residual_surf_right(double x, double u_prev[MAX_EQN_NUM],
 int main() {
   // create mesh
   Mesh mesh(A, B, N_elem, P_init, N_eq);
+  //mesh.get_elems()[0].refine(3, 3, N_eq);
+  //mesh.get_elems()[1].refine(3, 3, N_eq);
 
   // boundary conditions
   mesh.set_bc_left_dirichlet(0, Val_dir_left);

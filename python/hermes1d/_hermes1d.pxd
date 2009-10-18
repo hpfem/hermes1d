@@ -88,11 +88,11 @@ cdef extern from "hermes1d.h":
 
     cdef struct c_Mesh "Mesh":
         void create(double A, double B, int n)
-        int get_n_elems()
+        int get_n_base_elems()
         int get_n_dofs()
         void set_poly_orders(int poly_order)
         void assign_dofs()
-        c_Element *get_elems()
+        c_Element *get_base_elems()
         void set_dirichlet_bc_left(int eq_n, double val)
         void set_dirichlet_bc_right(int eq_n, double val)
     c_Mesh *new_Mesh "new Mesh" (double a, double b, int n_elem, int p_init,

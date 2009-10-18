@@ -30,11 +30,11 @@ class Mesh {
     public:
         Mesh(double a, double b, int n_elem, int p_init, int n_eq);
         int assign_dofs();
-        Element *get_elems() {
-	  return this->elems;
+        Element *get_base_elems() {
+	  return this->base_elems;
         }
-        int get_n_elems() {
-	  return this->n_elem;
+        int get_n_base_elems() {
+	  return this->n_base_elem;
         }
         int get_n_active_elems();
         int get_n_dof() {
@@ -76,9 +76,9 @@ class Mesh {
 
     private:
         int n_eq;
-        int n_elem;
+        int n_base_elem;
         int n_dof;
-        Element *elems;
+        Element *base_elems;
 };
 
 class Linearizer {

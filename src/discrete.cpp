@@ -38,8 +38,8 @@ void DiscreteProblem::add_vector_form_surf(int i, vector_form_surf fn, int bdy_i
 void DiscreteProblem::process_vol_forms(Matrix *mat, double *res, 
 					double *y_prev, int matrix_flag) {
   int n_eq = this->mesh->get_n_eq();
-  Element *elems = this->mesh->get_elems();
-  int n_elem = this->mesh->get_n_elems();
+  Element *elems = this->mesh->get_base_elems();
+  int n_elem = this->mesh->get_n_base_elems();
   Iterator *I = new Iterator(this->mesh);
 
   Element *e;
