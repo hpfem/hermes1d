@@ -11,7 +11,7 @@ Element::Element()
   x1 = x2 = 0;
   p = 0; 
   dof = NULL;
-  //sons = NULL; 
+  sons[0] = sons[1] = NULL; 
   active = 1;
   level = 0;
   id = -1;
@@ -24,7 +24,7 @@ Element::Element(double x_left, double x_right, int deg, int n_eq)
   p = deg; 
   this->dof_alloc(n_eq);
   if (dof == NULL) error("Not enough memory in Element().");
-  //sons = NULL; 
+  sons[0] = sons[1] = NULL; 
   active = 1;
   level = 0;
   id = -1;
@@ -64,6 +64,14 @@ void Element::dof_alloc(int n_eq)
   }
 }
 
+Mesh::Mesh() {
+  n_eq = 0;
+  n_base_elem = 0;
+  n_active_elem = 0;
+  n_dof = 0;
+  base_elems = NULL;
+}
+
 Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
 {
   // domain end points
@@ -85,8 +93,9 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
     this->bc_left_dir_values[i] = 0;
     this->bc_right_dir_values[i] = 0;
   }
-  // number of elements
+  // number of base elements
   this->n_base_elem = n_base_elem;
+  // number of active elements
   this->n_active_elem = n_base_elem;
   // allocate element array
   this->base_elems = new Element[this->n_base_elem];     
@@ -99,7 +108,8 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   for(int i=0; i<this->n_base_elem; i++) {         
     // polynomial degree
     this->base_elems[i].p = p_init;
-    // allocate element dof arrays
+    // allocate element dof arrays for all solution components 
+    // and length MAX_POLYORDER
     this->base_elems[i].dof_alloc(n_eq);
     // define element end points
     this->base_elems[i].x1 = a + i*h;
@@ -108,11 +118,8 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   this->assign_elem_ids();
 }
 
-int Mesh::get_n_active_elems()
-{
-    return this->n_active_elem;
-}
-
+// caution - this is expensive (traverses the entire tree 
+// from the beginning until the element is found)
 void Mesh::refine_single_elem(int id, int p_left, int p_right)
 {
     Iterator I(this);
@@ -128,16 +135,36 @@ void Mesh::refine_single_elem(int id, int p_left, int p_right)
     error("refine_single_elem: Element not found.");
 }
 
-void Mesh::refine_multi_elems(int n, int *id_array, int2 *p_pair_array)
+// performs mesh refinement using a list of elements to be 
+// refined and a list of corresponding polynomial degree 
+// pairs for the sons
+void Mesh::refine_elems(int elem_num, int *id_array, int2 *p_pair_array)
 {
     Iterator *I = new Iterator(this);
     Element *e;
     int count = 0;
     while ((e = I->next_active_element()) != NULL) {
         if (e->id == id_array[count]) {
-            if (count >= n)
+            if (count >= elem_num)
                 error("refine_multi_elems: not enough elems specified");
             e->refine(p_pair_array[count][0], p_pair_array[count][1], this->n_eq);
+            this->n_active_elem++;
+            count++;
+        }
+    }
+}
+
+// splits the indicated elements and 
+// increases poly degree in sons by one
+void Mesh::refine_elems(int start_elem_id, int elem_num)
+{
+    Iterator *I = new Iterator(this);
+    Element *e;
+    int count = 0;
+    while ((e = I->next_active_element()) != NULL) {
+        if (e->id >= start_elem_id && e->id < start_elem_id + elem_num) {
+	    if (count >= elem_num) return;
+            e->refine(e->p + 1, e->p + 1, this->n_eq);
             this->n_active_elem++;
             count++;
         }
@@ -321,108 +348,69 @@ void Mesh::element_shapefn_point(double x_ref, double a, double b,
     *der = lobatto_der_tab_1d[k](x_ref) / jac; 
 }
 
-// Evaluate (vector-valued) approximate solution at reference 
-// point 'x_ref' in element 'm'. Here 'y' is the global vector 
-// of coefficients. The result is a vector of length mesh->n_eq
-void Linearizer::eval_approx(Element *e, double x_ref, double *y, 
-                             double *x_phys, double *val) {
-  int n_eq = this->mesh->get_n_eq();
-  for(int c=0; c<n_eq; c++) { // loop over solution components
-    val[c] = 0;
-    for(int i=0; i <= e->p; i++) { // loop over shape functions
-      if(e->dof[c][i] >= 0) val[c] += y[e->dof[c][i]]*lobatto_fn_tab_1d[i](x_ref);
+// copying elements including their refinement trees 
+// inactive Dirichlet DOF are replicated
+// FIXME - the recursive version is slow, improve it!
+void copy_element_sons_recursively(Element *e_src, Element *e_trg, int n_eq) {
+  // if element has been refined
+  if(e_src->sons[0] != NULL) {
+    int p_left = e_src->sons[0]->p;
+    int p_right = e_src->sons[1]->p;
+    e_trg->refine(p_left, p_right, n_eq);
+    // left son
+    copy_element_sons_recursively(e_src->sons[0], e_trg->sons[0], n_eq);
+    // right son
+    copy_element_sons_recursively(e_src->sons[1], e_trg->sons[1], n_eq);
+  }
+}
+
+// Replicate mesh
+Mesh *Mesh::replicate()
+{
+  // copy base mesh element array, use dummy poly degree (p_init
+  // cannot be used since p-refinements on base mesh may have taken 
+  // place)
+  int p_dummy = -1; 
+  Mesh *mesh_ref = new Mesh(this->left_endpoint, this->right_endpoint, 
+			    this->n_base_elem, p_dummy, this->n_eq);
+
+  // copy element degrees on base mesh
+  for(int i=0; i<this->n_base_elem; i++) {
+    mesh_ref->get_base_elems()[i].p = this->get_base_elems()[i].p;
+  }
+
+  // copy number of base elements
+  mesh_ref->set_n_base_elem(this->get_n_base_elem());
+    
+  // copy arrays of Dirichlet boundary conditions
+  for(int c = 0; c<this->n_eq; c++) {
+    mesh_ref->bc_left_dir_values[c] = this->bc_left_dir_values[c]; 
+    mesh_ref->bc_right_dir_values[c] = this->bc_right_dir_values[c]; 
+  }
+
+  // copy inactive Dirichlet DOF on first and last element of base mesh
+  for(int c=0; c<this->n_eq; c++) {
+    if(this->base_elems[0].dof[c][0] == -1) {
+      Element *e_left = mesh_ref->get_base_elems();
+      e_left->dof[c][0] = -1;
+    }
+    if(this->base_elems[this->n_base_elem-1].dof[c][1] == -1) {
+      Element *e_right = mesh_ref->get_base_elems()+this->n_base_elem-1;
+      e_right->dof[c][1] = -1;
     }
   }
-  double a = e->x1;
-  double b = e->x2;
-  *x_phys = (a+b)/2 + x_ref*(b-a)/2;
-  return;
+
+  // replicate tree structure on all base mesh elements,
+  // this includes replication of inactive Dirichlet DOF
+  for(int i=0; i<this->n_base_elem; i++) {
+    Element *e_src = this->base_elems + i;
+    Element *e_trg = mesh_ref->get_base_elems() + i;
+    copy_element_sons_recursively(e_src, e_trg, this->n_eq);
+  }
+
+  // enumerate elements in reference mesh
+  mesh_ref->assign_elem_ids();
+
+  return mesh_ref;
 }
 
-// Plot solution in Gnuplot format
-void Linearizer::plot_solution(const char *out_filename, 
-                               double *y_prev, int plotting_elem_subdivision)
-{
-    int n_eq = this->mesh->get_n_eq();
-    FILE *f[MAX_EQN_NUM];
-    char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
-    for(int c=0; c<n_eq; c++) {
-        if(n_eq == 1)
-            sprintf(final_filename[c], "%s", out_filename);
-        else
-            sprintf(final_filename[c], "%s_%d", out_filename, c);
-        f[c] = fopen(final_filename[c], "wb");
-        if(f[c] == NULL) error("problem opening file in plot_solution().");
-        int n;
-        double *x, *y;
-        this->get_xy(y_prev, c, plotting_elem_subdivision, &x, &y, &n);
-        for (int i=0; i < n; i++)
-            fprintf(f[c], "%g %g\n", x[i], y[i]);
-        delete[] x;
-        delete[] y;
-        printf("Output written to %s.\n", final_filename[c]);
-        fclose(f[c]);
-    }
-}
-
-// Returns pointers to x and y coordinates in **x and **y
-// you should free it yourself when you don't need it anymore
-// y_prev --- the solution coefficients (all equations)
-// comp --- which component you want to process
-// plotting_elem_subdivision --- the number of subdivision of the element
-// x, y --- the doubles list of x,y
-// n --- the number of points
-
-void Linearizer::get_xy(double *y_prev, int comp,
-        int plotting_elem_subdivision,
-        double **x, double **y, int *n)
-{
-    int n_eq = this->mesh->get_n_eq();
-    int n_active_elem = this->mesh->get_n_active_elems();
-    Iterator *I = new Iterator(this->mesh);
-
-    *n = n_active_elem * (plotting_elem_subdivision+1);
-    double *x_out = new double[*n];
-    double *y_out = new double[*n];
-
-    // FIXME:
-    if(n_eq > MAX_EQN_NUM)
-        error("number of equations too high in plot_solution().");
-    // FIXME
-    if(plotting_elem_subdivision > MAX_PTS_NUM)
-        error("plotting_elem_subdivision too high in plot_solution().");
-    double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];
-    double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];
-        
-    Element *e;
-    int counter = 0;
-    while ((e = I->next_active_element()) != NULL) {
-        if (counter >= n_active_elem)
-            error("Internal error: wrong n_active_elem");
-        // FIXME:
-        if(e->p > MAX_POLYORDER)
-            error("element degree too hign in plot(solution).");
-        double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-        this->mesh->calculate_elem_coeffs(e, y_prev, coeffs);
-
-        double pts_array[MAX_PTS_NUM];
-        double h = 2./plotting_elem_subdivision;
-
-        for (int j=0; j<plotting_elem_subdivision+1; j++)
-            pts_array[j] = -1 + j*h;
-        this->mesh->element_solution(e, coeffs,
-                plotting_elem_subdivision+1, pts_array,
-                phys_u_prev, phys_du_prevdx);
-        double a = e->x1;
-        double b = e->x2;
-        for (int j=0; j<plotting_elem_subdivision+1; j++) {
-            x_out[counter*(plotting_elem_subdivision+1) + j] =
-                (a + b)/2 + pts_array[j] * (b-a)/2;
-            y_out[counter*(plotting_elem_subdivision+1) + j] =
-                phys_u_prev[comp][j];
-        }
-        counter++;
-    }
-    *x = x_out;
-    *y = y_out;
-}

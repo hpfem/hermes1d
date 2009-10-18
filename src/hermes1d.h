@@ -18,5 +18,6 @@
 #include "quad_std.h"
 #include "lobatto.h"
 #include "discrete.h"
+#include "linearizer.h"
 
 #endif

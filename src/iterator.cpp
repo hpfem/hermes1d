@@ -30,7 +30,7 @@ Element* Iterator::next_active_element()
   }
   else { // or we take it from the stack
     if(S.empty()) {
-      if(current_coarse_elem_index == this->mesh->get_n_base_elems()-1) { // there is no new element to visit
+      if(current_coarse_elem_index == this->mesh->get_n_base_elem()-1) { // there is no new element to visit
         return NULL;
       }
       else { // we take the next coarse mesh element
@@ -56,7 +56,7 @@ Element* Iterator::next_active_element()
 
 Element* Iterator::last_active_element()
 {
-  int n_elem = this->mesh->get_n_base_elems();
+  int n_elem = this->mesh->get_n_base_elem();
   Element *e = this->mesh->get_base_elems() + n_elem - 1;
   while(!e->is_active()) {
     e = e->sons[1];

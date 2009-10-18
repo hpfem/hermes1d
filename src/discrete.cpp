@@ -39,7 +39,7 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
 					double *y_prev, int matrix_flag) {
   int n_eq = this->mesh->get_n_eq();
   Element *elems = this->mesh->get_base_elems();
-  int n_elem = this->mesh->get_n_base_elems();
+  int n_elem = this->mesh->get_n_base_elem();
   Iterator *I = new Iterator(this->mesh);
 
   Element *e;
@@ -183,12 +183,12 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
   if(bdy_index == BOUNDARY_LEFT) {
     e = I->first_active_element(); 
     x_ref = -1; // left end of reference element
-    x_phys = this->mesh->left_endpoint;
+    x_phys = this->mesh->get_left_endpoint();
   }
   else {
     e = I->last_active_element(); 
     x_ref = 1;  // right end of reference element
-    x_phys = this->mesh->right_endpoint;
+    x_phys = this->mesh->get_right_endpoint();
   }
 
   // calculate coefficients of shape functions on element m
