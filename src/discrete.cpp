@@ -81,17 +81,6 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
     this->mesh->element_solution(e, coeffs, pts_num, 
                      ref_pts_array, phys_u_prev, phys_du_prevdx); 
 
-    // DEBUG - SETTING THE PREVIOUS SOLUTION 
-    // TO BE THE EXACT SOLUTION  
-    /*
-    for (int i=0 ; i<pts_num; i++) {
-      phys_u_prev[0][i] = exp(phys_pts[i]);
-      phys_du_prevdx[0][i] = exp(phys_pts[i]);
-      phys_u_prev[1][i] = exp(-phys_pts[i]);
-      phys_du_prevdx[1][i] = -exp(-phys_pts[i]);
-    }
-    */    
-
     // volumetric bilinear forms
     if(matrix_flag == 0 || matrix_flag == 1) 
     {

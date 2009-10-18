@@ -79,17 +79,9 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   if(n_eq > MAX_EQN_NUM) 
   error("Maximum number of equations exceeded (set in common.h)");
   // arrays for boundary conditions
-  /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
-  this->bc_left_dir = new int[n_eq];
-  this->bc_right_dir = new int[n_eq];
-  */
   this->bc_left_dir_values = new double[n_eq];
   this->bc_right_dir_values = new double[n_eq];
   for (int i=0; i<n_eq; i++) {
-  /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
-    this->bc_left_dir[i] = 0;
-    this->bc_right_dir[i] = 0;
-  */
     this->bc_left_dir_values[i] = 0;
     this->bc_right_dir_values[i] = 0;
   }
@@ -125,9 +117,6 @@ int Mesh::get_n_active_elems()
 
 void Mesh::set_bc_left_dirichlet(int eq_n, double val)
 {
-  /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
-  this->bc_left_dir[eq_n] = 1;
-  */
   this->bc_left_dir_values[eq_n] = val;
   // deactivate the corresponding dof for the left-most
   // element and all his descendants adjacent to the 
@@ -141,9 +130,6 @@ void Mesh::set_bc_left_dirichlet(int eq_n, double val)
 
 void Mesh::set_bc_right_dirichlet(int eq_n, double val)
 {
-  /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
-  this->bc_right_dir[eq_n] = 1;
-  */
   this->bc_right_dir_values[eq_n] = val;
   // deactivate the corresponding dof for the right-most
   // element and all his descendants adjacent to the 
@@ -155,18 +141,6 @@ void Mesh::set_bc_right_dirichlet(int eq_n, double val)
   } while (e != NULL);
 
 }
-
-/* TO BE DELETED WHEN NEW ASSEMBLING WORKS
-void Mesh::set_bc_left_natural(int eq_n)
-{
-    this->bc_left_dir[eq_n] = 0;
-}
-
-void Mesh::set_bc_right_natural(int eq_n)
-{
-    this->bc_right_dir[eq_n] = 0;
-}
-*/
 
 // define element connectivities (global dof)
 int Mesh::assign_dofs()

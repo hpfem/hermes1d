@@ -55,21 +55,7 @@ class Mesh {
 				   int k, double *val, double *der);
         void set_bc_left_dirichlet(int eq_n, double val);
         void set_bc_right_dirichlet(int eq_n, double val);
-        /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
-        void set_bc_left_natural(int eqn);
-        void set_bc_right_natural(int eqn);
-        */
 
-        // Dirichlet boundary conditions at both endpoints
-        // (first integer in pair indicates whether there is 
-        // a Dirichlet condition for that equation, the other
-        // one tells the value)
-        /* TO BE DELETED WHEN NEW ASSEMBLING WORKS
-        int *bc_left_dir; //1...Dirichlet (essential) BC at left end point
-                          //0...natural BC (Neumann, Newton, none)
-        int *bc_right_dir; //1...Dirichlet (essential) BC at right end point
-                           //0...natural BC (Neumann, Newton, none)
-	*/
         double *bc_left_dir_values;  // values for the Dirichlet condition left
         double *bc_right_dir_values; // values for the Dirichlet condition right
         double left_endpoint, right_endpoint;
