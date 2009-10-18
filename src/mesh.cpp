@@ -115,6 +115,34 @@ int Mesh::get_n_active_elems()
     return count;
 }
 
+void Mesh::refine_single_elem(int id, int p_left, int p_right)
+{
+    Iterator *I = new Iterator(this);
+    Element *e;
+    while ((e = I->next_active_element()) != NULL) {
+        if (e->id == id) {
+            e->refine(p_left, p_right, this->n_eq);
+            return;
+        }
+    }
+    error("refine_single_elem: Element not found.");
+}
+
+void Mesh::refine_multi_elems(int n, int *id_array, int2 *p_pair_array)
+{
+    Iterator *I = new Iterator(this);
+    Element *e;
+    int count = 0;
+    while ((e = I->next_active_element()) != NULL) {
+        if (e->id == id_array[count]) {
+            if (count >= n)
+                error("refine_multi_elems: not enough elems specified");
+            e->refine(p_pair_array[count][0], p_pair_array[count][1], this->n_eq);
+            count++;
+        }
+    }
+}
+
 void Mesh::set_bc_left_dirichlet(int eq_n, double val)
 {
   this->bc_left_dir_values[eq_n] = val;

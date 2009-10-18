@@ -56,6 +56,9 @@ class Mesh {
         void set_bc_left_dirichlet(int eq_n, double val);
         void set_bc_right_dirichlet(int eq_n, double val);
 
+        void refine_single_elem(int id, int p_left, int p_right);
+        void refine_multi_elems(int n, int *id_array, int2 *p_id_array);
+
         double *bc_left_dir_values;  // values for the Dirichlet condition left
         double *bc_right_dir_values; // values for the Dirichlet condition right
         double left_endpoint, right_endpoint;
