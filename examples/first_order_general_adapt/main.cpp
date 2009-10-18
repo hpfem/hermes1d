@@ -205,9 +205,10 @@ int main() {
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
-    printf("y_prev_ref = \n");
-    for(int i=0; i<N_dof_ref; i++) printf("%g, ", y_prev_ref[i]);
-    printf("\n");
+    //debugging prints for y_prev:
+    //printf("y_prev_ref = \n");
+    //for(int i=0; i<N_dof_ref; i++) printf("%g, ", y_prev_ref[i]);
+    //printf("\n");
 
     /* TO BE USED FOR ADAPTIVITY
     // Use the difference between the two solutions to determine 
