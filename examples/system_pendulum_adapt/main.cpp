@@ -2,13 +2,26 @@
 #include "solver_umfpack.h"
 
 // ********************************************************************
-// This example solves a system of two linear second-order equations 
-// u' + k^2 v = 0
-// u - v' = 0
-// which is equivalent to u'' + k^2 u = 0
-// in an interval (0, 2*pi) equipped with Dirichlet bdy conditions 
+// This example solves the mathematical pendulum equation 
+// y'' + k**2 * sin(y) = 0 in an interval (A, B), equipped with the 
+// initial conditions y(A) = Init_angle, y'(0) = Init_vel. The 
+// system is decomposed into two first order ODE and solved via 
+// the Newton's method starting from zero initial condition.
+// Note that the method diverges for longer time intervals, 
+// depending on the interval length, number of elements, and 
+// the initial polynomial degree.
+//
+// Derivation:
+// m*l*u'' = -m*g*sin(u)
+// so:
+// u'' + k^2 * sin(u) = 0
+// with k^2 = g/l
+// so we have to solve a system of two nonlinear second-order equations
+// v' + k^2 sin u = 0
+// u' - v = 0
+// in an interval (0, 2*pi) equipped with Dirichlet bdy conditions
 // u(0) = 0, v(0) = k
-// The exact solution is u(x) = sin(k*x), v(x) = k*cos(k*x)
+// The approximate (linearized) solution is u(x) = sin(k*x), v(x) = k*cos(k*x)
 
 // Error tolerance
 double TOL_NEWTON_BASIC = 1e-5;  // tolerance for the Newton's method on basic mesh
@@ -17,17 +30,17 @@ double TOL_ADAPT = 1e-5;         // tolerance for the adaptivity loop
 
 // General input:
 static int N_eq = 2;
-int N_elem = 5;          // number of elements
-double A = 0, B = 2*M_PI;     // domain end points
-int P_init = 1;          // initial polynomal degree
-double k = 1.0;          // the constant in the equation
+int N_elem = 10;          // number of elements
+double A = 0, B = 10;     // domain end points
+int P_init = 1;            // initial polynomal degree
+double k = 0.5;
 
 // Tolerance for the Newton's method
 double TOL = 1e-5;
 
 // Boundary conditions
-double Val_dir_left_0 = 0;
-double Val_dir_left_1 = k;
+double Init_angle = M_PI/2.;      // initial angle
+double Init_vel = 0;              // initial velocity
 
 // ********************************************************************
 
@@ -56,7 +69,7 @@ double jacobian_0_1(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += -u[i]*v[i]*weights[i];
+    val -= u[i]*v[i]*weights[i];
   }
   return val;
 };
@@ -70,7 +83,7 @@ double jacobian_1_0(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += k*k*u[i]*v[i]*weights[i];
+    val += k*k * cos(u_prev[0][i])*u[i]*v[i]*weights[i];
   }
   return val;
 };
@@ -89,7 +102,7 @@ double jacobian_1_1(int num, double *x, double *weights,
   return val;
 };
 
-// Residual part 0 (equation 0) 
+// Residual part 0 (equation 0)
 double residual_0(int num, double *x, double *weights, 
                 double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
                 double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
@@ -97,12 +110,12 @@ double residual_0(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (du_prevdx[0][i] - u_prev[1][i])*v[i]*weights[i];
+    val += (du_prevdx[0][i]*v[i] - u_prev[1][i]*v[i])*weights[i];
   }
   return val;
 };
 
-// Residual part 1 (equation 1)
+// Residual part 1 (equation 1) 
 double residual_1(int num, double *x, double *weights, 
                 double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
                 double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
@@ -110,7 +123,7 @@ double residual_1(int num, double *x, double *weights,
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (k*k*u_prev[0][i] + du_prevdx[1][i])*v[i]*weights[i];
+    val += (k*k*sin(u_prev[0][i])*v[i] + du_prevdx[1][i]*v[i])*weights[i];
   }
   return val;
 };
@@ -119,10 +132,10 @@ double residual_1(int num, double *x, double *weights,
 int main() {
   // create mesh
   Mesh mesh(A, B, N_elem, P_init, N_eq);
-  mesh.set_bc_left_dirichlet(0, Val_dir_left_0);
-  mesh.set_bc_left_dirichlet(1, Val_dir_left_1);
+  mesh.set_bc_left_dirichlet(0, Init_angle);
+  mesh.set_bc_left_dirichlet(1, Init_vel);
   int N_dof_basic = mesh.assign_dofs();
-  printf("N_dof_basic = %d\n", N_dof_basic);
+  printf("N_dof = %d\n", N_dof_basic);
 
   // register weak forms
   DiscreteProblem dp(&mesh);
