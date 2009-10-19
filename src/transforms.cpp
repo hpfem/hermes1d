@@ -84,18 +84,21 @@ void fill_transformation_matrix(int p, int p_ref, TransformationMatrix
     fill_chebyshev_points(n, chebyshev_points);
     fill_chebyshev_matrix(n, &chebyshev_matrix);
 
-    for (int i=0; i < p+1; i++) {
+    for (int j=0; j < p+1; j++) {
+        // FIXME: don't compute the matrix all the time, e.g.  move this out of
+        // the cycle and make sure the gaussian elimination doesn't overwrite
+        // the _mat.
         Matrix *_mat = new DenseMatrix(n);
         _mat->zero();
         for (int _i=0; _i < n; _i++)
             for (int _j=0; _j < n; _j++)
                 _mat->add(_i, _j, (chebyshev_matrix)[_i][_j]);
         double f[n];
-        for (int j=0; j < n; j++)
-            f[j] = lobatto_fn_tab_1d[i](chebyshev_points[j]);
+        for (int i=0; i < n; i++)
+            f[i] = lobatto_fn_tab_1d[j](chebyshev_points[i]);
         solve_linear_system(_mat, f);
-        for (int j=0; j < n; j++)
-            transformation_matrix[j][i] = f[j];
+        for (int i=0; i < n; i++)
+            transformation_matrix[i][j] = f[i];
     }
     for (int i=0; i < n; i++) {
         for (int j=0; j < p+1; j++) {
