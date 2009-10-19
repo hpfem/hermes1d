@@ -74,16 +74,43 @@ void fill_transformation_matrix()
 }
 
 void transform_element(int comp, double *y_prev, double *y_prev_ref, Element
-        *e, Element *e_ref_left, Element *e_ref_right)
+        *e, Element *e_ref_left, Element *e_ref_right, Mesh *mesh, Mesh
+        *mesh_ref)
 {
     double y_prev_loc[MAX_P+1];
     double y_prev_loc_trans[N_chebyshev+1];
-    for (int i=0; i < e->p + 1; i++)
+    if (e->dof[comp][0] == -1)
+        y_prev_loc[0] = mesh->bc_left_dir_values[comp];
+    else
+        y_prev_loc[0] = y_prev[e->dof[comp][0]];
+    if (e->dof[comp][1] == -1)
+        y_prev_loc[1] = mesh->bc_right_dir_values[comp];
+    else
+        y_prev_loc[1] = y_prev[e->dof[comp][1]];
+    for (int i=2; i < e->p + 1; i++)
         y_prev_loc[i] = y_prev[e->dof[comp][i]];
     fill_transformation_matrix();
     for (int i=0; i < 3 + 2*(e->p - 1); i++) {
         y_prev_loc_trans[i] = 0.;
         for (int j=0; j < e->p + 1; j++)
             y_prev_loc_trans[i] += transformation_matrix[i][j] * y_prev_loc[j];
+    }
+    // copying computed coefficients into the elements e_ref_left and
+    // e_ref_right
+    if (e->dof[comp][0] != -1)
+        y_prev_ref[e_ref_left->dof[comp][0]] = y_prev_loc_trans[0];
+    y_prev_ref[e_ref_left->dof[comp][1]] = y_prev_loc_trans[1];
+    y_prev_ref[e_ref_right->dof[comp][0]] = y_prev_loc_trans[1];
+    if (e->dof[comp][1] != -1)
+        y_prev_ref[e_ref_right->dof[comp][1]] = y_prev_loc_trans[2];
+    if (e_ref_left->p != e_ref_right->p)
+        error("internal error in transform_element: the left and right elements
+                must have the same order.");
+    int counter = 0;
+    for (int p=2; p < e_ref_left->p + 1; p++) {
+        y_prev_ref[e_ref_left->dof[comp][p]] = y_prev_loc_trans[3+counter];
+        counter++;
+        y_prev_ref[e_ref_right->dof[comp][p]] = y_prev_loc_trans[3+counter];
+        counter++;
     }
 }
