@@ -11,7 +11,7 @@
 
 // General input:
 static int N_eq = 1;             // number of equations
-int N_elem = 10;                 // number of elements
+int N_elem = 2;                 // number of elements
 double A = 0, B = 4;            // domain end points
 double YA = 1;                   // equation parameter
 int P_init = 1;                  // initial polynomal degree

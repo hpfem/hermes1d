@@ -75,7 +75,7 @@ void fill_chebyshev_matrix(int n, ChebyshevMatrix *chebyshev_matrix)
     //error("stop.");
 }
 
-void fill_transformation_matrix(int p_ref, TransformationMatrix
+void fill_transformation_matrix(int p, int p_ref, TransformationMatrix
         transformation_matrix)
 {
     double chebyshev_points[N_chebyshev_max];
@@ -84,7 +84,7 @@ void fill_transformation_matrix(int p_ref, TransformationMatrix
     fill_chebyshev_points(n, chebyshev_points);
     fill_chebyshev_matrix(n, &chebyshev_matrix);
 
-    for (int i=0; i < p_ref+1; i++) {
+    for (int i=0; i < p+1; i++) {
         Matrix *_mat = new DenseMatrix(n);
         _mat->zero();
         for (int _i=0; _i < n; _i++)
@@ -97,12 +97,20 @@ void fill_transformation_matrix(int p_ref, TransformationMatrix
         for (int j=0; j < n; j++)
             transformation_matrix[j][i] = f[j];
     }
+    for (int i=0; i < n; i++) {
+        for (int j=0; j < p+1; j++) {
+            printf("%f ", transformation_matrix[i][j]);
+        }
+        printf("\n");
+    }
+    error("stop.");
 }
 
 void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Element
         *e, Element *e_ref_left, Element *e_ref_right, Mesh *mesh, Mesh
         *mesh_ref)
 {
+    printf("ELEMENT: %d %f %f\n", e->id, e->x1, e->x2);
     double y_prev_loc[MAX_P+1];
     double y_prev_loc_trans[N_chebyshev_max+1];
     if (e->dof[comp][0] == -1)
@@ -115,16 +123,21 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
         y_prev_loc[1] = y_prev[e->dof[comp][1]];
     for (int i=2; i < e->p + 1; i++)
         y_prev_loc[i] = y_prev[e->dof[comp][i]];
+    for (int i=0; i < e->p + 1; i++)
+        printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
     TransformationMatrix transformation_matrix;
-    fill_transformation_matrix(e_ref_left->p, transformation_matrix);
+    fill_transformation_matrix(e->p, e_ref_left->p, transformation_matrix);
     //fill_transformation_matrix();
     //double TransformationMatrix *transformation_matrix =
     //    get_transformation_matrix(e_ref_left->p + 1);
-    for (int i=0; i < 3 + 2*(e->p - 1); i++) {
+    for (int i=0; i < 3 + 2*(e_ref_left->p - 1); i++) {
         y_prev_loc_trans[i] = 0.;
         for (int j=0; j < e->p + 1; j++)
             y_prev_loc_trans[i] += transformation_matrix[i][j] * y_prev_loc[j];
     }
+    for (int i=0; i < 3 + 2*(e_ref_left->p - 1); i++)
+        printf("y_prev_loc_trans[%d] = %f\n", i, y_prev_loc_trans[i]);
+    printf("----------------------\n");
     // copying computed coefficients into the elements e_ref_left and
     // e_ref_right
     if (e->dof[comp][0] != -1)
