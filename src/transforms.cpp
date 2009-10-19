@@ -10,6 +10,7 @@
 double chebyshev_points[N_chebyshev];
 double chebyshev_matrix[N_chebyshev][N_chebyshev];
 double transformation_matrix[N_chebyshev][MAX_P+1];
+int transformation_matrix_initialized=0;
 
 void fill_chebyshev_points()
 {
@@ -52,6 +53,8 @@ void fill_chebyshev_matrix()
 
 void fill_transformation_matrix()
 {
+    if (transformation_matrix_initialized)
+        return;
     fill_chebyshev_matrix();
 
     for (int i=0; i < MAX_P; i++) {
@@ -66,5 +69,21 @@ void fill_transformation_matrix()
         solve_linear_system(_mat, f);
         for (int j=0; j < N_chebyshev; j++)
             transformation_matrix[j][i] = f[j];
+    }
+    transformation_matrix_initialized = 1;
+}
+
+void transform_element(int comp, double *y_prev, double *y_prev_ref, Element
+        *e, Element *e_ref_left, Element *e_ref_right)
+{
+    double y_prev_loc[MAX_P+1];
+    double y_prev_loc_trans[N_chebyshev+1];
+    for (int i=0; i < e->p + 1; i++)
+        y_prev_loc[i] = y_prev[e->dof[comp][i]];
+    fill_transformation_matrix();
+    for (int i=0; i < 3 + 2*(e->p - 1); i++) {
+        y_prev_loc_trans[i] = 0.;
+        for (int j=0; j < e->p + 1; j++)
+            y_prev_loc_trans[i] += transformation_matrix[i][j] * y_prev_loc[j];
     }
 }
