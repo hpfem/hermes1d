@@ -5,17 +5,31 @@
 
 #include "transforms.h"
 
-#define N_chebyshev (3+2*(MAX_P-1))
+#define N_chebyshev_max (3+2*(MAX_P-1))
 
-double chebyshev_points[N_chebyshev];
-double chebyshev_matrix[N_chebyshev][N_chebyshev];
-double transformation_matrix[N_chebyshev][MAX_P+1];
+typedef double ChebyshevMatrix[N_chebyshev_max][N_chebyshev_max];
+typedef double TransformationMatrix[N_chebyshev_max][MAX_P+1];
+// for one particular p:
+TransformationMatrix transformation_matrix;
+// for all p:
+TransformationMatrix transformation_matrix_list[MAX_P+1];
 int transformation_matrix_initialized=0;
 
-void fill_chebyshev_points()
+TransformationMatrix *get_transformation_matrix(int p)
 {
-    for (int i=0; i < N_chebyshev; i++)
-        chebyshev_points[i] = cos(i*M_PI/(N_chebyshev-1));
+    return & (transformation_matrix_list[p]);
+}
+
+void fill_chebyshev_points(int n, double *chebyshev_points)
+{
+    for (int i=0; i < n; i++)
+        chebyshev_points[i] = -cos(i*M_PI/(n-1));
+    /*
+    for (int i=0; i < N_chebyshev_max; i++)
+        printf("%f ", chebyshev_points[i]);
+    printf("\n");
+    printf("done.\n");
+    */
 }
 
 // transform values from (-1, 0) to (-1, 1)
@@ -40,40 +54,49 @@ double phi(int i, double x)
         else if (i % 2 == 1)
             return 0;
         else {
-            printf("XXX: %d %f\n", i, x);
             return lobatto_fn_tab_1d[i/2](map_left(x));
         }
     } 
 }
 
-void fill_chebyshev_matrix()
+void fill_chebyshev_matrix(int n, ChebyshevMatrix *chebyshev_matrix)
 {
-    fill_chebyshev_points();
-    for (int i=0; i < N_chebyshev; i++)
-        for (int j=0; j < N_chebyshev; j++)
-            chebyshev_matrix[i][j] = phi(i, chebyshev_points[j]);
+    double chebyshev_points[N_chebyshev_max];
+    fill_chebyshev_points(n, chebyshev_points);
+    for (int i=0; i < n; i++) {
+        for (int j=0; j < n; j++) {
+            //printf("XXX %d %d %f \n", i, j, phi(j, chebyshev_points[i]));
+            //printf("XXX %d %d %f \n", i, j, (*chebyshev_matrix)[i][j]);
+            (*chebyshev_matrix)[i][j] = phi(j, chebyshev_points[i]);
+            //printf("%f ", (*chebyshev_matrix)[i][j]);
+        }
+        //printf("\n");
+    }
+    //error("stop.");
 }
 
-void fill_transformation_matrix()
+void fill_transformation_matrix(int p_ref, TransformationMatrix
+        transformation_matrix)
 {
-    if (transformation_matrix_initialized)
-        return;
-    fill_chebyshev_matrix();
+    double chebyshev_points[N_chebyshev_max];
+    ChebyshevMatrix chebyshev_matrix;
+    int n = 3+2*(p_ref-1);
+    fill_chebyshev_points(n, chebyshev_points);
+    fill_chebyshev_matrix(n, &chebyshev_matrix);
 
-    for (int i=0; i < MAX_P; i++) {
-        Matrix *_mat = new DenseMatrix(N_chebyshev);
+    for (int i=0; i < p_ref+1; i++) {
+        Matrix *_mat = new DenseMatrix(n);
         _mat->zero();
-        for (int _i=0; _i < N_chebyshev; _i++)
-            for (int _j=0; _j < N_chebyshev; _j++)
-                _mat->add(_i, _j, chebyshev_matrix[_i][_j]);
-        double f[N_chebyshev];
-        for (int j=0; j < N_chebyshev; j++)
+        for (int _i=0; _i < n; _i++)
+            for (int _j=0; _j < n; _j++)
+                _mat->add(_i, _j, (chebyshev_matrix)[_i][_j]);
+        double f[n];
+        for (int j=0; j < n; j++)
             f[j] = lobatto_fn_tab_1d[i](chebyshev_points[j]);
         solve_linear_system(_mat, f);
-        for (int j=0; j < N_chebyshev; j++)
+        for (int j=0; j < n; j++)
             transformation_matrix[j][i] = f[j];
     }
-    transformation_matrix_initialized = 1;
 }
 
 void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Element
@@ -81,7 +104,7 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
         *mesh_ref)
 {
     double y_prev_loc[MAX_P+1];
-    double y_prev_loc_trans[N_chebyshev+1];
+    double y_prev_loc_trans[N_chebyshev_max+1];
     if (e->dof[comp][0] == -1)
         y_prev_loc[0] = mesh->bc_left_dir_values[comp];
     else
@@ -92,7 +115,11 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
         y_prev_loc[1] = y_prev[e->dof[comp][1]];
     for (int i=2; i < e->p + 1; i++)
         y_prev_loc[i] = y_prev[e->dof[comp][i]];
-    fill_transformation_matrix();
+    TransformationMatrix transformation_matrix;
+    fill_transformation_matrix(e_ref_left->p, transformation_matrix);
+    //fill_transformation_matrix();
+    //double TransformationMatrix *transformation_matrix =
+    //    get_transformation_matrix(e_ref_left->p + 1);
     for (int i=0; i < 3 + 2*(e->p - 1); i++) {
         y_prev_loc_trans[i] = 0.;
         for (int j=0; j < e->p + 1; j++)
