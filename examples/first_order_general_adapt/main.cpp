@@ -14,7 +14,7 @@ static int N_eq = 1;             // number of equations
 int N_elem = 2;                 // number of elements
 double A = 0, B = 4;            // domain end points
 double YA = 1;                   // equation parameter
-int P_init = 1;                  // initial polynomal degree
+int P_init = 2;                  // initial polynomal degree
 
 // Error tolerance
 double TOL_NEWTON_BASIC = 1e-5;  // tolerance for the Newton's method on basic mesh

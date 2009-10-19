@@ -93,6 +93,7 @@ void fill_transformation_matrix(int p, int p_ref, TransformationMatrix
         for (int _i=0; _i < n; _i++)
             for (int _j=0; _j < n; _j++)
                 _mat->add(_i, _j, chebyshev_matrix[_i][_j]);
+        /*
         printf("chebyshev stuff:\n");
         for (int _i=0; _i < n; _i++) {
             for (int _j=0; _j < n; _j++) {
@@ -101,9 +102,11 @@ void fill_transformation_matrix(int p, int p_ref, TransformationMatrix
             printf("\n");
         }
         printf("----- END ---- \n");
+        */
         double f[n];
         for (int i=0; i < n; i++)
             f[i] = lobatto_fn_tab_1d[j](chebyshev_points[i]);
+        /*
         printf("chebyshev_points\n");
         for (int i=0; i < 5; i++)
             printf("%f ", chebyshev_points[i]);
@@ -112,24 +115,27 @@ void fill_transformation_matrix(int p, int p_ref, TransformationMatrix
         for (int i=0; i < n; i++)
             printf("%f ", f[i]);
         printf("\n");
+        */
         solve_linear_system(_mat, f);
         for (int i=0; i < n; i++)
             transformation_matrix[i][j] = f[i];
     }
+    /*
     for (int i=0; i < n; i++) {
         for (int j=0; j < p+1; j++) {
             printf("%f ", transformation_matrix[i][j]);
         }
         printf("\n");
     }
-    error("stop.");
+    //error("stop.");
+    */
 }
 
 void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Element
         *e, Element *e_ref_left, Element *e_ref_right, Mesh *mesh, Mesh
         *mesh_ref)
 {
-    printf("ELEMENT: %d %f %f\n", e->id, e->x1, e->x2);
+    //printf("ELEMENT: %d %f %f\n", e->id, e->x1, e->x2);
     double y_prev_loc[MAX_P+1];
     double y_prev_loc_trans[N_chebyshev_max+1];
     if (e->dof[comp][0] == -1)
@@ -142,8 +148,10 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
         y_prev_loc[1] = y_prev[e->dof[comp][1]];
     for (int i=2; i < e->p + 1; i++)
         y_prev_loc[i] = y_prev[e->dof[comp][i]];
+    /*
     for (int i=0; i < e->p + 1; i++)
         printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
+        */
     TransformationMatrix transformation_matrix;
     fill_transformation_matrix(e->p, e_ref_left->p, transformation_matrix);
     //fill_transformation_matrix();
@@ -154,9 +162,11 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
         for (int j=0; j < e->p + 1; j++)
             y_prev_loc_trans[i] += transformation_matrix[i][j] * y_prev_loc[j];
     }
+    /*
     for (int i=0; i < 3 + 2*(e_ref_left->p - 1); i++)
         printf("y_prev_loc_trans[%d] = %f\n", i, y_prev_loc_trans[i]);
     printf("----------------------\n");
+    */
     // copying computed coefficients into the elements e_ref_left and
     // e_ref_right
     if (e->dof[comp][0] != -1)
