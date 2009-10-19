@@ -8,10 +8,12 @@
 #define N_chebyshev (3+2*(MAX_P-1))
 
 double chebyshev_points[N_chebyshev];
+double chebyshev_matrix[N_chebyshev][N_chebyshev];
+double transformation_matrix[N_chebyshev][MAX_P+1];
 
-void calculate_chebyshev_points()
+void fill_chebyshev_points()
 {
-    for (int i; i < N_chebyshev; i++)
+    for (int i=0; i < N_chebyshev; i++)
         chebyshev_points[i] = cos(i*M_PI/(N_chebyshev-1));
 }
 
@@ -39,4 +41,30 @@ double phi(int i, double x)
         else
             return lobatto_fn_tab_1d[i/2](map_left(x));
     } 
+}
+
+void fill_chebyshev_matrix()
+{
+    for (int i=0; i < N_chebyshev; i++)
+        for (int j=0; j < N_chebyshev; j++)
+            chebyshev_matrix[i][j] = phi(i, chebyshev_points[j]);
+}
+
+void fill_transformation_matrix()
+{
+    fill_chebyshev_matrix();
+
+    for (int i=0; i < MAX_P; i++) {
+        Matrix *_mat = new DenseMatrix(N_chebyshev);
+        _mat->zero();
+        for (int _i=0; _i < N_chebyshev; _i++)
+            for (int _j=0; _j < N_chebyshev; _j++)
+                _mat->add(_i, _j, chebyshev_matrix[_i][_j]);
+        double f[N_chebyshev];
+        for (int j=0; j < N_chebyshev; j++)
+            f[j] = lobatto_fn_tab_1d[i](chebyshev_points[j]);
+        solve_linear_system(_mat, f);
+        for (int j=0; j < N_chebyshev; j++)
+            transformation_matrix[j][i] = f[j];
+    }
 }

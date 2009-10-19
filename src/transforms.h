@@ -9,6 +9,7 @@
 #include "common.h"
 #include "lobatto.h"
 #include "mesh.h"
+#include "matrix.h"
 
 
 #endif
