@@ -10,6 +10,7 @@
 #include "lobatto.h"
 #include "mesh.h"
 #include "matrix.h"
+#include "iterator.h"
 
 
 #endif

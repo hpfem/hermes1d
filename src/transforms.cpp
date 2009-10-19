@@ -73,7 +73,7 @@ void fill_transformation_matrix()
     transformation_matrix_initialized = 1;
 }
 
-void transform_element(int comp, double *y_prev, double *y_prev_ref, Element
+void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Element
         *e, Element *e_ref_left, Element *e_ref_right, Mesh *mesh, Mesh
         *mesh_ref)
 {
@@ -104,13 +104,51 @@ void transform_element(int comp, double *y_prev, double *y_prev_ref, Element
     if (e->dof[comp][1] != -1)
         y_prev_ref[e_ref_right->dof[comp][1]] = y_prev_loc_trans[2];
     if (e_ref_left->p != e_ref_right->p)
-        error("internal error in transform_element: the left and right elements
-                must have the same order.");
+        error("internal error in transform_element: the left and right elements must have the same order.");
     int counter = 0;
     for (int p=2; p < e_ref_left->p + 1; p++) {
         y_prev_ref[e_ref_left->dof[comp][p]] = y_prev_loc_trans[3+counter];
         counter++;
         y_prev_ref[e_ref_right->dof[comp][p]] = y_prev_loc_trans[3+counter];
         counter++;
+    }
+}
+
+void transform_element_unrefined(int comp, double *y_prev, double *y_prev_ref, Element
+        *e, Element *e_ref, Mesh *mesh, Mesh *mesh_ref)
+{
+    for (int p=0; p < e->p + 1; p++) {
+        if (e->dof[comp][p] != -1)
+            y_prev_ref[e_ref->dof[comp][p]] = y_prev[e->dof[comp][p]];
+    }
+    for (int p=e->p+1; p < e_ref->p + 1; p++) {
+        y_prev_ref[e_ref->dof[comp][p]] = 0.;
+    }
+}
+
+/* This only works after the dofs are assigned in the reference (and coarse)
+ * solution. */
+void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref)
+{
+    Iterator *I = new Iterator(mesh);
+    Iterator *I_ref = new Iterator(mesh_ref);
+    Element *e, *e_ref, *e_ref_left, *e_ref_right;
+    for (int comp=0; comp < mesh->get_n_eq(); comp++) {
+        I->reset();
+        I_ref->reset();
+        while ((e = I->next_active_element()) != NULL) {
+            e_ref = I_ref->next_active_element();
+            if (e->level == e_ref->level)
+                transform_element_unrefined(comp, y_prev, y_prev_ref, e,
+                    e_ref, mesh, mesh_ref);
+            else if (e->level + 1 == e_ref->level) {
+                e_ref_left = e_ref;
+                e_ref_right = I_ref->next_active_element();
+                transform_element_refined(comp, y_prev, y_prev_ref, e,
+                    e_ref_left, e_ref_right, mesh, mesh_ref);
+            }
+            else
+                error("internal error in transfer_solution: element orders mismatch.");
+        }
     }
 }

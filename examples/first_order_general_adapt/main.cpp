@@ -165,7 +165,12 @@ int main() {
     double *res_ref = new double[N_dof_ref];
 
     // TEMPORARY: set y_prev_ref zero
-    for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] = 0;
+    transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref
+    void transform_element(int comp, double *y_prev, double *y_prev_ref, Element
+            *e, Element *e_ref_left, Element *e_ref_right, Mesh *mesh, Mesh
+            *mesh_ref)
+
+
 
     // Use the basic solution as the initial condition 
     // for the Newton's iteration for the reference solution
