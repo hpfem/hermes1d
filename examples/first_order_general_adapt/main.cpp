@@ -11,24 +11,26 @@
 
 // General input:
 static int N_eq = 1;             // number of equations
-int N_elem = 2;                 // number of elements
-double A = 0, B = 4;            // domain end points
+int N_elem = 100;                 // number of elements
+double A = 0, B = 100;            // domain end points
 double YA = 1;                   // equation parameter
 int P_init = 1;                  // initial polynomal degree
 
 // Error tolerance
 double TOL_NEWTON_BASIC = 1e-5;  // tolerance for the Newton's method on basic mesh
-double TOL_NEWTON_REF = 1e-2;    // tolerance for the Newton's method on reference mesh
+double TOL_NEWTON_REF = 1e-5;    // tolerance for the Newton's method on reference mesh
 double TOL_ADAPT = 1e-5;         // tolerance for the adaptivity loop      
  
 // Function f(y, x)
 double f(double y, double x) {
-  return -y;
+  //return -y; // with y(0)=1, exact solution is y=exp(-x)
+  return -y*y; // with y(0)=1, exact solution is y=1/(x+1)
 }
 
 // Function dfdy(y, x)
 double dfdy(double y, double x) {
-  return -1;
+  //return -1;
+  return -2*y;
 }
 
 // ********************************************************************
@@ -164,6 +166,11 @@ int main() {
     y_prev_ref = new double[N_dof_ref];
     double *res_ref = new double[N_dof_ref];
 
+
+    /*
+    for (int i=0; i < N_dof_ref; i++)
+        y_prev_ref[i] = 0;
+        */
     transfer_solution(&mesh, mesh_ref, y_prev, y_prev_ref);
     /*
     for (int i=0; i < N_dof_ref; i++)
