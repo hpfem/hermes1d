@@ -50,11 +50,11 @@ double phi(int i, double x)
         if (i == 0)
             return 0;
         else if (i == 1)
-            return lobatto_fn_tab_1d[0](map_left(x));
+            return lobatto_fn_tab_1d[0](map_right(x));
         else if (i % 2 == 1)
             return 0;
         else {
-            return lobatto_fn_tab_1d[i/2](map_left(x));
+            return lobatto_fn_tab_1d[i/2](map_right(x));
         }
     } 
 }
@@ -92,10 +92,26 @@ void fill_transformation_matrix(int p, int p_ref, TransformationMatrix
         _mat->zero();
         for (int _i=0; _i < n; _i++)
             for (int _j=0; _j < n; _j++)
-                _mat->add(_i, _j, (chebyshev_matrix)[_i][_j]);
+                _mat->add(_i, _j, chebyshev_matrix[_i][_j]);
+        printf("chebyshev stuff:\n");
+        for (int _i=0; _i < n; _i++) {
+            for (int _j=0; _j < n; _j++) {
+                printf("%f ", chebyshev_matrix[_i][_j]);
+            }
+            printf("\n");
+        }
+        printf("----- END ---- \n");
         double f[n];
         for (int i=0; i < n; i++)
             f[i] = lobatto_fn_tab_1d[j](chebyshev_points[i]);
+        printf("chebyshev_points\n");
+        for (int i=0; i < 5; i++)
+            printf("%f ", chebyshev_points[i]);
+        printf("\n");
+        printf("XXXXXX\n");
+        for (int i=0; i < n; i++)
+            printf("%f ", f[i]);
+        printf("\n");
         solve_linear_system(_mat, f);
         for (int i=0; i < n; i++)
             transformation_matrix[i][j] = f[i];
