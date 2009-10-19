@@ -19,5 +19,6 @@
 #include "lobatto.h"
 #include "discrete.h"
 #include "linearizer.h"
+#include "transforms.h"
 
 #endif

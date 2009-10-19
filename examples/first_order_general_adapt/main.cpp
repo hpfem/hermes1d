@@ -11,7 +11,7 @@
 
 // General input:
 static int N_eq = 1;             // number of equations
-int N_elem = 4;                 // number of elements
+int N_elem = 2;                 // number of elements
 double A = 0, B = 4;            // domain end points
 double YA = 1;                   // equation parameter
 int P_init = 1;                  // initial polynomal degree
@@ -164,13 +164,10 @@ int main() {
     y_prev_ref = new double[N_dof_ref];
     double *res_ref = new double[N_dof_ref];
 
-    // TEMPORARY: set y_prev_ref zero
-    transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref
-    void transform_element(int comp, double *y_prev, double *y_prev_ref, Element
-            *e, Element *e_ref_left, Element *e_ref_right, Mesh *mesh, Mesh
-            *mesh_ref)
-
-
+    transfer_solution(&mesh, mesh_ref, y_prev, y_prev_ref);
+    for (int i=0; i < N_dof_ref; i++)
+        printf("y_prev_ref[%d] = %f\n", i, y_prev_ref[i]);
+    break;
 
     // Use the basic solution as the initial condition 
     // for the Newton's iteration for the reference solution

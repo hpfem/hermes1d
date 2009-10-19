@@ -39,13 +39,16 @@ double phi(int i, double x)
             return lobatto_fn_tab_1d[0](map_left(x));
         else if (i % 2 == 1)
             return 0;
-        else
+        else {
+            printf("XXX: %d %f\n", i, x);
             return lobatto_fn_tab_1d[i/2](map_left(x));
+        }
     } 
 }
 
 void fill_chebyshev_matrix()
 {
+    fill_chebyshev_points();
     for (int i=0; i < N_chebyshev; i++)
         for (int j=0; j < N_chebyshev; j++)
             chebyshev_matrix[i][j] = phi(i, chebyshev_points[j]);
