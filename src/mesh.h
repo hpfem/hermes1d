@@ -31,51 +31,56 @@ class Mesh {
     public:
         Mesh();
         Mesh(double a, double b, int n_elem, int p_init, int n_eq);
-	Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq);
+        Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq);
+        ~Mesh() {
+            if (this->base_elems != NULL)
+                delete[] this->base_elems;
+        }
         int assign_dofs();
         Element *get_base_elems() {
-	  return this->base_elems;
+            return this->base_elems;
         }
+
         int get_n_base_elem() {
-	  return this->n_base_elem;
+            return this->n_base_elem;
         }
         void set_n_base_elem(int n_base_elem) {
-	  this->n_base_elem = n_base_elem;
+            this->n_base_elem = n_base_elem;
         }
         int get_n_active_elem() {
-          return this->n_active_elem;
+            return this->n_active_elem;
         }
         int get_n_dof() {
-	  return this->n_dof;
+            return this->n_dof;
         }
         int get_n_eq() {
-	  return this->n_eq;
+            return this->n_eq;
         }
         void set_n_eq(int n_eq) {
-	  this->n_eq = n_eq;
+            this->n_eq = n_eq;
         }
         double get_left_endpoint() {
-          return left_endpoint; 
+            return left_endpoint; 
         }
         double get_right_endpoint() {
-          return right_endpoint; 
+            return right_endpoint; 
         }
         void calculate_elem_coeffs(Element *e, double *y_prev, 
-                      double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM]);
+                double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM]);
         void element_solution(Element *e, 
-                      double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                      int pts_num, 
-		      double pts_array[MAX_PTS_NUM], 
-                      double val[MAX_EQN_NUM][MAX_PTS_NUM], 
-                      double der[MAX_EQN_NUM][MAX_PTS_NUM]);
+                double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                int pts_num, 
+                double pts_array[MAX_PTS_NUM], 
+                double val[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double der[MAX_EQN_NUM][MAX_PTS_NUM]);
         void element_solution_point(double x_ref, Element *e, 
-			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                            double *val, 
-                            double *der);
+                double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                double *val, 
+                double *der);
         void element_shapefn(double a, double b, 
-			     int k, int order, double *val, double *der);
+                int k, int order, double *val, double *der);
         void element_shapefn_point(double x_ref, double a, double b, 
-				   int k, double *val, double *der);
+                int k, double *val, double *der);
         void set_bc_left_dirichlet(int eq_n, double val);
         void set_bc_right_dirichlet(int eq_n, double val);
 
