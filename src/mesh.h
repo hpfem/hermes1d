@@ -55,6 +55,10 @@ class Mesh {
             if (this->base_elems != NULL) {
                 delete[] this->base_elems;
             }
+            if (this->bc_left_dir_values != NULL)
+                delete[] this->bc_left_dir_values;
+            if (this->bc_right_dir_values != NULL)
+                delete[] this->bc_right_dir_values;
         }
         int assign_dofs();
         Element *get_base_elems() {

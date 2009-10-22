@@ -71,6 +71,8 @@ Mesh::Mesh() {
   n_active_elem = 0;
   n_dof = 0;
   base_elems = NULL;
+  this->bc_left_dir_values = NULL;
+  this->bc_right_dir_values = NULL;
 }
 
 // creates equidistant mesh with uniform polynomial degree of elements
