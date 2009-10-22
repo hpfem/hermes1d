@@ -21,7 +21,7 @@ int P_init = 2;             // initial polynomal degree
 int ADAPTIVITY_DISABLED = 1;     
 
 // Damping parameter
-int DAMPING_STEPS = 3;          // This is the number of damping steps. The entire problem
+int DAMPING_STEPS = 1;          // This is the number of damping steps. The entire problem
                                  // will be run repeatedly, with the DAMPING parameter 
                                  // increased from 0 to 1 in DAMPING_STEPS. Every time, 
                                  // the last result will be used as an initial condition for the 
@@ -306,7 +306,8 @@ int main() {
 
 	newton_iterations++;
 	printf("Finished coarse Newton iteration: %d\n", newton_iterations);
-    error("stop");
+    printf("XXXXXX %d\n", mesh.get_n_eq());
+    break;
       }
       // Update y_prev by new solution which is in res
       for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
@@ -438,14 +439,16 @@ int main() {
   } // end of the damping loop
 
   // plotting the basic solution
+  printf("XXXXXX %d\n", mesh.get_n_eq());
   Linearizer l(&mesh);
+  printf("2XXXXXX %d\n", mesh.get_n_eq());
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
   // plotting the reference solution
-  Linearizer lxx(mesh_ref);
-  const char *out_filename2 = "solution_ref.gp";
-  lxx.plot_solution(out_filename2, y_prev_ref);
+  //Linearizer lxx(mesh_ref);
+  //const char *out_filename2 = "solution_ref.gp";
+  //lxx.plot_solution(out_filename2, y_prev_ref);
  
   printf("Done.\n");
   return 1;

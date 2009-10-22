@@ -12,19 +12,40 @@
 
 class Element {
 public:
-  Element();
-  Element(double x_left, double x_right, int deg, int n_eq);
-  virtual void dof_alloc(int n_eq);
-  void refine(int p_left, int p_right, int n_eq);
-  unsigned is_active();
-  unsigned active;   // flag used by assembling algorithm
-  double x1, x2;     // endpoints
-  int p;             // poly degree
-  int **dof;         // connectivity array of length p+1 
+    Element();
+    Element(double x_left, double x_right, int deg, int n_eq);
+    void free_element() {
+        if (this->sons[0] != NULL) delete this->sons[0];
+        if (this->sons[1] != NULL) delete this->sons[1];
+        /*
+        if (this->dof != NULL) {
+            for(int c=0; c < this->dof_size; c++)
+                delete this->dof[c];
+            if (this->dof != NULL)
+                free(this->dof);
+        }
+        */
+        /*
+        this->dof = NULL;
+        this->sons[0] = NULL;
+        this->sons[1] = NULL;
+        */
+    }
+    ~Element() {
+        this->free_element();
+    }
+    virtual void dof_alloc(int n_eq);
+    void refine(int p_left, int p_right, int n_eq);
+    unsigned is_active();
+    unsigned active;   // flag used by assembling algorithm
+    double x1, x2;     // endpoints
+    int p;             // poly degree
+    int dof_size;      // size of the dof[] array
+    int **dof;         // connectivity array of length p+1 
                      // for every solution component
-  int id;
-  unsigned level;    // refinement level (zero for initial mesh elements) 
-  Element *sons[2];  // for refinement
+    int id;
+    unsigned level;    // refinement level (zero for initial mesh elements) 
+    Element *sons[2];  // for refinement
 };
 
 class Mesh {
@@ -33,8 +54,9 @@ class Mesh {
         Mesh(double a, double b, int n_elem, int p_init, int n_eq);
         Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq);
         ~Mesh() {
-            if (this->base_elems != NULL)
+            if (this->base_elems != NULL) {
                 delete[] this->base_elems;
+            }
         }
         int assign_dofs();
         Element *get_base_elems() {

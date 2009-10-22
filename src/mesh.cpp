@@ -56,6 +56,7 @@ void Element::dof_alloc(int n_eq)
 {
   this->dof = (int**)malloc(n_eq*sizeof(int*));
   if(this->dof == NULL) error("Element dof_alloc() failed.");
+  this->dof_size = n_eq;
   // c is solution component
   for(int c=0; c<n_eq; c++) {
     this->dof[c] = new int[MAX_POLYORDER + 1];
