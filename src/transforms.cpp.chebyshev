@@ -5,12 +5,32 @@
 
 #include "transforms.h"
 
-#define N_proj_max (3+2*(MAX_P-1))
+#define N_chebyshev_max (3+2*(MAX_P-1))
 
-typedef double ProjectionMatrix[N_proj_max][N_proj_max];
-typedef double TransformationMatrix[N_proj_max][MAX_P+1];
+typedef double ChebyshevMatrix[N_chebyshev_max][N_chebyshev_max];
+typedef double TransformationMatrix[N_chebyshev_max][MAX_P+1];
+// for one particular p:
 TransformationMatrix transformation_matrix;
+// for all p:
+TransformationMatrix transformation_matrix_list[MAX_P+1];
 int transformation_matrix_initialized=0;
+
+TransformationMatrix *get_transformation_matrix(int p)
+{
+    return & (transformation_matrix_list[p]);
+}
+
+void fill_chebyshev_points(int n, double *chebyshev_points)
+{
+    for (int i=0; i < n; i++)
+        chebyshev_points[i] = -cos(i*M_PI/(n-1));
+    /*
+    for (int i=0; i < N_chebyshev_max; i++)
+        printf("%f ", chebyshev_points[i]);
+    printf("\n");
+    printf("done.\n");
+    */
+}
 
 // transform values from (-1, 0) to (-1, 1)
 #define map_left(x) (2*x+1)
@@ -39,75 +59,32 @@ double phi(int i, double x)
     } 
 }
 
-double projection_inner_product(double i, double j, int right, int order)
+void fill_chebyshev_matrix(int n, ChebyshevMatrix *chebyshev_matrix)
 {
-    double phys_x[MAX_PTS_NUM];                  // quad points
-    double phys_weights[MAX_PTS_NUM];              // quad weights
-    int    pts_num = 0;
-    if (right) {
-        create_element_quadrature(0, 1, order, phys_x, phys_weights,
-                &pts_num); 
-    } else {
-        create_element_quadrature(-1, 0, order, phys_x, phys_weights,
-                &pts_num); 
-    }
-
-    double result = 0;
-    for (int k=0; k < pts_num; k++ )
-        result += phys_weights[k] * (phi(i, phys_x[k]) * phi(j, phys_x[k]));
-
-    return result;
-}
-
-double projection_rhs_integral(int j_coarse, int i_fine, int right, int order)
-{
-    double phys_x[MAX_PTS_NUM];                  // quad points
-    double phys_weights[MAX_PTS_NUM];              // quad weights
-    int    pts_num = 0;
-    if (right) {
-        create_element_quadrature(0, 1, order, phys_x, phys_weights,
-                &pts_num); 
-    } else {
-        create_element_quadrature(-1, 0, order, phys_x, phys_weights,
-                &pts_num); 
-    }
-
-    double result = 0;
-    for (int k=0; k < pts_num; k++ )
-        result += phys_weights[k] * (lobatto_fn_tab_1d[j_coarse](phys_x[k]) *
-                phi(i_fine, phys_x[k]));
-
-    return result;
-}
-
-
-void fill_projection_matrix(int n, ProjectionMatrix *proj_matrix)
-{
-    int order=N_proj_max*2;
-    int left = 0, right = 1;
+    double chebyshev_points[N_chebyshev_max];
+    fill_chebyshev_points(n, chebyshev_points);
     for (int i=0; i < n; i++) {
         for (int j=0; j < n; j++) {
-	  (*proj_matrix)[i][j] = 
-	     // both the i-th and j-th functions are on the fine element
-             projection_inner_product(i, j, left, order) +
-             projection_inner_product(i, j, right, order); 
+            //printf("XXX %d %d %f \n", i, j, phi(j, chebyshev_points[i]));
+            //printf("XXX %d %d %f \n", i, j, (*chebyshev_matrix)[i][j]);
+            (*chebyshev_matrix)[i][j] = phi(j, chebyshev_points[i]);
+            //printf("%f ", (*chebyshev_matrix)[i][j]);
         }
         //printf("\n");
     }
     //error("stop.");
 }
 
-void fill_transformation_matrix(TransformationMatrix
+void fill_transformation_matrix(int p, int p_ref, TransformationMatrix
         transformation_matrix)
 {
-    int order=N_proj_max+MAX_P;
-    int left = 0, right = 1;
-    ProjectionMatrix proj_matrix;
-    int n = N_proj_max;
-    fill_projection_matrix(n, &proj_matrix);
+    double chebyshev_points[N_chebyshev_max];
+    ChebyshevMatrix chebyshev_matrix;
+    int n = 3+2*(p_ref-1);
+    fill_chebyshev_points(n, chebyshev_points);
+    fill_chebyshev_matrix(n, &chebyshev_matrix);
 
-    // loop over shape functions on coarse element
-    for (int j=0; j < MAX_P; j++) {
+    for (int j=0; j < p+1; j++) {
         // FIXME: don't compute the matrix all the time, e.g.  move this out of
         // the cycle and make sure the gaussian elimination doesn't overwrite
         // the _mat.
@@ -115,13 +92,30 @@ void fill_transformation_matrix(TransformationMatrix
         _mat->zero();
         for (int _i=0; _i < n; _i++)
             for (int _j=0; _j < n; _j++)
-                _mat->add(_i, _j, proj_matrix[_i][_j]);
-        // fill right-hand side vector for j-th shape function on coarse element 
+                _mat->add(_i, _j, chebyshev_matrix[_i][_j]);
+        /*
+        printf("chebyshev stuff:\n");
+        for (int _i=0; _i < n; _i++) {
+            for (int _j=0; _j < n; _j++) {
+                printf("%f ", chebyshev_matrix[_i][_j]);
+            }
+            printf("\n");
+        }
+        printf("----- END ---- \n");
+        */
         double f[n];
         for (int i=0; i < n; i++)
-	  f[i] = projection_rhs_integral(j, i, left, order) +
-                 projection_rhs_integral(j, i, right, order);
-        // solve linear system to obtain another column in transformation matrix
+            f[i] = lobatto_fn_tab_1d[j](chebyshev_points[i]);
+        /*
+        printf("chebyshev_points\n");
+        for (int i=0; i < 5; i++)
+            printf("%f ", chebyshev_points[i]);
+        printf("\n");
+        printf("XXXXXX\n");
+        for (int i=0; i < n; i++)
+            printf("%f ", f[i]);
+        printf("\n");
+        */
         solve_linear_system(_mat, f);
         for (int i=0; i < n; i++)
             transformation_matrix[i][j] = f[i];
@@ -137,14 +131,13 @@ void fill_transformation_matrix(TransformationMatrix
     */
 }
 
-
 void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Element
         *e, Element *e_ref_left, Element *e_ref_right, Mesh *mesh, Mesh
         *mesh_ref)
 {
     //printf("ELEMENT: %d %f %f\n", e->id, e->x1, e->x2);
     double y_prev_loc[MAX_P+1];
-    double y_prev_loc_trans[N_proj_max+1];
+    double y_prev_loc_trans[N_chebyshev_max+1];
     if (e->dof[comp][0] == -1)
         y_prev_loc[0] = mesh->bc_left_dir_values[comp];
     else
@@ -159,10 +152,8 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
     for (int i=0; i < e->p + 1; i++)
         printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
         */
-    if (transformation_matrix_initialized == 0) {
-        fill_transformation_matrix(transformation_matrix);
-        transformation_matrix_initialized=1;
-    }
+    TransformationMatrix transformation_matrix;
+    fill_transformation_matrix(e->p, e_ref_left->p, transformation_matrix);
     //fill_transformation_matrix();
     //double TransformationMatrix *transformation_matrix =
     //    get_transformation_matrix(e_ref_left->p + 1);

@@ -11,7 +11,7 @@
 static int N_eq = 1;
 int N_elem = 3;                         // number of elements
 double A = 0, B = 2*M_PI;               // domain end points
-int P_init = 1;                         // initial polynomal degree
+int P_init = 2;                         // initial polynomal degree
 
 // Error tolerance
 double TOL_NEWTON_BASIC = 1e-5;  // tolerance for the Newton's method on basic mesh
