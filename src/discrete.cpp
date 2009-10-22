@@ -164,6 +164,7 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
       }
     }
   } // end while
+  delete I;
 }
 
 // process boundary weak forms
@@ -272,6 +273,7 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
       }
     }
   }
+  delete I;
 }
 
 // construct Jacobi matrix or residual vector

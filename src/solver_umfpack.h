@@ -179,6 +179,11 @@ void solve_linear_system_umfpack(CooMatrix *mat, double *res) {
     u->solve(slv_ctx, csr->get_size(), csr->get_IA(), csr->get_JA(),
             csr->get_A(), false, res, vec);
     memcpy(res, vec, csr->get_size() * sizeof(double));
+    u->free_data(slv_ctx);
+    u->free_context(slv_ctx);
+    free(vec);
+    delete u;
+    delete csr;
 }
 
 #endif

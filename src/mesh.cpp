@@ -294,6 +294,7 @@ int Mesh::assign_dofs()
     printf("\n"); 
   }
 
+  delete I;
   return this->n_dof;
 }
 

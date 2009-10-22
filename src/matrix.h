@@ -171,9 +171,24 @@ class CooMatrix : public Matrix {
     public:
         CooMatrix(int size) {
             this->size = size;
+            this->list = NULL;
+            this->list_last = NULL;
             this->zero();
         }
+        ~CooMatrix() {
+            this->free_data();
+        }
+        void free_data() {
+            Triple *t = this->list;
+            while (t != NULL) {
+                Triple *t_old = t;
+                t = t->next;
+                delete t_old;
+            }
+        }
         virtual void zero() {
+            if (this->list != NULL)
+                this->free_data();
             this->list = NULL;
             this->list_last = NULL;
         }
@@ -250,6 +265,9 @@ class DenseMatrix : public Matrix {
             //this->size = size;
             m->copy_into(this);
         }
+        ~DenseMatrix() {
+            delete[] this->mat;
+        }
         virtual void zero() {
             // erase matrix
             for(int i = 0; i < this->size; i++)
@@ -309,9 +327,15 @@ class CSRMatrix : public Matrix {
         CSRMatrix(CooMatrix *m) {
             DenseMatrix *dmat = new DenseMatrix(m);
             this->copy_from_dense_matrix(dmat);
+            delete dmat;
         }
         CSRMatrix(DenseMatrix *m) {
             this->copy_from_dense_matrix(m);
+        }
+        ~CSRMatrix() {
+            delete[] this->A;
+            delete[] this->IA;
+            delete[] this->JA;
         }
 
         void copy_from_dense_matrix(DenseMatrix *m) {
