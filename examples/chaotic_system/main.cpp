@@ -451,27 +451,8 @@ int main() {
   //lxx.plot_solution(out_filename2, y_prev_ref);
  
   printf("Done.\n");
+  delete[] y_prev;
+  delete[] res;
+  delete mat;
   return 1;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
