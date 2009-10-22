@@ -14,14 +14,14 @@
 // General input:
 static int N_eq = 4;
 int N_elem = 500;           // number of elements
-double A = 0, B = 10;       // domain end points
+double A = 0, B = 20;       // domain end points
 int P_init = 2;             // initial polynomal degree
 
 // Disable reference solution and adaptivity
 int ADAPTIVITY_DISABLED = 1;     
 
 // Damping parameter
-int DAMPING_STEPS = 1;          // This is the number of damping steps. The entire problem
+int DAMPING_STEPS = 20;          // This is the number of damping steps. The entire problem
                                  // will be run repeatedly, with the DAMPING parameter 
                                  // increased from 0 to 1 in DAMPING_STEPS. Every time, 
                                  // the last result will be used as an initial condition for the 
@@ -306,8 +306,6 @@ int main() {
 
 	newton_iterations++;
 	printf("Finished coarse Newton iteration: %d\n", newton_iterations);
-    printf("XXXXXX %d\n", mesh.get_n_eq());
-    break;
       }
       // Update y_prev by new solution which is in res
       for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
@@ -432,6 +430,11 @@ int main() {
         // Perform the hp-refinements in the basic mesh
         //mesh.refine_multi_elems(num_elems_to_be_refined, id_array, p_pair_array);
 
+        // feeing matrices and vectors (N_dof_ref will change)
+        if (y_prev_ref != NULL) delete[] y_prev_ref;
+        if (res_ref != NULL) delete[] res_ref;
+        if (mat_ref != NULL) delete mat_ref;
+
         adapt_iterations++;
       } // end of condition ADAPTIVITY_DISABLED == 0
       else break;
@@ -439,9 +442,7 @@ int main() {
   } // end of the damping loop
 
   // plotting the basic solution
-  printf("XXXXXX %d\n", mesh.get_n_eq());
   Linearizer l(&mesh);
-  printf("2XXXXXX %d\n", mesh.get_n_eq());
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
@@ -451,8 +452,8 @@ int main() {
   //lxx.plot_solution(out_filename2, y_prev_ref);
  
   printf("Done.\n");
-  delete[] y_prev;
-  delete[] res;
-  delete mat;
+  if (y_prev != NULL) delete[] y_prev;
+  if (res != NULL) delete[] res;
+  if (mat != NULL) delete mat;
   return 1;
 }
