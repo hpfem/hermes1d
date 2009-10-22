@@ -14,7 +14,7 @@ add_subdirectory(system_pendulum)
 add_subdirectory(first_order_general_adapt)
 add_subdirectory(system_pendulum_adapt)
 add_subdirectory(laplace_bc_dirichlet_adapt)
-add_subdirectory(chaotic_system)
+add_subdirectory(system_chaotic)
 
 if(WITH_PYTHON)
     add_subdirectory(schroedinger)
