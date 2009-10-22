@@ -113,5 +113,6 @@ void Linearizer::get_xy(double *y_prev, int comp,
     }
     *x = x_out;
     *y = y_out;
+    delete I;
 }
 
