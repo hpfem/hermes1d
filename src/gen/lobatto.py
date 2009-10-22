@@ -5,7 +5,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 from sympy import Symbol, integrate, legendre, factor, sqrt, ccode
 
-n_functions = 20
+n_functions = 100
 precision = 25
 
 def legendre_int(i, x):
