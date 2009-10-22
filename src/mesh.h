@@ -17,14 +17,12 @@ public:
     void free_element() {
         if (this->sons[0] != NULL) delete this->sons[0];
         if (this->sons[1] != NULL) delete this->sons[1];
-        /*
         if (this->dof != NULL) {
             for(int c=0; c < this->dof_size; c++)
-                delete this->dof[c];
+                delete[] this->dof[c];
             if (this->dof != NULL)
                 free(this->dof);
         }
-        */
         /*
         this->dof = NULL;
         this->sons[0] = NULL;
