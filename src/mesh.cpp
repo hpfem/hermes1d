@@ -306,6 +306,7 @@ int Mesh::assign_elem_ids()
     while ((e = I->next_active_element()) != NULL) {
         e->id = count_id++;
     }
+    delete I;
 }
 
 // return coefficients for all shape functions on the element m,

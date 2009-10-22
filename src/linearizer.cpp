@@ -72,8 +72,10 @@ void Linearizer::get_xy(double *y_prev, int comp,
     double *y_out = new double[*n];
 
     // FIXME:
-    if(n_eq > MAX_EQN_NUM)
+    if(n_eq > MAX_EQN_NUM) {
+      printf("n_eq = %d\n", n_eq);
         error("number of equations too high in plot_solution().");
+    }
     // FIXME
     if(plotting_elem_subdivision > MAX_PTS_NUM)
         error("plotting_elem_subdivision too high in plot_solution().");
