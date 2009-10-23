@@ -20,11 +20,12 @@ void calc_elem_L2_error_squared(Element *e, double *y_prev, double
 			double bc_right_dir_values[MAX_EQN_NUM],
 			double norm_squared[MAX_EQN_NUM]);
 
-// projects reference solution on element 'e' onto a space of 
-// (discontinuous) polynomials of degree p_left on the left
-// son and degree p_right on the right son  
-void try_hp_candidate(Element *e, double *y_prev_ref, 
-                      int p_left, int p_right, double *error, 
-                      int *new_ndof);
+// projects reference solution on element 'e' onto the space of 
+// (discontinuous) polynomials of degree 'p_left' on (-1, 0)
+// and degree 'p_right' on (0, 1)
+double check_hp_candidate(Element *e, double *y_prev_ref, 
+                        int p_left, int p_right, 
+                        double bc_left_dir_values[MAX_EQN_NUM],
+	  	        double bc_right_dir_values[MAX_EQN_NUM]);
 
 #endif
