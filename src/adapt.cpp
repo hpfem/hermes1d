@@ -24,22 +24,103 @@ double legendre_right(int i, double x) {
 
 // calculates the difference between the coarse and fine 
 // mesh solution on element 'e' in L2 norm 
-void calc_elem_L2_error(Element *e, double *y_prev, double
-			*y_prev_ref) 
+void calc_elem_L2_error_squared(Element *e, double *y_prev, double
+			*y_prev_ref, 
+                        double bc_left_dir_values[MAX_EQN_NUM],
+			double bc_right_dir_values[MAX_EQN_NUM],
+                        double norm_squared[MAX_EQN_NUM]) 
 {
-  double phys_x[MAX_PTS_NUM];                  // quad points
-  double phys_weights[MAX_PTS_NUM];            // quad weights
+  int n_eq = e->dof_size;
+  double phys_x[MAX_PTS_NUM];          // quad points
+  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM]; // values of coarse mesh solution for all solution components
+  double phys_val_fine[MAX_EQN_NUM][MAX_PTS_NUM];   // values of fine mesh solution for all solution components
+  double phys_weights[MAX_PTS_NUM];    // quad weights
 
-  // first left half
-  int order_left = 2*e->sons[0]->p;
-  int pts_num_left = 0;
+  // first process interval (-1, 0)
+  int order = 2*e->sons[0]->p;
+  int pts_num = 0;
 
   // create Gauss quadrature on (-1, 0)
-  create_element_quadrature(-1, 0, order_left, phys_x, phys_weights,
-                            &pts_num_left); 
+  create_element_quadrature(-1, 0, order, phys_x, phys_weights,
+                            &pts_num); 
 
+  // evaluate coarse-mesh solution and its derivative 
+  // at all quadrature points in (-1, 0), for every 
+  // solution component
+  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
+                bc_right_dir_values); 
+  for (int i=0; i<pts_num; i++) {
+    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
+    e->get_solution_point(phys_x[i], coeffs, val, der);
+    for(int c=0; c<n_eq; c++) phys_val_coarse[c][i] = val[c];
+  }
 
+  // evaluate fine-mesh solution and its derivative 
+  // at all quadrature points in (-1, 0), for every 
+  // solution component
+  e->sons[0]->get_coeffs(y_prev, coeffs, bc_left_dir_values,
+                         bc_right_dir_values); 
+  for (int i=0; i<pts_num; i++) {
+    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
+    e->sons[0]->get_solution_point(phys_x[i], coeffs, 
+		       	           val, der);
+    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
+  }
 
+  // integrate over (-1, 0)
+  double norm_squared_left[MAX_EQN_NUM];
+  for (int c=0; c<n_eq; c++) {
+    norm_squared_left[c] = 0;
+    for (int i=0; i<pts_num; i++) {
+      double diff = phys_val_fine[c][i] - phys_val_coarse[c][i];
+      norm_squared_left[c] += diff*diff*phys_weights[i];
+    }
+  }
+
+  // next process interval (0, 1)
+  order = 2*e->sons[1]->p;
+  pts_num = 0;
+
+  // create Gauss quadrature on (0, 1)
+  create_element_quadrature(0, 1, order, phys_x, phys_weights,
+                            &pts_num); 
+
+  // evaluate coarse-mesh solution and its derivative 
+  // at all quadrature points in (0, 1), for every 
+  // solution component
+  e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
+                bc_right_dir_values); 
+  for (int i=0; i<pts_num; i++) {
+    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
+    e->get_solution_point(phys_x[i], coeffs, val, der);
+    for(int c=0; c<n_eq; c++) phys_val_coarse[c][i] = val[c];
+  }
+
+  // evaluate fine-mesh solution and its derivative 
+  // at all quadrature points in (-1, 0), for every 
+  // solution component
+  e->sons[1]->get_coeffs(y_prev, coeffs, bc_left_dir_values,
+                         bc_right_dir_values); 
+  for (int i=0; i<pts_num; i++) {
+    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
+    e->sons[1]->get_solution_point(phys_x[i], coeffs, 
+		       	           val, der);
+    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
+  }
+
+  // integrate over (0, 1)
+  double norm_squared_right[MAX_EQN_NUM];
+  for (int c=0; c<n_eq; c++) {
+    norm_squared_right[c] = 0;
+    for (int i=0; i<pts_num; i++) {
+      double diff = phys_val_fine[c][i] - phys_val_coarse[c][i];
+      norm_squared_right[c] += diff*diff*phys_weights[i];
+    }
+  }
+
+  for (int c=0; c<n_eq; c++)  
+    norm_squared[c] = norm_squared_left[c] + norm_squared_right[c];
 }
 
 

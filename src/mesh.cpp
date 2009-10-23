@@ -129,7 +129,7 @@ void Element::get_coeffs(double *y_prev,
 // at the reference point x_ref
 void Element::get_solution_point(double x_ref,
 			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                            double *val, double *der)
+                            double val[MAX_EQN_NUM], double der[MAX_EQN_NUM])
 {
   double x1 = this->x1;
   double x2 = this->x2;

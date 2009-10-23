@@ -45,7 +45,7 @@ public:
          double der[MAX_EQN_NUM][MAX_PTS_NUM]);
     void get_solution_point(double x_ref,
          double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-			    double *val, double *der);
+			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM]);
     void refine(int p_left, int p_right);
     unsigned is_active();
     unsigned active;   // flag used by assembling algorithm
