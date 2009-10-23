@@ -15,6 +15,7 @@ Element::Element()
   active = 1;
   level = 0;
   id = -1;
+  dof_size = 0;
 }
 
 Element::Element(double x_left, double x_right, int deg, int n_eq) 
@@ -22,7 +23,8 @@ Element::Element(double x_left, double x_right, int deg, int n_eq)
   x1 = x_left;
   x2 = x_right;
   p = deg; 
-  this->dof_alloc(n_eq);
+  dof_size = n_eq;
+  this->dof_alloc();
   if (dof == NULL) error("Not enough memory in Element().");
   sons[0] = sons[1] = NULL; 
   active = 1;
@@ -35,33 +37,128 @@ unsigned Element::is_active()
   return this->active;
 }
 
-void Element::refine(int p_left, int p_right, int n_eq) 
+void Element::refine(int p_left, int p_right) 
 {
   double x1 = this->x1;
   double x2 = this->x2;
   double midpoint = (x1 + x2)/2.; 
-  this->sons[0] = new Element(x1, midpoint, p_left, n_eq);
-  this->sons[1] = new Element(midpoint, x2, p_right, n_eq);
+  this->sons[0] = new Element(x1, midpoint, p_left, dof_size);
+  this->sons[1] = new Element(midpoint, x2, p_right, dof_size);
   this->sons[0]->level = this->level + 1; 
   this->sons[1]->level = this->level + 1; 
   // copying negative dof to sons if any
-  for(int c=0; c<n_eq; c++) {
+  for(int c=0; c<dof_size; c++) {
     if (this->dof[c][0] < 0) this->sons[0]->dof[c][0] = this->dof[c][0];
     if (this->dof[c][1] < 0) this->sons[1]->dof[c][1] = this->dof[c][1];
   }
   this->active = 0;
 }
 
-void Element::dof_alloc(int n_eq) 
+void Element::init(double x1, double x2, int p_init, int n_eq)
 {
-  this->dof = (int**)malloc(n_eq*sizeof(int*));
-  if(this->dof == NULL) error("Element dof_alloc() failed.");
+  this->x1 = x1;
+  this->x2 = x2;
+  this->p = p_init;
   this->dof_size = n_eq;
+  // allocate element dof arrays for all solution components 
+  // and length MAX_POLYORDER
+  this->dof_alloc();
+}
+
+
+void Element::dof_alloc() 
+{
+  this->dof = (int**)malloc(dof_size*sizeof(int*));
+  if(this->dof == NULL) error("Element dof_alloc() failed.");
   // c is solution component
-  for(int c=0; c<n_eq; c++) {
+  for(int c=0; c<dof_size; c++) {
     this->dof[c] = new int[MAX_POLYORDER + 1];
     // important for th etreatment of boundary conditions
     for(int i=0; i<MAX_POLYORDER + 1; i++) this->dof[c][i] = 0;
+  }
+}
+
+// evaluate previous solution and its derivative 
+// in the "pts_array" points
+void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                           int pts_num, double pts_array[MAX_PTS_NUM], 
+                           double val[MAX_EQN_NUM][MAX_PTS_NUM], 
+                           double der[MAX_EQN_NUM][MAX_PTS_NUM])
+{
+  double x1 = this->x1;
+  double x2 = this->x2;
+  double jac = (x2-x1)/2.; 
+  int dof_size = this->dof_size;
+  int p = this->p;
+  for(int c=0; c<dof_size; c++) { 
+    for (int i=0 ; i<pts_num; i++) {
+      der[c][i] = val[c][i] = 0;
+      for(int j=0; j<=p; j++) {
+        val[c][i] += coeff[c][j]*lobatto_fn_tab_1d[j](pts_array[i]);
+        der[c][i] += coeff[c][j]*lobatto_der_tab_1d[j](pts_array[i]);
+      }
+      der[c][i] /= jac;
+    }
+  }
+} 
+
+// return coefficients for all shape functions on the element m,
+// for all solution components
+void Element::get_coeffs(double *y_prev, 
+                         double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM],
+                         double bc_left_dir_values[MAX_EQN_NUM],
+                         double bc_right_dir_values[MAX_EQN_NUM])
+{
+  if (!this->is_active()) error("Internal in calculate_elem_coeffs().");
+  int dof_size = this->dof_size;
+  for(int c=0; c<dof_size; c++) {
+    // coeff of the left vertex function
+    if (this->dof[c][0] == -1) coeffs[c][0] = bc_left_dir_values[c];
+    else coeffs[c][0] = y_prev[this->dof[c][0]];
+    // coeff of the right vertex function
+    if (this->dof[c][1] == -1) coeffs[c][1] = bc_right_dir_values[c];
+    else coeffs[c][1] = y_prev[this->dof[c][1]];
+    //completing coeffs of bubble functions
+    for (int j=2; j<=this->p; j++) {
+        coeffs[c][j] = y_prev[this->dof[c][j]];
+    }
+  }
+}
+
+// evaluate previous solution and its derivative 
+// at the reference point x_ref
+void Element::get_solution_point(double x_ref,
+			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                            double *val, double *der)
+{
+  double x1 = this->x1;
+  double x2 = this->x2;
+  double jac = (x2-x1)/2.;
+  int dof_size = this->dof_size; 
+  int p = this->p;
+  for(int c=0; c<dof_size; c++) {
+    der[c] = val[c] = 0;
+    for(int j=0; j<=p; j++) {
+      val[c] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref);
+      der[c] += coeff[c][j]*lobatto_der_tab_1d[j](x_ref);
+    }
+    der[c] /= jac;
+  }
+} 
+
+// copying elements including their refinement trees 
+// inactive Dirichlet DOF are replicated
+// FIXME - the recursive version is slow, improve it!
+void Element::copy_sons_recursively(Element *e_trg) {
+  // if element has been refined
+  if(this->sons[0] != NULL) {
+    int p_left = this->sons[0]->p;
+    int p_right = this->sons[1]->p;
+    e_trg->refine(p_left, p_right);
+    // left son
+    this->sons[0]->copy_sons_recursively(e_trg->sons[0]);
+    // right son
+    this->sons[1]->copy_sons_recursively(e_trg->sons[1]);
   }
 }
 
@@ -71,8 +168,6 @@ Mesh::Mesh() {
   n_active_elem = 0;
   n_dof = 0;
   base_elems = NULL;
-  this->bc_left_dir_values = NULL;
-  this->bc_right_dir_values = NULL;
 }
 
 // creates equidistant mesh with uniform polynomial degree of elements
@@ -91,9 +186,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   if(n_eq > MAX_EQN_NUM) 
   error("Maximum number of equations exceeded (set in common.h)");
   // arrays for boundary conditions
-  this->bc_left_dir_values = new double[n_eq];
-  this->bc_right_dir_values = new double[n_eq];
-  for (int i=0; i<n_eq; i++) {
+  for (int i=0; i<MAX_EQN_NUM; i++) {
     this->bc_left_dir_values[i] = 0;
     this->bc_right_dir_values[i] = 0;
   }
@@ -110,14 +203,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   double h = (b - a)/this->n_base_elem;          
   // fill initial element array
   for(int i=0; i<this->n_base_elem; i++) {         
-    // polynomial degree
-    this->base_elems[i].p = p_init;
-    // allocate element dof arrays for all solution components 
-    // and length MAX_POLYORDER
-    this->base_elems[i].dof_alloc(n_eq);
-    // define element end points
-    this->base_elems[i].x1 = a + i*h;
-    this->base_elems[i].x2 = this->base_elems[i].x1 + h;
+    this->base_elems[i].init(a + i*h, a + i*h + h, p_init, n_eq);
   }
   this->assign_elem_ids();
 }
@@ -139,9 +225,7 @@ Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
   if(n_eq > MAX_EQN_NUM) 
   error("Maximum number of equations exceeded (set in common.h)");
   // arrays for boundary conditions
-  this->bc_left_dir_values = new double[n_eq];
-  this->bc_right_dir_values = new double[n_eq];
-  for (int i=0; i<n_eq; i++) {
+  for (int i=0; i<MAX_EQN_NUM; i++) {
     this->bc_left_dir_values[i] = 0;
     this->bc_right_dir_values[i] = 0;
   }
@@ -160,7 +244,7 @@ Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
     this->base_elems[i].p = p_array[i];
     // allocate element dof arrays for all solution components 
     // and length MAX_POLYORDER
-    this->base_elems[i].dof_alloc(n_eq);
+    this->base_elems[i].dof_alloc();
     // define element end points
     this->base_elems[i].x1 = pts_array[i];
     this->base_elems[i].x2 = pts_array[i+1];
@@ -177,7 +261,7 @@ void Mesh::refine_single_elem(int id, int p_left, int p_right)
     while ((e = I.next_active_element()) != NULL) {
         printf("%d %d\n", e->id, id);
         if (e->id == id) {
-            e->refine(p_left, p_right, this->n_eq);
+            e->refine(p_left, p_right);
             this->n_active_elem++;
             return;
         }
@@ -197,7 +281,7 @@ void Mesh::refine_elems(int elem_num, int *id_array, int2 *p_pair_array)
         if (e->id == id_array[count]) {
             if (count >= elem_num)
                 error("refine_multi_elems: not enough elems specified");
-            e->refine(p_pair_array[count][0], p_pair_array[count][1], this->n_eq);
+            e->refine(p_pair_array[count][0], p_pair_array[count][1]);
             this->n_active_elem++;
             count++;
         }
@@ -214,7 +298,7 @@ void Mesh::refine_elems(int start_elem_id, int elem_num)
     while ((e = I->next_active_element()) != NULL) {
         if (e->id >= start_elem_id && e->id < start_elem_id + elem_num) {
 	    if (count >= elem_num) return;
-            e->refine(e->p + 1, e->p + 1, this->n_eq);
+            e->refine(e->p + 1, e->p + 1);
             this->n_active_elem++;
             count++;
         }
@@ -227,7 +311,7 @@ void Mesh::set_bc_left_dirichlet(int eq_n, double val)
   // deactivate the corresponding dof for the left-most
   // element and all his descendants adjacent to the 
   // left boundary
-  Element *e = &(this->base_elems[0]);
+  Element *e = this->base_elems + 0;
   do {
     e->dof[eq_n][0] = -1;
     e = e->sons[0];
@@ -240,7 +324,7 @@ void Mesh::set_bc_right_dirichlet(int eq_n, double val)
   // deactivate the corresponding dof for the right-most
   // element and all his descendants adjacent to the 
   // right boundary
-  Element *e = &(this->base_elems[this->n_base_elem-1]);
+  Element *e = this->base_elems + this->n_base_elem - 1;
   do {
     e->dof[eq_n][1] = -1;
     e = e->sons[1];
@@ -313,73 +397,9 @@ int Mesh::assign_elem_ids()
     delete I;
 }
 
-// return coefficients for all shape functions on the element m,
-// for all solution components
-void Mesh::calculate_elem_coeffs(Element *e, double *y_prev, 
-                                 double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM])
-{
-  if (!e->is_active()) error("Internal in calculate_elem_coeffs().");
-  for(int c=0; c<n_eq; c++) {
-    // coeff of the left vertex function
-    if (e->dof[c][0] == -1) coeffs[c][0] = bc_left_dir_values[c];
-    else coeffs[c][0] = y_prev[e->dof[c][0]];
-    // coeff of the right vertex function
-    if (e->dof[c][1] == -1) coeffs[c][1] = bc_right_dir_values[c];
-    else coeffs[c][1] = y_prev[e->dof[c][1]];
-    //completing coeffs of bubble functions
-    for (int j=2; j<=e->p; j++) {
-        coeffs[c][j] = y_prev[e->dof[c][j]];
-    }
-  }
-}
-
-// evaluate previous solution and its derivative 
-// in the "pts_array" points
-void Mesh::element_solution(Element *e, 
-                            double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                            int pts_num, double pts_array[MAX_PTS_NUM], 
-                            double val[MAX_EQN_NUM][MAX_PTS_NUM], 
-                            double der[MAX_EQN_NUM][MAX_PTS_NUM])
-{
-  double a = e->x1;
-  double b = e->x2;
-  double jac = (b-a)/2.; 
-  int p = e->p;
-  for(int c=0; c<n_eq; c++) { 
-    for (int i=0 ; i<pts_num; i++) {
-      der[c][i] = val[c][i] = 0;
-      for(int j=0; j<=p; j++) {
-        val[c][i] += coeff[c][j]*lobatto_fn_tab_1d[j](pts_array[i]);
-        der[c][i] += coeff[c][j]*lobatto_der_tab_1d[j](pts_array[i]);
-      }
-      der[c][i] /= jac;
-    }
-  }
-} 
-
-// evaluate previous solution and its derivative 
-// at the reference point x_ref to element 'e'.
-void Mesh::element_solution_point(double x_ref, Element *e, 
-			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                            double *val, double *der)
-{
-  double a = e->x1;
-  double b = e->x2;
-  double jac = (b-a)/2.; 
-  int p = e->p;
-  for(int c=0; c<n_eq; c++) {
-    der[c] = val[c] = 0;
-    for(int j=0; j<=p; j++) {
-      val[c] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref);
-      der[c] += coeff[c][j]*lobatto_der_tab_1d[j](x_ref);
-    }
-    der[c] /= jac;
-  }
-} 
-
 // transformation of k-th shape function defined on Gauss points 
 // corresponding to 'order' to physical interval (a,b)
-void Mesh::element_shapefn(double a, double b, 
+void element_shapefn(double a, double b, 
 		     int k, int order, double *val, double *der) {
   double2 *ref_tab = g_quad_1d_std.get_points(order);
   int pts_num = g_quad_1d_std.get_num_points(order);
@@ -393,28 +413,12 @@ void Mesh::element_shapefn(double a, double b,
 
 // transformation of k-th shape function at the reference 
 // point x_ref to physical interval (a,b).
-void Mesh::element_shapefn_point(double x_ref, double a, double b, 
-		                 int k, double *val, double *der) {
+void element_shapefn_point(double x_ref, double a, double b, 
+		           int k, double *val, double *der) {
     // change function values and derivatives to interval (a, b)
     *val = lobatto_fn_tab_1d[k](x_ref);
     double jac = (b-a)/2.; 
     *der = lobatto_der_tab_1d[k](x_ref) / jac; 
-}
-
-// copying elements including their refinement trees 
-// inactive Dirichlet DOF are replicated
-// FIXME - the recursive version is slow, improve it!
-void copy_element_sons_recursively(Element *e_src, Element *e_trg, int n_eq) {
-  // if element has been refined
-  if(e_src->sons[0] != NULL) {
-    int p_left = e_src->sons[0]->p;
-    int p_right = e_src->sons[1]->p;
-    e_trg->refine(p_left, p_right, n_eq);
-    // left son
-    copy_element_sons_recursively(e_src->sons[0], e_trg->sons[0], n_eq);
-    // right son
-    copy_element_sons_recursively(e_src->sons[1], e_trg->sons[1], n_eq);
-  }
 }
 
 // Replicate mesh
@@ -458,7 +462,7 @@ Mesh *Mesh::replicate()
   for(int i=0; i<this->n_base_elem; i++) {
     Element *e_src = this->base_elems + i;
     Element *e_trg = mesh_ref->get_base_elems() + i;
-    copy_element_sons_recursively(e_src, e_trg, this->n_eq);
+    e_src->copy_sons_recursively(e_trg);
   }
 
   // enumerate elements in reference mesh

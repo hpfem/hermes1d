@@ -39,9 +39,6 @@
 #define legendre10x(x) (1.0 / 256.0 * ((((461890 * (x) * (x) - 875160) * (x) * (x) + 540540) * (x) * (x) - 120120) * (x) * (x) + 6930) * (x))
 #define legendre11x(x) (1.0 / 256.0 * (((((969969 * (x) * (x) - 2078505) * (x) * (x) + 1531530) * (x) * (x) - 450450) * (x) * (x) + 45045) * (x) * (x) - 693))
 
-
-//
-
 extern shape_fn_t lobatto_fn_tab_1d[];
 extern shape_fn_t lobatto_der_tab_1d[];
 extern shape_fn_t legendre_fn_tab_1d[];

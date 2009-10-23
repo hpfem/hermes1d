@@ -5,17 +5,47 @@
 
 #include "transforms.h"
 
-#define N_proj_max (3+2*(MAX_P-1))
-typedef double ProjectionMatrix[N_proj_max][N_proj_max];
-typedef double TransformationMatrix[N_proj_max][MAX_P+1];
-
-TransformationMatrix transformation_matrix;
-int transformation_matrix_initialized=0;
-
 // transform values from (-1, 0) to (-1, 1)
 #define map_left(x) (2*x+1)
 // transform values from (0, 1) to (-1, 1)
 #define map_right(x) (2*x-1)
+
+// returns values of Legendre polynomials transformed
+// and normalized to be orthonormal on (-1,0)
+double legendre_left(int i, double x) {
+  return sqrt(2)*legendre_fn_tab_1d[i](map_left(x));
+}
+
+// returns values of Legendre polynomials transformed
+// and normalized to be orthonormal on (0,1)
+double legendre_right(int i, double x) {
+  return sqrt(2)*legendre_fn_tab_1d[i](map_right(x));
+}
+
+// calculates the difference between the coarse and fine 
+// mesh solution on element 'e' in L2 norm 
+void calc_elem_L2_error(Element *e, double *y_prev, double
+			*y_prev_ref) 
+{
+  double phys_x[MAX_PTS_NUM];                  // quad points
+  double phys_weights[MAX_PTS_NUM];            // quad weights
+
+  // first left half
+  int order_left = 2*e->sons[0]->p;
+  int pts_num_left = 0;
+
+  // create Gauss quadrature on (-1, 0)
+  create_element_quadrature(-1, 0, order_left, phys_x, phys_weights,
+                            &pts_num_left); 
+
+
+
+}
+
+
+/*
+
+
 
 double phi(int i, double x)
 {
@@ -62,7 +92,7 @@ double projection_inner_product(double i, double j, int right, int order)
 double projection_rhs_integral(int j_coarse, int i_fine, int right, int order)
 {
     double phys_x[MAX_PTS_NUM];                  // quad points
-    double phys_weights[MAX_PTS_NUM];              // quad weights
+    double phys_weights[MAX_PTS_NUM];            // quad weights
     int    pts_num = 0;
     if (right) {
         create_element_quadrature(0, 1, order, phys_x, phys_weights,
@@ -126,15 +156,6 @@ void fill_transformation_matrix(TransformationMatrix
         for (int i=0; i < n; i++)
             transformation_matrix[i][j] = f[i];
     }
-    /*
-    for (int i=0; i < n; i++) {
-        for (int j=0; j < p+1; j++) {
-            printf("%f ", transformation_matrix[i][j]);
-        }
-        printf("\n");
-    }
-    //error("stop.");
-    */
 }
 
 
@@ -155,10 +176,6 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
         y_prev_loc[1] = y_prev[e->dof[comp][1]];
     for (int i=2; i < e->p + 1; i++)
         y_prev_loc[i] = y_prev[e->dof[comp][i]];
-    /*
-    for (int i=0; i < e->p + 1; i++)
-        printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
-        */
     if (transformation_matrix_initialized == 0) {
         fill_transformation_matrix(transformation_matrix);
         transformation_matrix_initialized=1;
@@ -171,11 +188,6 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
         for (int j=0; j < e->p + 1; j++)
             y_prev_loc_trans[i] += transformation_matrix[i][j] * y_prev_loc[j];
     }
-    /*
-    for (int i=0; i < 3 + 2*(e_ref_left->p - 1); i++)
-        printf("y_prev_loc_trans[%d] = %f\n", i, y_prev_loc_trans[i]);
-    printf("----------------------\n");
-    */
     // copying computed coefficients into the elements e_ref_left and
     // e_ref_right
     if (e->dof[comp][0] != -1)
@@ -207,8 +219,7 @@ void transform_element_unrefined(int comp, double *y_prev, double *y_prev_ref, E
     }
 }
 
-/* This only works after the dofs are assigned in the reference (and coarse)
- * solution. */
+
 void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref)
 {
     Iterator *I = new Iterator(mesh);
@@ -233,3 +244,5 @@ void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_pre
         }
     }
 }
+
+*/

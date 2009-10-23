@@ -91,14 +91,16 @@ void Linearizer::get_xy(double *y_prev, int comp,
         if(e->p > MAX_POLYORDER)
             error("element degree too hign in plot(solution).");
         double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-        this->mesh->calculate_elem_coeffs(e, y_prev, coeffs);
+        e->get_coeffs(y_prev, coeffs, 
+                      this->mesh->bc_left_dir_values,
+                      this->mesh->bc_right_dir_values);
 
         double pts_array[MAX_PTS_NUM];
         double h = 2./plotting_elem_subdivision;
 
         for (int j=0; j<plotting_elem_subdivision+1; j++)
             pts_array[j] = -1 + j*h;
-        this->mesh->element_solution(e, coeffs,
+        e->get_solution(coeffs,
                 plotting_elem_subdivision+1, pts_array,
                 phys_u_prev, phys_du_prevdx);
         double a = e->x1;

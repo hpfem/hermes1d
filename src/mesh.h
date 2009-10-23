@@ -32,8 +32,21 @@ public:
     ~Element() {
         this->free_element();
     }
-    virtual void dof_alloc(int n_eq);
-    void refine(int p_left, int p_right, int n_eq);
+    virtual void dof_alloc();
+    void init(double x1, double x2, int p_init, int n_eq);
+    void copy_sons_recursively(Element *e_trg);
+    void get_coeffs(double *y_prev, 
+		    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM],
+                    double bc_left_dir_values[MAX_EQN_NUM],
+                    double bc_right_dir_values[MAX_EQN_NUM]);
+    void get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+         int pts_num, double pts_array[MAX_PTS_NUM], 
+         double val[MAX_EQN_NUM][MAX_PTS_NUM], 
+         double der[MAX_EQN_NUM][MAX_PTS_NUM]);
+    void get_solution_point(double x_ref,
+         double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+			    double *val, double *der);
+    void refine(int p_left, int p_right);
     unsigned is_active();
     unsigned active;   // flag used by assembling algorithm
     double x1, x2;     // endpoints
@@ -55,10 +68,6 @@ class Mesh {
             if (this->base_elems != NULL) {
                 delete[] this->base_elems;
             }
-            if (this->bc_left_dir_values != NULL)
-                delete[] this->bc_left_dir_values;
-            if (this->bc_right_dir_values != NULL)
-                delete[] this->bc_right_dir_values;
         }
         int assign_dofs();
         Element *get_base_elems() {
@@ -89,32 +98,15 @@ class Mesh {
         double get_right_endpoint() {
             return right_endpoint; 
         }
-        void calculate_elem_coeffs(Element *e, double *y_prev, 
-                double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM]);
-        void element_solution(Element *e, 
-                double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                int pts_num, 
-                double pts_array[MAX_PTS_NUM], 
-                double val[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double der[MAX_EQN_NUM][MAX_PTS_NUM]);
-        void element_solution_point(double x_ref, Element *e, 
-                double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                double *val, 
-                double *der);
-        void element_shapefn(double a, double b, 
-                int k, int order, double *val, double *der);
-        void element_shapefn_point(double x_ref, double a, double b, 
-                int k, double *val, double *der);
         void set_bc_left_dirichlet(int eq_n, double val);
         void set_bc_right_dirichlet(int eq_n, double val);
-
         void refine_single_elem(int id, int p_left, int p_right);
         void refine_elems(int elem_num, int *id_array, int2 *p_id_array);
         void refine_elems(int start_elem_id, int elem_num);
         Mesh *replicate(); 
         int assign_elem_ids();
-        double *bc_left_dir_values;  // values for the Dirichlet condition left
-        double *bc_right_dir_values; // values for the Dirichlet condition right
+        double bc_left_dir_values[MAX_EQN_NUM];  // values for the Dirichlet condition left
+        double bc_right_dir_values[MAX_EQN_NUM]; // values for the Dirichlet condition right
 
     private:
         double left_endpoint, right_endpoint;
