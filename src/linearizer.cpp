@@ -51,6 +51,25 @@ void Linearizer::plot_solution(const char *out_filename,
     }
 }
 
+// Plot solution in Gnuplot format, as a trajectory where solution[comp_x]
+// is used as x-coordinate and solution[comp_y] as y-coordinate
+void Linearizer::plot_trajectory(FILE *f, double *y_prev,
+			         int comp_x, int comp_y, 
+                                 int plotting_elem_subdivision)
+{
+    int n1, n2;
+    double *x1, *y1, *x2, *y2;
+    this->get_xy(y_prev, comp_x, plotting_elem_subdivision, &x1, &y1, &n1);
+    this->get_xy(y_prev, comp_y, plotting_elem_subdivision, &x2, &y2, &n2);
+    if (n1 != n2) error("internal: n1 != n2 in plot_trajectory().");
+    for (int i=0; i < n1; i++) fprintf(f, "%g %g\n", y1[i], y2[i]);
+    delete[] x1;
+    delete[] y1;
+    delete[] x2;
+    delete[] y2;
+}
+
+
 // Returns pointers to x and y coordinates in **x and **y
 // you should free it yourself when you don't need it anymore
 // y_prev --- the solution coefficients (all equations)
