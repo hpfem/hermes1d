@@ -21,19 +21,20 @@
 // The problem is considered in a time interval (0, T), and Dirichlet 
 // conditions are given for all quantities at the beginning.
 
-// Goal: Calculate all possible trajectories of the car.
+// Goal: Calculate all possible trajectories of the car given the 
+// initial condition and intervals for alpha and zeta.
 
 // General input:
 const int N_eq = 5;
-const int N_elem = 30;             // number of elements
+const int N_elem = 3;             // number of elements
 const double A = 0, B = 1;         // domain end points
-const int P_init = 1;              // initial polynomal degree 
+const int P_init = 3;              // initial polynomal degree 
 
 // Parameters
 const double Alpha_max = 1.;
-const double Zeta_max = M_PI/10;
-const int Num_rays = 4;
-const int N_steps_per_ray = 1000;
+const double Zeta_max = M_PI/6;
+const int Num_rays = 100;
+const int N_steps_per_ray = 5;
 
 // Boundary conditions
 const double X0_left = 0;
@@ -399,7 +400,7 @@ int main() {
   dp.add_matrix_form(2, 2, jacobian_2_2);
   dp.add_matrix_form(3, 3, jacobian_3_3);
   dp.add_matrix_form(4, 2, jacobian_4_2);
-  dp.add_matrix_form(4, 3, jacobian_4_4);
+  dp.add_matrix_form(4, 3, jacobian_4_3);
   dp.add_matrix_form(4, 4, jacobian_4_4);
   dp.add_vector_form(0, residual_0);
   dp.add_vector_form(1, residual_1);
@@ -412,9 +413,13 @@ int main() {
   double *y_prev = new double[N_dof];
   double *res = new double[N_dof];
 
-  // Loop over rays -TEMPORARILY DISABLED
-  //for (int a = 0; a < Num_rays; a++) {
-    //double angle = a*2*M_PI/Num_rays;
+  // Loop over rays
+  double radius = sqrt(Alpha_max*Alpha_max + Zeta_max*Zeta_max)/2.;
+  for (int a = 0; a < Num_rays; a++) {
+    double ray_angle = 2*M_PI*a/Num_rays;
+    printf("Ray angle = %g\n", ray_angle);
+    double alpha_actual = radius * cos(ray_angle); 
+    double zeta_actual = radius * sin(ray_angle); 
 
     // Set zero initial condition for the Newton's method
     for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
@@ -422,74 +427,94 @@ int main() {
     // Loop over control parameters alpha and zeta lying on the ray, 
     // starting from the origin and moving towards the boundary of
     // the rectangle
-    for (int step = 0; step < N_steps_per_ray; step++) {
+    for (int step0 = 0; step0 < N_steps_per_ray; step0++) {
+      alpha_ctrl[0] = alpha_actual * step0/double(N_steps_per_ray);      
+      zeta_ctrl[0] = zeta_actual * step0/double(N_steps_per_ray);      
+      for (int step1 = 0; step1 < N_steps_per_ray; step1++) {
+        alpha_ctrl[1] = alpha_actual * step1/double(N_steps_per_ray);      
+        zeta_ctrl[1] = zeta_actual * step1/double(N_steps_per_ray);      
+        for (int step2 = 0; step2 < N_steps_per_ray; step2++) {
+          alpha_ctrl[2] = alpha_actual * step2/double(N_steps_per_ray);      
+          zeta_ctrl[2] = zeta_actual * step2/double(N_steps_per_ray);      
+          for (int step3 = 0; step3 < N_steps_per_ray; step3++) {
+              alpha_ctrl[3] = alpha_actual * step3/double(N_steps_per_ray);
+              zeta_ctrl[3] = zeta_actual * step3/double(N_steps_per_ray);      
 
-      // Define alpha[0] and zeta[0] according to the 
-      // position on the ray
-      alpha_ctrl[0] = Alpha_max * step/double(N_steps_per_ray);      
-      zeta_ctrl[0] = Zeta_max * step/double(N_steps_per_ray);      
+              // Newton's iteration
+              int newton_iterations = 0;
+              
+              //printf("------------- Newton's iterations -------------- \n"); 
+              printf("alpha = (%g, %g, %g, %g), zeta = (%g, %g, %g, %g)\n", 
+                     alpha_ctrl[0], alpha_ctrl[1], 
+                     alpha_ctrl[2], alpha_ctrl[3], zeta_ctrl[0], 
+                     zeta_ctrl[1], zeta_ctrl[2], zeta_ctrl[3]); 
+              
+              if (fabs(alpha_ctrl[0]) <= Alpha_max && 
+                  fabs(zeta_ctrl[0]) <= Zeta_max   && 
+                  fabs(alpha_ctrl[1]) <= Alpha_max && 
+                  fabs(zeta_ctrl[1]) <= Zeta_max   &&
+                  fabs(alpha_ctrl[2]) <= Alpha_max &&
+                  fabs(zeta_ctrl[2]) <= Zeta_max   &&
+                  fabs(alpha_ctrl[3]) <= Alpha_max &&
+                  fabs(zeta_ctrl[3]) <= Zeta_max) { 
+                while (1) {
+                  // Erase the matrix:
+                  mat->zero();
 
-      // Newton's iteration
-      int newton_iterations = 0;
-      printf("------------- Newton's iterations -------------- \n"); 
-      printf("alpha = (%g, %g, %g, %g), zeta = (%g, %g, %g, %g)\n", alpha_ctrl[0], alpha_ctrl[1], 
-             alpha_ctrl[2], alpha_ctrl[3], zeta_ctrl[0], zeta_ctrl[1], zeta_ctrl[2], zeta_ctrl[3]); 
-      while (1) {
-        // Erase the matrix:
-        mat->zero();
+                  // Construct residual vector
+                  dp.assemble_matrix_and_vector(mat, res, y_prev); 
 
-        // Construct residual vector
-        dp.assemble_matrix_and_vector(mat, res, y_prev); 
+                  // Calculate L2 norm of residual vector
+                  double res_norm = 0;
+                  for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
+                  res_norm = sqrt(res_norm);
 
-        // Calculate L2 norm of residual vector
-        double res_norm = 0;
-        for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
-        res_norm = sqrt(res_norm);
+                  // If residual norm less than TOL_newton, quit
+                  // latest solution is in y_prev
+                  //printf("Residual L2 norm: %.15f\n", res_norm);
+                  if(res_norm < TOL_newton) break;
 
-        // If residual norm less than TOL_newton, quit
-        // latest solution is in y_prev
-        printf("Residual L2 norm: %.15f\n", res_norm);
-        if(res_norm < TOL_newton) break;
+                  // Change sign of vector res
+                  for(int i=0; i<N_dof; i++) res[i]*= -1;
 
-        // Change sign of vector res
-        for(int i=0; i<N_dof; i++) res[i]*= -1;
+                  // Solve the matrix system
+                  solve_linear_system_umfpack((CooMatrix*)mat, res);
 
-        // Solve the matrix system
-        solve_linear_system_umfpack((CooMatrix*)mat, res);
+                  newton_iterations++;
+                  //printf("Finished Newton iteration: %d\n", newton_iterations);
 
-        // Update y_prev by new solution which is in res
-        for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+                  // Update y_prev by new solution which is in res
+                  for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+                } // end of Newton's loop
 
-        newton_iterations++;
-        printf("Finished Newton iteration: %d\n", newton_iterations);
+                // plotting the solution
+                //Linearizer l(&mesh);
+                //const char *out_filename = "solution.gp";
+                //l.plot_solution(out_filename, y_prev, 10);
 
-        // Update y_prev by new solution which is in res
-        for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-      } // end of Newton's loop
-
-      // plotting the solution
-      //Linearizer l(&mesh);
-      //const char *out_filename = "solution.gp";
-      //l.plot_solution(out_filename, y_prev);
-
-      // plotting the trajectory
-      static int first_traj = 1;
-      const char *traj_filename = "trajectory.gp";
-      FILE *f;
-      if (first_traj) {
-        f = fopen(traj_filename, "wb");
-        first_traj = 0;
+                // plotting the trajectory
+                static int first_traj = 1;
+                const char *traj_filename = "trajectory.gp";
+                FILE *f;
+                if (first_traj) {
+                  f = fopen(traj_filename, "wb");
+                  first_traj = 0;
+                }
+                else f = fopen(traj_filename, "ab");
+                if(f == NULL) error("Problem opening trajectory file.");
+                Linearizer l_traj(&mesh);
+                l_traj.plot_trajectory(f, y_prev, 0, 1, 10);
+                static int traj_count = 0; 
+                traj_count++;
+                printf("Trajectory %d written to %s.\n", traj_count, traj_filename);
+                fclose(f);
+              }
+              else ;//printf("Alpha or zeta out of rectangle.\n");
+          }
+        }
       }
-      else f = fopen(traj_filename, "ab");
-      if(f == NULL) error("Problem opening trajectory file.");
-      Linearizer l_traj(&mesh);
-      l_traj.plot_trajectory(f, y_prev, 0, 1);
-      static int traj_count = 0; 
-      traj_count++;
-      printf("Trajectory %d written to %s.\n", traj_count, traj_filename);
-      fclose(f);
     }
-  //} // LOOP OVER ANGLES TEMPORARILY DISABLED
+  }
 
   printf("Done.\n");
   if (y_prev != NULL) delete[] y_prev;

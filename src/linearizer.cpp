@@ -44,6 +44,7 @@ void Linearizer::plot_solution(const char *out_filename,
         this->get_xy(y_prev, c, plotting_elem_subdivision, &x, &y, &n);
         for (int i=0; i < n; i++)
             fprintf(f[c], "%g %g\n", x[i], y[i]);
+        fprintf(f[c], "\n");
         delete[] x;
         delete[] y;
         printf("Output written to %s.\n", final_filename[c]);
@@ -63,6 +64,7 @@ void Linearizer::plot_trajectory(FILE *f, double *y_prev,
     this->get_xy(y_prev, comp_y, plotting_elem_subdivision, &x2, &y2, &n2);
     if (n1 != n2) error("internal: n1 != n2 in plot_trajectory().");
     for (int i=0; i < n1; i++) fprintf(f, "%g %g\n", y1[i], y2[i]);
+    fprintf(f, "\n");
     delete[] x1;
     delete[] y1;
     delete[] x2;
