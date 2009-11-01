@@ -22,24 +22,24 @@
 // conditions are given for all quantities at the beginning.
 
 // Goal: Calculate all possible trajectories of the car given the 
-// initial condition and intervals for alpha and zeta.
+// initial condition and intervals for alpha and zeta. The current 
+// algorithm considers 9 control parameters and moves only on the 
+// boundary of the 8-dimensional rectangle. TODO: forget trajectories 
+// where |v| > v_max or |phi| > phi_max.
 
 // Print data ?
 const int PRINT = 0;
 
 // General input:
 const int N_eq = 5;
-const int N_elem = 3;              // number of elements
-const double A = 0, B = 1;         // domain end points
-const int P_init = 3;              // initial polynomal degree 
+const int N_elem = 5;              // number of elements
+const double A = 0, B = 10;         // domain end points
+const int P_init = 2;              // initial polynomal degree 
 
 // Parameters
 const double Alpha_max = 1.;
 const double Zeta_max = M_PI/6;
-const int Num_rays = 100;
-const int N_steps_per_ray = 6;    // NOTE: be careful with this number,
-                                  // there are four embedded loops of
-                                  // this length!
+const int Num_rays = 120;
 
 // Boundary conditions
 const double X0_left = 0;
@@ -60,325 +60,129 @@ const double TOL_newton = 1e-5;        // tolerance for the Newton's method
 
 // ********************************************************************
 
-double get_ctrl_alpha(double t) 
+// Include weak forms
+#include "forms.cpp"
+
+void compute_trajectory(int n_dof, DiscreteProblem *dp, Matrix *mat, 
+                        double *y_prev, double *res) 
 {
-  // FIXME: this implementation is not efficient
-  for (int i = 0; i<N_ctrl-1; i++) {
-    if (time_ctrl[i] <= t && t <= time_ctrl[i+1]) {
-      // return linear interpolant
-      return alpha_ctrl[i] + 
-	(t - time_ctrl[i])*(alpha_ctrl[i+1] - alpha_ctrl[i])/(time_ctrl[i+1] - time_ctrl[i]);
-    }
-  }
-  error("Internal: time interval not found in get_ctrl_alpha().");
+  //if (PRINT) {
+    printf("alpha = (%g, %g, %g, %g), zeta = (%g, %g, %g, %g)\n", 
+           alpha_ctrl[0], alpha_ctrl[1], 
+           alpha_ctrl[2], alpha_ctrl[3], zeta_ctrl[0], 
+           zeta_ctrl[1], zeta_ctrl[2], zeta_ctrl[3]); 
+    // }
+
+
+  // Newton's iteration
+  int newton_iterations = 0;
+              
+  // Newton's loop
+  while (1) {
+    // Erase the matrix:
+    mat->zero();
+
+    // Construct residual vector
+    dp->assemble_matrix_and_vector(mat, res, y_prev); 
+
+    // Calculate L2 norm of residual vector
+    double res_norm = 0;
+    for(int i=0; i<n_dof; i++) res_norm += res[i]*res[i];
+    res_norm = sqrt(res_norm);
+
+    // If residual norm less than TOL_newton, quit
+    // latest solution is in y_prev
+    if (PRINT) printf("Residual L2 norm: %.15f\n", res_norm);
+    if(res_norm < TOL_newton) break;
+
+    // Change sign of vector res
+    for(int i=0; i<n_dof; i++) res[i]*= -1;
+
+    // Solve the matrix system
+    solve_linear_system_umfpack((CooMatrix*)mat, res);
+
+    newton_iterations++;
+    if (PRINT) printf("Finished Newton iteration: %d\n", newton_iterations);
+
+    // Update y_prev by new solution which is in res
+    for(int i=0; i<n_dof; i++) y_prev[i] += res[i];
+  } // end of Newton's loop
 }
 
-double get_ctrl_zeta(double t) 
+void plot_trajectory(Mesh *mesh, double *y_prev, int subdivision) 
 {
-  // FIXME: this implementation is not efficient
-  for (int i = 0; i<N_ctrl-1; i++) {
-    if (time_ctrl[i] <= t && t <= time_ctrl[i+1]) {
-      // return linear interpolant
-      return zeta_ctrl[i] + 
-	(t - time_ctrl[i])*(zeta_ctrl[i+1] - zeta_ctrl[i])/(time_ctrl[i+1] - time_ctrl[i]);
-    }
+  static int first_traj = 1;
+  const char *traj_filename = "trajectory.gp";
+  FILE *f;
+  if (first_traj) {
+    f = fopen(traj_filename, "wb");
+    first_traj = 0;
   }
-  error("Internal: time interval not found in get_ctrl_zeta().");
+  else f = fopen(traj_filename, "ab");
+  if(f == NULL) error("Problem opening trajectory file.");
+  Linearizer l_traj(mesh);
+  int x_comp = 0; // take first solution component as the x-coordinate
+  int y_comp = 1; // take second solution component as the y-coordinate
+  l_traj.plot_trajectory(f, y_prev, x_comp, y_comp, subdivision);
+  fclose(f);
 }
 
-
-// ********************************************************************
-
-double jacobian_0_0(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
+void plot_trajectory_endpoint(Mesh *mesh, double *y_prev) 
 {
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i] * v[i] * weights[i];
+  static int first_traj = 1;
+  const char *traj_filename = "reach.gp";
+  FILE *f;
+  if (first_traj) {
+    f = fopen(traj_filename, "wb");
+    first_traj = 0;
   }
-  return val;
-};
+  else f = fopen(traj_filename, "ab");
+  if(f == NULL) error("Problem opening reachability file.");
+  Linearizer l_reach(mesh);
+  double x_ref = 1; 
+  double x_phys; 
+  double val[MAX_EQN_NUM];
+  l_reach. eval_approx(mesh->last_active_element(), x_ref, y_prev, &x_phys, val);
+  int x_comp = 0; // take first solution component as the x-coordinate
+  int y_comp = 1; // take second solution component as the y-coordinate
+  fprintf(f, "%g %g\n", val[x_comp], val[y_comp]);
+  fclose(f);
+}
 
-double jacobian_0_2(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
+void plot_solution(Mesh *mesh, double *y_prev, int subdivision)
 {
-  // renaming for better readability
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
+  Linearizer l(mesh);
+  const char *out_filename = "solution.gp";
+  l.plot_solution(out_filename, y_prev, subdivision);
+}
 
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -u[i] * cos(phi[i]) * cos(theta[i]) * v[i] * weights[i];
+// set global controls
+void set_alpha_and_zeta(int component, double ray_angle, double radius) { 
+  double alpha = radius * cos(ray_angle);
+  double zeta = radius * sin(ray_angle); 
+  if (alpha > Alpha_max) {
+    double coeff = Alpha_max/alpha;
+    alpha = Alpha_max;
+    zeta *= coeff;
   }
-  return val;
-};
-
-double jacobian_0_3(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  // renaming for better readability
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += vel[i] * sin(phi[i]) * u[i] * cos(theta[i]) * v[i] * weights[i];
+  if (alpha < -Alpha_max) {
+    double coeff = -Alpha_max/alpha;
+    alpha = -Alpha_max;
+    zeta *= coeff;
   }
-  return val;
-};
-
-double jacobian_0_4(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  // renaming for better readability
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += vel[i] * cos(phi[i]) * sin(theta[i]) * u[i] * v[i] * weights[i];
+  if (zeta > Zeta_max) {
+    double coeff = Zeta_max/zeta;
+    zeta = Zeta_max;
+    alpha *= coeff;
   }
-  return val;
-};
-
-double jacobian_1_1(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i] * v[i] * weights[i];
+  if (zeta < -Zeta_max) {
+    double coeff = -Zeta_max/zeta;
+    zeta = -Zeta_max;
+    alpha *= coeff;
   }
-  return val;
-};
-
-double jacobian_1_2(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  // renaming for better readability
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -u[i] * cos(phi[i]) * sin(theta[i]) * v[i] * weights[i];
-  }
-  return val;
-};
-
-double jacobian_1_3(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  // renaming for better readability
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += vel[i] * sin(phi[i]) * u[i] * sin(theta[i]) * v[i] * weights[i];
-  }
-  return val;
-};
-
-double jacobian_1_4(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  // renaming for better readability
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -vel[i] * cos(phi[i]) * cos(theta[i]) * u[i] * v[i] * weights[i];
-  }
-  return val;
-};
-
-double jacobian_2_2(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i] * v[i] * weights[i];
-  }
-  return val;
-};
-
-double jacobian_3_3(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i] * v[i] * weights[i];
-  }
-  return val;
-};
-
-double jacobian_4_2(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  // renaming for better readability
-  double* phi = u_prev[3];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -u[i] * sin(phi[i]) * v[i] * weights[i];
-  }
-  return val;
-};
-
-double jacobian_4_3(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  // renaming for better readability
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -vel[i] * cos(phi[i]) * u[i] * v[i] * weights[i];
-  }
-  return val;
-};
-
-double jacobian_4_4(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i] * v[i] * weights[i];
-  }
-  return val;
-};
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-double residual_0(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  // renaming for better readability
-  double* dxposdt = du_prevdx[0];
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (dxposdt[i] - vel[i] * cos(phi[i]) * cos(theta[i])) * v[i] * weights[i];
-  }
-  return val;
-};
-
-double residual_1(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  // renaming for better readability
-  double* dyposdt = du_prevdx[1];
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-  double* theta = u_prev[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (dyposdt[i] - vel[i] * cos(phi[i]) * sin(theta[i])) * v[i] * weights[i];
-  }
-  return val;
-};
-
-double residual_2(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  // renaming for better readability
-  double* dveldt = du_prevdx[2];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (dveldt[i] - get_ctrl_alpha(x[i])) * v[i] * weights[i];
-  }
-  return val;
-};
-
-
-double residual_3(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  // renaming for better readability
-  double* dphidt = du_prevdx[3];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (dphidt[i] - get_ctrl_zeta(x[i])) * v[i] * weights[i];
-  }
-  return val;
-};
-
-double residual_4(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  // renaming for better readability
-  double* vel = u_prev[2];
-  double* phi = u_prev[3];
-  double* dthetadt = du_prevdx[4];
-
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (dthetadt[i] - vel[i] * sin(phi[i])) * v[i] * weights[i];
-  }
-  return val;
-};
+  alpha_ctrl[component] = alpha;
+  zeta_ctrl[component] = zeta;
+}
 
 /******************************************************************************/
 int main() {
@@ -389,6 +193,9 @@ int main() {
   mesh.set_bc_left_dirichlet(2, Vel_left);
   mesh.set_bc_left_dirichlet(3, Phi_left);
   mesh.set_bc_left_dirichlet(4, Theta_left);
+
+  // enumerate shape functions and calculate
+  // the number of DOF
   int N_dof = mesh.assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
@@ -418,102 +225,46 @@ int main() {
   double *y_prev = new double[N_dof];
   double *res = new double[N_dof];
 
-  // Loop over rays
-  double radius = sqrt(Alpha_max*Alpha_max + Zeta_max*Zeta_max)/2.;
-  for (int a = 0; a < Num_rays; a++) {
-    double ray_angle = 2*M_PI*a/Num_rays;
-    printf("Ray %d, angle %g\n", a, ray_angle);
-    double alpha_actual = radius * cos(ray_angle);
-    if (alpha_actual > Alpha_max) alpha_actual = Alpha_max;
-    if (alpha_actual < -Alpha_max) alpha_actual = -Alpha_max;
-    double zeta_actual = radius * sin(ray_angle); 
-    if (zeta_actual > Zeta_max) zeta_actual = Zeta_max;
-    if (zeta_actual < -Zeta_max) zeta_actual = -Zeta_max;
+  // At the very beginning, set zero initial 
+  // condition for the Newton's method
+  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
-    // At the beginning of every ray: Set zero initial condition 
-    // for the Newton's method
-    for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
+  // Move on the boundary of the rectangle 
+  // (-Alpha_max, Alpha_max) x (-Zeta_max, Zeta_max) in the CCW
+  // direction, starting at the point [Alpha_max, 0]
+  double radius = sqrt(Alpha_max*Alpha_max + Zeta_max*Zeta_max);
+  double angle_increment = 2.*M_PI/Num_rays;
+  for (int ray_0 = 0; ray_0 < Num_rays; ray_0++) {
+    // set alpha_ctrl[0], zeta_ctrl[0].
+    set_alpha_and_zeta(0, ray_0*angle_increment, radius); 
+    for (int ray_1 = 0; ray_1 < Num_rays; ray_1++) {
+      // set alpha_ctrl[1], zeta_ctrl[1]. 
+      set_alpha_and_zeta(1, ray_1*angle_increment, radius); 
+      for (int ray_2 = 0; ray_2 < Num_rays; ray_2++) {
+        // set alpha_ctrl[2], zeta_ctrl[2]. 
+        set_alpha_and_zeta(2, ray_2*angle_increment, radius); 
+        for (int ray_3 = 0; ray_3 < Num_rays; ray_3++) {
+          // set alpha_ctrl[3], zeta_ctrl[3]. 
+          set_alpha_and_zeta(3, ray_3*angle_increment, radius); 
+  
+          // Compute new trajectory for the actual set of global control 
+          // parameters alpha_ctrl[] and zeta_ctrl[] via the Newton's 
+          // method, using the last computed trajectory as the initial 
+          // condition  
+          compute_trajectory(N_dof, &dp, mat, y_prev, res);
 
-    // Loop over control parameters alpha and zeta lying on the ray. 
-    // Start from the origin and move towards the boundary of
-    // the rectangle
-    for (int step0 = 0; step0 < N_steps_per_ray; step0++) {
-      alpha_ctrl[0] = alpha_actual * step0/double(N_steps_per_ray);      
-      zeta_ctrl[0] = zeta_actual * step0/double(N_steps_per_ray);      
-      for (int step1 = 0; step1 < N_steps_per_ray; step1++) {
-        alpha_ctrl[1] = alpha_actual * step1/double(N_steps_per_ray);      
-        zeta_ctrl[1] = zeta_actual * step1/double(N_steps_per_ray);      
-        for (int step2 = 0; step2 < N_steps_per_ray; step2++) {
-          alpha_ctrl[2] = alpha_actual * step2/double(N_steps_per_ray);      
-          zeta_ctrl[2] = zeta_actual * step2/double(N_steps_per_ray);      
-          for (int step3 = 0; step3 < N_steps_per_ray; step3++) {
-            alpha_ctrl[3] = alpha_actual * step3/double(N_steps_per_ray);
-            zeta_ctrl[3] = zeta_actual * step3/double(N_steps_per_ray);      
+          // save trajectory to a file
+          int plotting_subdivision = 10;
+          plot_trajectory_endpoint(&mesh, y_prev); 
 
-            // Newton's iteration
-            int newton_iterations = 0;
-              
-            if (PRINT) {
-              printf("------------- Newton's iterations -------------- \n"); 
-              printf("alpha = (%g, %g, %g, %g), zeta = (%g, %g, %g, %g)\n", 
-                     alpha_ctrl[0], alpha_ctrl[1], 
-                     alpha_ctrl[2], alpha_ctrl[3], zeta_ctrl[0], 
-                     zeta_ctrl[1], zeta_ctrl[2], zeta_ctrl[3]); 
-            }
-            while (1) {
-              // Erase the matrix:
-              mat->zero();
+          // save trajectory to a file
+          //int plotting_subdivision = 10;
+          //plot_trajectory(&mesh, y_prev, plotting_subdivision); 
 
-              // Construct residual vector
-              dp.assemble_matrix_and_vector(mat, res, y_prev); 
-
-              // Calculate L2 norm of residual vector
-              double res_norm = 0;
-              for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
-              res_norm = sqrt(res_norm);
-
-              // If residual norm less than TOL_newton, quit
-              // latest solution is in y_prev
-              if (PRINT) printf("Residual L2 norm: %.15f\n", res_norm);
-              if(res_norm < TOL_newton) break;
-
-              // Change sign of vector res
-              for(int i=0; i<N_dof; i++) res[i]*= -1;
-
-              // Solve the matrix system
-              solve_linear_system_umfpack((CooMatrix*)mat, res);
-
-              newton_iterations++;
-              if (PRINT) printf("Finished Newton iteration: %d\n", newton_iterations);
-
-              // Update y_prev by new solution which is in res
-              for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-            } // end of Newton's loop
-
-            // plotting the solution
-            //Linearizer l(&mesh);
-            //const char *out_filename = "solution.gp";
-            //l.plot_solution(out_filename, y_prev, 10);
-
-            // plotting the trajectory
-            static int first_traj = 1;
-            const char *traj_filename = "trajectory.gp";
-            FILE *f;
-            if (first_traj) {
-              f = fopen(traj_filename, "wb");
-              first_traj = 0;
-            }
-            else f = fopen(traj_filename, "ab");
-            if(f == NULL) error("Problem opening trajectory file.");
-            Linearizer l_traj(&mesh);
-            l_traj.plot_trajectory(f, y_prev, 0, 1, 10);
-            static int traj_count = 0; 
-            traj_count++;
-            if (PRINT) printf("Trajectory %d written to %s.\n", 
-              traj_count, traj_filename);
-            fclose(f);
-	  }
-	}
+          // save solution to a file
+          //int plotting_subdivision_2 = 10;
+          //plot_solution(&mesh, y_prev, plotting_subdivision_2); 
+        }
       }
     }
   }

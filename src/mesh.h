@@ -98,6 +98,8 @@ class Mesh {
         double get_right_endpoint() {
             return right_endpoint; 
         }
+        Element* first_active_element();
+        Element* last_active_element();
         void set_bc_left_dirichlet(int eq_n, double val);
         void set_bc_right_dirichlet(int eq_n, double val);
         void refine_single_elem(int id, int p_left, int p_right);

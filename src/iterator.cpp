@@ -13,11 +13,7 @@ void Iterator::reset() {
 
 Element* Iterator::first_active_element()
 {
-  Element *e = this->mesh->get_base_elems();
-  while(!e->is_active()) {
-    e = e->sons[0];
-  }
-  return e;
+  return this->mesh->first_active_element();
 }
 
 Element* Iterator::next_active_element()
@@ -56,12 +52,7 @@ Element* Iterator::next_active_element()
 
 Element* Iterator::last_active_element()
 {
-  int n_elem = this->mesh->get_n_base_elem();
-  Element *e = this->mesh->get_base_elems() + n_elem - 1;
-  while(!e->is_active()) {
-    e = e->sons[1];
-  }
-  return e;
+  return this->mesh->last_active_element();
 }
 
 

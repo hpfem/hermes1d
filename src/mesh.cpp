@@ -397,6 +397,24 @@ int Mesh::assign_elem_ids()
     delete I;
 }
 
+Element* Mesh::first_active_element()
+{
+  Element *e = base_elems;
+  while(!e->is_active()) {
+    e = e->sons[0];
+  }
+  return e;
+}
+
+Element* Mesh::last_active_element()
+{
+  Element *e = base_elems + n_base_elem - 1;
+  while(!e->is_active()) {
+    e = e->sons[1];
+  }
+  return e;
+}
+
 // transformation of k-th shape function defined on Gauss points 
 // corresponding to 'order' to physical interval (a,b)
 void element_shapefn(double a, double b, 
