@@ -5,28 +5,26 @@ import os
 from jinja2 import Environment, FileSystemLoader
 from sympy import Symbol, integrate, legendre, factor, sqrt, ccode
 
-#n_functions = 100
-n_functions = 10
+n_functions = 100
 precision = 25
 
 def legendre_norm(i, x):
     """
     Returns the normalized integrated Legendre polynomial.
     """
-    y = Symbol("y", dummy=True)
-    f = legendre(i, y)
-    n = sqrt(integrate(f**2, (y, -1, 1)))
+    f = legendre(i, x)
+    n = sqrt(integrate(f**2, (x, -1, 1)))
     return f/n
 
 def legendre_shape_function(i, x):
     """
     Returns the Lobatto shape function.
     """
-    if i == 0:
-        return 1-legendre_shape_function(1, x)
-    f = legendre_norm(i-1, x)
-    if i == 1:
-        f /= sqrt(2)
+    #if i == 0:
+    #    return 1-legendre_shape_function(1, x)
+    f = legendre_norm(i, x)
+    #if i == 1:
+    #    f /= sqrt(2)
     return f.expand()
 
 def horner_scheme(p, x):

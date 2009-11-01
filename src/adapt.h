@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "lobatto.h"
+#include "legendre.h"
 #include "mesh.h"
 #include "matrix.h"
 #include "iterator.h"
