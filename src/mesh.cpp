@@ -16,6 +16,7 @@ Element::Element()
   level = 0;
   id = -1;
   dof_size = 0;
+  err_squared = -1;
 }
 
 Element::Element(double x_left, double x_right, int deg, int n_eq) 
@@ -30,6 +31,7 @@ Element::Element(double x_left, double x_right, int deg, int n_eq)
   active = 1;
   level = 0;
   id = -1;
+  err_squared = -1;
 }
 
 unsigned Element::is_active() 

@@ -50,12 +50,13 @@ public:
     unsigned is_active();
     unsigned active;   // flag used by assembling algorithm
     double x1, x2;     // endpoints
-    int p;             // poly degree
+    int p;             // poly degrees
     int dof_size;      // size of the dof[] array
     int **dof;         // connectivity array of length p+1 
-                     // for every solution component
+                       // for every solution component
     int id;
     unsigned level;    // refinement level (zero for initial mesh elements) 
+    double err_squared;  // used in adaptivity
     Element *sons[2];  // for refinement
 };
 

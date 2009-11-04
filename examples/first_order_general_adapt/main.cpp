@@ -1,5 +1,6 @@
 #include "hermes1d.h"
 #include "solver_umfpack.h"
+#include "adapt.h"
 
 // ********************************************************************
 
@@ -11,14 +12,14 @@
 
 // General input:
 static int N_eq = 1;             // number of equations
-int N_elem = 100;                 // number of elements
-double A = 0, B = 100;            // domain end points
+int N_elem = 5;                  // number of elements
+double A = 0, B = 10;            // domain end points
 double YA = 1;                   // equation parameter
 int P_init = 1;                  // initial polynomal degree
 
-// Error tolerance
+// Error tolerances
 double TOL_NEWTON_BASIC = 1e-5;  // tolerance for the Newton's method on basic mesh
-double TOL_NEWTON_REF = 1e-5;    // tolerance for the Newton's method on reference mesh
+double TOL_NEWTON_REF = 1e-3;    // tolerance for the Newton's method on reference mesh
 double TOL_ADAPT = 1e-5;         // tolerance for the adaptivity loop      
  
 // Function f(y, x)
@@ -80,7 +81,6 @@ int main() {
   Mesh mesh(A, B, N_elem, P_init, N_eq);
   mesh.set_bc_left_dirichlet(0, YA);
   int N_dof_basic = mesh.assign_dofs();
-  printf("N_dof_basic = %d\n", N_dof_basic);
 
   // Register weak forms
   DiscreteProblem dp(&mesh);
@@ -104,7 +104,8 @@ int main() {
  
     printf("------------------ Adaptivity iteration %d --------------------\n", 
            adapt_iterations); 
-    printf("----------- Starting Newton iterations on basic mesh ----------\n"); 
+    printf("----------- Starting Newton iterations on coarse mesh --------\n"); 
+    printf("N_dof_basic = %d\n", N_dof_basic);
 
     // Obtain basic mesh solution via Newton's iteration
     int newton_iterations = 0;
@@ -135,14 +136,13 @@ int main() {
       for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
 
       newton_iterations++;
-      printf("Finished coarse Newton iteration: %d\n", newton_iterations);
+      printf("Finished coarse mesh Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
 
-    printf("--------- Starting Newton iterations on reference mesh  ---------\n"); 
-
     // Replicate current mesh
+    printf("Creating reference mesh.\n");
     mesh_ref = mesh.replicate();
 
     // Refines 'num_to_ref' elements starting with element 'start_elem_id'
@@ -154,7 +154,6 @@ int main() {
 
     // Enumerate DOF in the reference mesh
     int N_dof_ref = mesh_ref->assign_dofs();
-    printf("N_dof_ref = %d\n", N_dof_ref);
     
     // Register weak forms
     DiscreteProblem dp_ref(mesh_ref);
@@ -171,6 +170,7 @@ int main() {
     for (int i=0; i < N_dof_ref; i++)
         y_prev_ref[i] = 0;
         */
+    printf("Transfering solution to reference mesh.\n");
     transfer_solution(&mesh, mesh_ref, y_prev, y_prev_ref);
     /*
     for (int i=0; i < N_dof_ref; i++)
@@ -181,7 +181,10 @@ int main() {
     // for the Newton's iteration for the reference solution
     //mesh_ref.project(mesh, y_prev, 0, mesh.get_n_active_elems(), y_ref_prev);
 
-    // Obtain basic mesh solution via Newton's iteration
+    printf("---------- Starting Newton iterations on fine mesh  ----------\n"); 
+    printf("N_dof_ref = %d\n", N_dof_ref);
+
+    // Obtain fine mesh solution via Newton's iteration
     int newton_iterations_ref = 0;
     while(1) {
       // Zero the matrix:
@@ -210,7 +213,7 @@ int main() {
       for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
       newton_iterations_ref++;
-      printf("Finished coarse Newton iteration: %d\n", newton_iterations_ref);
+      printf("Finished fine mesh Newton iteration: %d\n", newton_iterations_ref);
     }
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
@@ -219,6 +222,12 @@ int main() {
     //printf("y_prev_ref = \n");
     //for(int i=0; i<N_dof_ref; i++) printf("%g, ", y_prev_ref[i]);
     //printf("\n");
+
+    // calculate element errors (squared)
+    calc_elem_L2_errors_squared(&mesh, mesh_ref, y_prev, y_prev_ref);
+
+    // print element errors (squared)
+    print_element_errors(&mesh);
 
     /* TO BE USED FOR ADAPTIVITY
     // Use the difference between the two solutions to determine 
@@ -241,7 +250,7 @@ int main() {
     adapt_iterations++;
   };
 
-  // plotting the basic solution
+  // plotting the coarse mesh solution
   Linearizer l(&mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
