@@ -107,6 +107,7 @@ void calc_elem_L2_error_squared_hp(Element *e,
   double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
   e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
                 bc_right_dir_values); 
+  
   for (int i=0; i<pts_num; i++) {
     double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
     e->get_solution_point(phys_x[i], coeffs, val, der);
@@ -116,7 +117,7 @@ void calc_elem_L2_error_squared_hp(Element *e,
   // evaluate fine-mesh solution and its derivative 
   // at all quadrature points in (-1, 0), for every 
   // solution component
-  e_ref_left->get_coeffs(y_prev, coeffs, bc_left_dir_values,
+  e_ref_left->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values,
                          bc_right_dir_values); 
   for (int i=0; i<pts_num; i++) {
     double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
@@ -157,7 +158,7 @@ void calc_elem_L2_error_squared_hp(Element *e,
   // evaluate fine-mesh solution and its derivative 
   // at all quadrature points in (0, 1), for every 
   // solution component
-  e_ref_right->get_coeffs(y_prev, coeffs, bc_left_dir_values,
+  e_ref_right->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values,
                          bc_right_dir_values); 
   for (int i=0; i<pts_num; i++) {
     double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
@@ -177,8 +178,9 @@ void calc_elem_L2_error_squared_hp(Element *e,
   }
 
   e->err_squared = 0;
-  for (int c=0; c<n_eq; c++)  
+  for (int c=0; c<n_eq; c++) {
     e->err_squared += norm_squared_left[c] + norm_squared_right[c];
+  }
 }
 
 void calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
