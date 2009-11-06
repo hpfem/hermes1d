@@ -18,7 +18,7 @@
 // Assumes that the element was not refined in space for the 
 // reference solution. 
 // FIXME: to be moved to the Element class
-void calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
+double calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]);
@@ -28,7 +28,7 @@ void calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
 // Assumes that the element was refined in space for the 
 // reference solution.
 // FIXME: to be moved to the Element class
-void calc_elem_L2_error_squared_hp(Element *e, 
+double calc_elem_L2_error_squared_hp(Element *e, 
                         Element *e_ref_left, Element *e_ref_right,
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
@@ -39,10 +39,11 @@ void calc_elem_L2_error_squared_hp(Element *e,
 // calculated values are stored in the variable 'err_squared' in
 // every element of 'mesh' 
 void calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
-                         double* y_prev, double* y_prev_ref);
+				 double* y_prev, double* y_prev_ref, 
+                                 double *err_array);
 
-// prints element errors (squared)
-void print_element_errors(Mesh *mesh);
+// sorting err_array[] and returning array of sorted element indices
+void sort_element_errors(int n, double *err_array, int *id_array); 
 
 // Projects reference solution on element 'e' onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on (-1, 0)

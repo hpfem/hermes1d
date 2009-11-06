@@ -1,5 +1,5 @@
 set(SRC
-    common.cpp iterator.cpp
+    common.cpp iterator.cpp qsort.cpp
     lobatto.cpp legendre.cpp  matrix.cpp discrete.cpp mesh.cpp linearizer.cpp
     quad_std.cpp transforms.cpp adapt.cpp
     )

@@ -56,7 +56,6 @@ public:
                        // for every solution component
     int id;
     unsigned level;    // refinement level (zero for initial mesh elements) 
-    double err_squared;  // used in adaptivity
     Element *sons[2];  // for refinement
 };
 

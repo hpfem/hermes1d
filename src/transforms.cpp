@@ -213,6 +213,8 @@ void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_pre
 {
     Iterator *I = new Iterator(mesh);
     Iterator *I_ref = new Iterator(mesh_ref);
+
+    // simultaneous traversal of 'mesh' and 'mesh_ref'
     Element *e, *e_ref, *e_ref_left, *e_ref_right;
     for (int comp=0; comp < mesh->get_n_eq(); comp++) {
         I->reset();
@@ -222,14 +224,12 @@ void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_pre
             if (e->level == e_ref->level)
                 transform_element_unrefined(comp, y_prev, y_prev_ref, e,
                     e_ref, mesh, mesh_ref);
-            else if (e->level + 1 == e_ref->level) {
+            else {
                 e_ref_left = e_ref;
                 e_ref_right = I_ref->next_active_element();
                 transform_element_refined(comp, y_prev, y_prev_ref, e,
                     e_ref_left, e_ref_right, mesh, mesh_ref);
             }
-            else
-                error("internal error in transfer_solution: element orders mismatch.");
         }
     }
 }

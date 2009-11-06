@@ -18,7 +18,7 @@ double YA = 1;                   // equation parameter
 int P_init = 1;                  // initial polynomal degree
 
 // Error tolerances
-double TOL_NEWTON_BASIC = 1e-5;  // tolerance for the Newton's method on basic mesh
+double TOL_NEWTON_COARSE = 1e-5;  // tolerance for the Newton's method on coarse mesh
 double TOL_NEWTON_REF = 1e-3;    // tolerance for the Newton's method on reference mesh
 double TOL_ADAPT = 1e-5;         // tolerance for the adaptivity loop      
  
@@ -80,7 +80,7 @@ int main() {
   // Create mesh
   Mesh mesh(A, B, N_elem, P_init, N_eq);
   mesh.set_bc_left_dirichlet(0, YA);
-  int N_dof_basic = mesh.assign_dofs();
+  int N_dof_coarse = mesh.assign_dofs();
 
   // Register weak forms
   DiscreteProblem dp(&mesh);
@@ -88,13 +88,13 @@ int main() {
   dp.add_vector_form(0, residual);
 
   // Allocate Jacobi matrix and residual
-  Matrix *mat = new CooMatrix(N_dof_basic);
-  double *y_prev = new double[N_dof_basic];
-  double *res = new double[N_dof_basic];
+  Matrix *mat = new CooMatrix(N_dof_coarse);
+  double *y_prev = new double[N_dof_coarse];
+  double *res = new double[N_dof_coarse];
 
   // Zero initial condition for the Newton's method
-  // on the basic mesh
-  for(int i=0; i<N_dof_basic; i++) y_prev[i] = 0; 
+  // on the coarse mesh
+  for(int i=0; i<N_dof_coarse; i++) y_prev[i] = 0; 
 
   // Main adaptivity loop
   int adapt_iterations = 1;
@@ -105,9 +105,9 @@ int main() {
     printf("------------------ Adaptivity iteration %d --------------------\n", 
            adapt_iterations); 
     printf("----------- Starting Newton iterations on coarse mesh --------\n"); 
-    printf("N_dof_basic = %d\n", N_dof_basic);
+    printf("N_dof_coarse = %d\n", N_dof_coarse);
 
-    // Obtain basic mesh solution via Newton's iteration
+    // Obtain coarse mesh solution via Newton's iteration
     int newton_iterations = 0;
     while (1) {
       // Erase the matrix:
@@ -118,28 +118,28 @@ int main() {
 
       // Calculate L2 norm of residual vector
       double res_norm = 0;
-      for(int i=0; i<N_dof_basic; i++) res_norm += res[i]*res[i];
+      for(int i=0; i<N_dof_coarse; i++) res_norm += res[i]*res[i];
       res_norm = sqrt(res_norm);
 
-      // If residual norm less than TOL_NEWTON_BASIC, quit
+      // If residual norm less than TOL_NEWTON_COARSE, quit
       // latest solution is in y_prev
       printf("Residual L2 norm: %.15f\n", res_norm);
-      if(res_norm < TOL_NEWTON_BASIC) break;
+      if(res_norm < TOL_NEWTON_COARSE) break;
 
       // Change sign of vector res
-      for(int i=0; i<N_dof_basic; i++) res[i]*= -1;
+      for(int i=0; i<N_dof_coarse; i++) res[i]*= -1;
 
       // Solve the matrix system
       solve_linear_system_umfpack((CooMatrix*)mat, res);
 
       // Update y_prev by new solution which is in res
-      for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
+      for(int i=0; i<N_dof_coarse; i++) y_prev[i] += res[i];
 
       newton_iterations++;
       printf("Finished coarse mesh Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
-    for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
+    for(int i=0; i<N_dof_coarse; i++) y_prev[i] += res[i];
 
     // Replicate current mesh
     printf("Creating reference mesh.\n");
@@ -149,7 +149,7 @@ int main() {
     // For now, refine entire mesh uniformly in 'h' and 'p'
     int start_elem_id = 0; 
     int num_to_ref = mesh.get_n_active_elem();
-    //mesh_ref->refine_elems(0, 1);
+    //mesh_ref->refine_elems(0, 2);
     mesh_ref->refine_elems(start_elem_id, num_to_ref);
 
     // Enumerate DOF in the reference mesh
@@ -177,7 +177,7 @@ int main() {
         printf("y_prev_ref[%d] = %f\n", i, y_prev_ref[i]);
         */
 
-    // Use the basic solution as the initial condition 
+    // Use the coarse mesh solution as the initial condition 
     // for the Newton's iteration for the reference solution
     //mesh_ref.project(mesh, y_prev, 0, mesh.get_n_active_elems(), y_ref_prev);
 
@@ -224,10 +224,22 @@ int main() {
     //printf("\n");
 
     // calculate element errors (squared)
-    calc_elem_L2_errors_squared(&mesh, mesh_ref, y_prev, y_prev_ref);
+    double err_array[MAX_ELEM_NUM]; //FIXME - change this to dynamic allocation
+    calc_elem_L2_errors_squared(&mesh, mesh_ref, y_prev, y_prev_ref, err_array);
 
-    // print element errors (squared)
-    print_element_errors(&mesh);
+    // print element errors
+    for (int i=0; i<mesh.get_n_active_elem(); i++) {
+      printf("Elem[%d]: error = %g\n", i, err_array[i]);
+    }
+
+    // sorting err_array[] and returning array of sorted element indices
+    int id_array[MAX_ELEM_NUM];
+    sort_element_errors(mesh.get_n_active_elem(), err_array, id_array);
+
+    // print sorted element errors along with corresponding reordered indices
+    for (int i=0; i<mesh.get_n_active_elem(); i++) {
+      printf("id_array[%d] = %d\n", i, id_array[i]);
+    }
 
     /* TO BE USED FOR ADAPTIVITY
     // Use the difference between the two solutions to determine 
@@ -244,7 +256,7 @@ int main() {
     double err_adapt = 0; 
     if(err_adapt < TOL_ADAPT) break;
 
-    // Perform the hp-refinements in the basic mesh
+    // Perform the hp-refinements in the coarse mesh
     //mesh.refine_multi_elems(num_elems_to_be_refined, id_array, p_pair_array);
 
     adapt_iterations++;

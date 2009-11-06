@@ -22,7 +22,7 @@ double legendre_right(int i, double x) {
   return sqrt(2)*legendre_fn_tab_1d[i](map_right(x));
 }
 
-void calc_elem_L2_error_squared_p(Element *e, Element *e_ref, 
+double calc_elem_L2_error_squared_p(Element *e, Element *e_ref, 
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
@@ -76,12 +76,13 @@ void calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
     }
   }
 
-  e->err_squared = 0;
+  double err_squared = 0;
   for (int c=0; c<n_eq; c++)  
-    e->err_squared += norm_squared[c];
+    err_squared += norm_squared[c];
+  return err_squared;
 }
 
-void calc_elem_L2_error_squared_hp(Element *e, 
+double calc_elem_L2_error_squared_hp(Element *e, 
 				   Element *e_ref_left, Element *e_ref_right,
                                    double *y_prev, double *y_prev_ref, 
                                    double bc_left_dir_values[MAX_EQN_NUM],
@@ -177,14 +178,15 @@ void calc_elem_L2_error_squared_hp(Element *e,
     }
   }
 
-  e->err_squared = 0;
+  double err_squared = 0;
   for (int c=0; c<n_eq; c++) {
-    e->err_squared += norm_squared_left[c] + norm_squared_right[c];
+    err_squared += norm_squared_left[c] + norm_squared_right[c];
   }
+  return err_squared;
 }
 
 void calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
-				 double* y_prev, double* y_prev_ref) 
+				 double* y_prev, double* y_prev_ref, double *err_array) 
 {
   Iterator *I = new Iterator(mesh);
   Iterator *I_ref = new Iterator(mesh_ref);
@@ -193,32 +195,48 @@ void calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref,
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
     Element *e_ref = I_ref->next_active_element();
+    double err_squared;
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      calc_elem_L2_error_squared_p(e, e_ref, y_prev, y_prev_ref, 
-                                   mesh->bc_left_dir_values,
-			           mesh->bc_right_dir_values);
+      err_squared = calc_elem_L2_error_squared_p(e, e_ref, y_prev, y_prev_ref, 
+                                         mesh->bc_left_dir_values,
+			                 mesh->bc_right_dir_values);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
-      calc_elem_L2_error_squared_hp(e, e_ref_left, e_ref_right, 
-                                    y_prev, y_prev_ref, 
-                                    mesh->bc_left_dir_values,
-			            mesh->bc_right_dir_values);
+      err_squared = calc_elem_L2_error_squared_hp(e, e_ref_left, e_ref_right, 
+                                          y_prev, y_prev_ref, 
+                                          mesh->bc_left_dir_values,
+			                  mesh->bc_right_dir_values);
     }
+    err_array[e->id] = sqrt(err_squared);
   }
 }
 
-void print_element_errors(Mesh *mesh) 
+/* qsort int comparison function */
+int int_cmp(const void *a, const void *b)
 {
-  Iterator *I = new Iterator(mesh);
-  Element *e;
-  while ((e = I->next_active_element()) != NULL) {
-    printf("Elem %d, err_squared = %g\n", e->id, e->err_squared);
-  }
+    const double *ia = (const double *)a; // casting pointer types
+    const double *ib = (const double *)b;
+    return ia[0]  - ib[0] > 0; 
+	/* double comparison: returns negative if b[0] > a[0] 
+	and positive if a[0] > b[0] */
 }
 
+// sorting err_array[] and returning array of sorted element indices
+void sort_element_errors(int n, double *err_array, int *id_array) 
+{
+    double array[MAX_ELEM_NUM][2];
+    for (int i=0; i<n; i++) {
+      array[i][0] = err_array[i];
+      array[i][1] = i;
+    }
+
+    qsort(array, n, 2*sizeof(double), int_cmp);
+
+    for (int i=0; i<n; i++) id_array[i] = array[i][1];
+}
 
 // projects reference solution on element 'e' onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on (-1, 0)
