@@ -104,7 +104,7 @@ class Mesh {
         void set_bc_right_dirichlet(int eq_n, double val);
         void refine_single_elem(int id, int p_left, int p_right);
         void refine_elems(int elem_num, int *id_array, int2 *p_id_array);
-        void refine_elems(int start_elem_id, int elem_num);
+        void reference_refinement(int start_elem_id, int elem_num);
         Mesh *replicate(); 
         int assign_elem_ids();
         double bc_left_dir_values[MAX_EQN_NUM];  // values for the Dirichlet condition left

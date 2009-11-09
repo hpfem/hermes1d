@@ -35,12 +35,14 @@ double calc_elem_L2_error_squared_hp(Element *e,
 			double bc_right_dir_values[MAX_EQN_NUM]);
 
 // Calculates l2-norm (squared) of the difference between the coarse
-// and fine mesh solutions in all active elements of 'mesh'. The 
-// calculated values are stored in the variable 'err_squared' in
-// every element of 'mesh' 
-void calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
-				 double* y_prev, double* y_prev_ref, 
-                                 double *err_array);
+// and reference solutions in all active elements of 'mesh'. Total
+// error is returned.
+double calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
+				   double* y_prev, double* y_prev_ref, 
+				   double *err_squared_array);
+
+// can be used for both the coarse and reference solutions
+double calc_solution_L2_norm(Mesh* mesh, double* y_prev);
 
 // sorting err_array[] and returning array of sorted element indices
 void sort_element_errors(int n, double *err_array, int *id_array); 

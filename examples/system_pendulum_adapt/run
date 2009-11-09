@@ -1,0 +1,3 @@
+system_pendulum_adapt
+python plot.py &
+

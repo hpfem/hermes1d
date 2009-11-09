@@ -22,6 +22,53 @@ double legendre_right(int i, double x) {
   return sqrt(2)*legendre_fn_tab_1d[i](map_right(x));
 }
 
+double calc_elem_L2_norm_squared(Element *e, double *y_prev, 
+                        double bc_left_dir_values[MAX_EQN_NUM],
+			double bc_right_dir_values[MAX_EQN_NUM]) 
+{
+  int n_eq = e->dof_size;
+  double phys_x[MAX_PTS_NUM];          // quad points
+  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM]; // values of coarse mesh solution for all solution components
+  double phys_weights[MAX_PTS_NUM];    // quad weights
+
+  // integration order
+  int order = 2*e->p;
+  int pts_num = 0;
+
+  // create Gauss quadrature on (-1, 1)
+  // FIXME: this only transforms the quadrature from (-1, 1) to (-1, 1),
+  //        so it should be simplified
+  create_element_quadrature(-1, 1, order, phys_x, phys_weights,
+                            &pts_num); 
+
+  // evaluate coarse-mesh solution and its derivative 
+  // at all quadrature points in (-1, 1), for every 
+  // solution component
+  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
+                bc_right_dir_values); 
+  for (int i=0; i<pts_num; i++) {
+    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
+    e->get_solution_point(phys_x[i], coeffs, val, der);
+    for(int c=0; c<n_eq; c++) phys_val_coarse[c][i] = val[c];
+  }
+
+  // integrate square over (-1, 1)
+  double norm_squared[MAX_EQN_NUM];
+  for (int c=0; c<n_eq; c++) {
+    norm_squared[c] = 0;
+    for (int i=0; i<pts_num; i++) {
+      double val = phys_val_coarse[c][i];
+      norm_squared[c] += val * val * phys_weights[i];
+    }
+  }
+
+  double elem_norm_squared = 0;
+  for (int c=0; c<n_eq; c++)  
+    elem_norm_squared += norm_squared[c];
+  return elem_norm_squared;
+}
+
 double calc_elem_L2_error_squared_p(Element *e, Element *e_ref, 
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
@@ -33,12 +80,12 @@ double calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
   double phys_val_fine[MAX_EQN_NUM][MAX_PTS_NUM];   // values of fine mesh solution for all solution components
   double phys_weights[MAX_PTS_NUM];    // quad weights
 
-  // first process interval (-1, 0)
   int order = 2*e_ref->p;
   int pts_num = 0;
 
   // create Gauss quadrature on (-1, 1)
-  // FIXME: this transforms the quadrature from (-1, 1) to (-1, 1)
+  // FIXME: this only transforms the quadrature from (-1, 1) to (-1, 1),
+  // so it should be simplified
   create_element_quadrature(-1, 1, order, phys_x, phys_weights,
                             &pts_num); 
 
@@ -185,9 +232,11 @@ double calc_elem_L2_error_squared_hp(Element *e,
   return err_squared;
 }
 
-void calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
-				 double* y_prev, double* y_prev_ref, double *err_array) 
+double calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
+				   double* y_prev, double* y_prev_ref, 
+				   double *err_squared_array)
 {
+  double err_total_squared = 0;
   Iterator *I = new Iterator(mesh);
   Iterator *I_ref = new Iterator(mesh_ref);
 
@@ -210,8 +259,26 @@ void calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref,
                                           mesh->bc_left_dir_values,
 			                  mesh->bc_right_dir_values);
     }
-    err_array[e->id] = sqrt(err_squared);
+    err_squared_array[e->id] = err_squared;
+    err_total_squared += err_squared;
   }
+  return sqrt(err_total_squared);
+}
+
+double calc_solution_L2_norm(Mesh* mesh, double* y_prev)
+{
+  double norm_squared = 0;
+  Iterator *I = new Iterator(mesh);
+
+  // traverse 'mesh' and calculate squared solution L2 norm 
+  // in every element 
+  Element *e;
+  while ((e = I->next_active_element()) != NULL) {
+    norm_squared += calc_elem_L2_norm_squared(e, y_prev,
+                                         mesh->bc_left_dir_values,
+			                 mesh->bc_right_dir_values);
+  }
+  return sqrt(norm_squared);
 }
 
 /* qsort int comparison function */
@@ -219,9 +286,9 @@ int int_cmp(const void *a, const void *b)
 {
     const double *ia = (const double *)a; // casting pointer types
     const double *ib = (const double *)b;
-    return ia[0]  - ib[0] > 0; 
-	/* double comparison: returns negative if b[0] > a[0] 
-	and positive if a[0] > b[0] */
+    return ia[0] - ib[0] < 0; 
+	/* double comparison: returns negative if b[0] < a[0] 
+	and positive if a[0] < b[0] */
 }
 
 // sorting err_array[] and returning array of sorted element indices

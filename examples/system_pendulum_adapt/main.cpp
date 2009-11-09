@@ -208,8 +208,8 @@ int main() {
     // For now, refine entire mesh uniformly in 'h' and 'p'
     int start_elem_id = 0; 
     int num_to_ref = mesh.get_n_active_elem();
-    //mesh_ref->refine_elems(0, 1);
-    mesh_ref->refine_elems(start_elem_id, num_to_ref);
+    //mesh_ref->reference_refinement(0, 1);
+    mesh_ref->reference_refinement(start_elem_id, num_to_ref);
 
     // Enumerate DOF in the reference mesh
     int N_dof_ref = mesh_ref->assign_dofs();

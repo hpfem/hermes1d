@@ -290,7 +290,7 @@ void Mesh::refine_elems(int elem_num, int *id_array, int2 *p_pair_array)
 
 // splits the indicated elements and 
 // increases poly degree in sons by one
-void Mesh::refine_elems(int start_elem_id, int elem_num)
+void Mesh::reference_refinement(int start_elem_id, int elem_num)
 {
     Iterator *I = new Iterator(this);
     Element *e;
