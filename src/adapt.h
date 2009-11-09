@@ -41,18 +41,52 @@ double calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref,
 				   double* y_prev, double* y_prev_ref, 
 				   double *err_squared_array);
 
-// can be used for both the coarse and reference solutions
+// Can be used for both the coarse and reference solutions
 double calc_solution_L2_norm(Mesh* mesh, double* y_prev);
 
-// sorting err_array[] and returning array of sorted element indices
+// Sort err_array[] and returning array of sorted element indices
 void sort_element_errors(int n, double *err_array, int *id_array); 
 
-// Projects reference solution on element 'e' onto the space of 
+// Assumes that reference solution is defined on two half-elements 'e_ref_left' 
+// and 'e_ref_right'. The reference solution is projected onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on (-1, 0)
-// and degree 'p_right' on (0, 1)
-double check_hp_candidate(Element *e, double *y_prev_ref, 
-                        int p_left, int p_right, 
-                        double bc_left_dir_values[MAX_EQN_NUM],
-	  	        double bc_right_dir_values[MAX_EQN_NUM]);
+// and degree 'p_right' on (0, 1). 
+double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
+                                   double *y_prev_ref, int p_left, int p_right, 
+                                   double bc_left_dir_values[MAX_EQN_NUM],
+	  	                   double bc_right_dir_values[MAX_EQN_NUM]);
+
+
+// Assumes that reference solution is defined on two half-elements 'e_ref_left'
+// and 'e_ref_right'. The reference solution is projected onto the space of 
+// (discontinuous) polynomials of degree 'p_left' on (-1, 0)
+// and degree 'p_right' on (0, 1). 
+double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
+                                   double *y_prev_ref, int p_left, int p_right, 
+                                   double bc_left_dir_values[MAX_EQN_NUM],
+	  	                   double bc_right_dir_values[MAX_EQN_NUM]);
+
+// Assumes that reference solution is defined on two half-elements 'e_ref_left'
+// and 'e_ref_right'. The reference solution is projected onto the space of 
+// polynomials of degree 'p' on (-1, 1). 
+double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
+                                    double *y_prev_ref, int p,
+                                    double bc_left_dir_values[MAX_EQN_NUM],
+		                    double bc_right_dir_values[MAX_EQN_NUM]);
+
+// Assumes that reference solution is defined on one single element 
+// 'e_ref' (reference refinement did not split the element in space). 
+// The reference solution is projected onto the space of 
+// polynomials of degree 'p' on (-1, 1). 
+double check_refin_coarse_p_fine_p(Element *e, Element *e_ref, 
+                                 double *y_prev_ref, int p, 
+                                 double bc_left_dir_values[MAX_EQN_NUM],
+	  	                 double bc_right_dir_values[MAX_EQN_NUM]);
+
+
+
+// Refine elements in the id_array list whose id_array >= 0
+void refine_elements(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
+                     int *id_array, double *err_squared_array);
 
 #endif

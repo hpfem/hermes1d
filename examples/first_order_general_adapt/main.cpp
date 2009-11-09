@@ -259,7 +259,7 @@ int main() {
     printf("Estimated relative error = %g \%\n", 100.*err_rel);
     if(err_rel < TOL_ERR_REL) break;
 
-    // Sort err_squared_array[] in decreasing order
+    // Sort elements according to their error in decreasing order
     int id_array[MAX_ELEM_NUM];
     sort_element_errors(mesh->get_n_active_elem(), 
                         err_squared_array, id_array);
@@ -277,20 +277,8 @@ int main() {
                                    sqrt(err_squared_array[i]));
     }
 
-    /* TO BE USED FOR ADAPTIVITY
-    // Use the difference between the two solutions to determine 
-    // list of elements to be refined (plus the polynomial degrees
-    // on sons). Also calculate the total error estimate. 
-    unsigned num_elems_to_be_refined; 
-    int id_array[1000];
-    int2 p_pair_array[1000];
-    double err_adapt = 0;
-    ...
-    */
-
-
-    // Perform the hp-refinements in the coarse mesh
-    //mesh->refine_multi_elems(num_elems_to_be_refined, id_array, p_pair_array);
+    // refine elements in the id_array list whose id_array >= 0
+    refine_elements(mesh, mesh_ref, y_prev, y_prev_ref, id_array, err_squared_array);
 
     adapt_iterations++;
 

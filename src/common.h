@@ -44,4 +44,6 @@ void throw_exception(char *text);
 #define verbose(msg)
 #define warn(msg)
 
+double max(double a, double b);
+
 #endif
