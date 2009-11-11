@@ -35,6 +35,7 @@ public:
     virtual void dof_alloc();
     void init(double x1, double x2, int p_init, int n_eq);
     void copy_sons_recursively(Element *e_trg);
+    double get_x_phys(double x_ref); // gets physical coordinate of a reference poin
     void get_coeffs(double *y_prev, 
 		    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM],
                     double bc_left_dir_values[MAX_EQN_NUM],
@@ -45,7 +46,11 @@ public:
          double der[MAX_EQN_NUM][MAX_PTS_NUM]);
     void get_solution_point(double x_ref,
          double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM]);
+	 double val[MAX_EQN_NUM], double der[MAX_EQN_NUM]);
+    void get_solution_point(double x_ref,
+			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM], 
+                            double *y_prev, double *bc_left_dir_values,
+                            double *bc_right_dir_values);
     void refine(int p_left, int p_right);
     unsigned is_active();
     unsigned active;   // flag used by assembling algorithm
@@ -106,6 +111,18 @@ class Mesh {
         void refine_elems(int elem_num, int *id_array, int2 *p_id_array);
         void reference_refinement(int start_elem_id, int elem_num);
         Mesh *replicate(); 
+        void plot(const char* filename); // plots the mesh and polynomial degrees of elements
+        void plot_element_error_p(FILE *f, Element *p, Element *e_ref, 
+				  double* y_prev, double* y_prev_ref, 
+                                  int subdivision = 20); // plots error wrt. reference solution
+        void plot_element_error_hp(FILE *f, Element *p, Element *e_ref_left, Element *e_ref_right, 
+				   double* y_prev, double* y_prev_ref, 
+                                   int subdivision = 20); // plots error wrt. reference solution
+                                                             // if ref. refinement was hp-refinement
+        void plot_error(const char *filename, Mesh* mesh_ref, 
+			double* y_prev, double* y_prev_ref, 
+                        int subdivision = 20); // plots error wrt. reference solution
+
         int assign_elem_ids();
         double bc_left_dir_values[MAX_EQN_NUM];  // values for the Dirichlet condition left
         double bc_right_dir_values[MAX_EQN_NUM]; // values for the Dirichlet condition right
@@ -119,5 +136,6 @@ class Mesh {
         Element *base_elems;
 
 };
+
 
 #endif

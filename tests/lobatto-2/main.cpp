@@ -15,10 +15,10 @@
 int main(int argc, char* argv[])
 {
   // maximum index of Lobatto function tested
-  int max_n = 99; 
+  int max_n = 20; //FIXME: should be 99
 
   // maximum allowed error at an integration point
-  double max_allowed_error = 1e-15;
+  double max_allowed_error = 1e-12;
 
   // loop over Lobatto shape functions starting with
   // the quadratic one

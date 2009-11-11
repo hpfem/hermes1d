@@ -301,18 +301,23 @@ int int_cmp(const void *a, const void *b)
 	and positive if a[0] < b[0] */
 }
 
-// sorting err_array[] and returning array of sorted element indices
-void sort_element_errors(int n, double *err_array, int *id_array) 
+// sorting elements according to err_squared_array[]. After this,
+// id_array[] will contain indices of sirted elements, and also 
+// err_squared_array[] will be sorted. 
+void sort_element_errors(int n, double *err_squared_array, int *id_array) 
 {
     double array[MAX_ELEM_NUM][2];
     for (int i=0; i<n; i++) {
-      array[i][0] = err_array[i];
-      array[i][1] = i;
+      array[i][0] = err_squared_array[i];
+      array[i][1] = id_array[i];
     }
 
     qsort(array, n, 2*sizeof(double), int_cmp);
 
-    for (int i=0; i<n; i++) id_array[i] = array[i][1];
+    for (int i=0; i<n; i++) {
+      err_squared_array[i] = array[i][0];
+      id_array[i] = array[i][1];
+    }
 }
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
@@ -954,11 +959,9 @@ void refine_elements(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_
     }
   }
  
-  /*  
   // Debug: Printing list of elements to be refined
-  printf("Elements to be adapted:\n");
-  for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
-  */
+  //printf("refine_elements(): Elements to be refined:\n");
+  //for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
 
   Iterator *I = new Iterator(mesh);
   Iterator *I_ref = new Iterator(mesh_ref);
@@ -993,4 +996,5 @@ void refine_elements(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_
     }
   }
 }
+
 

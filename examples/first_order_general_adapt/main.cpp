@@ -22,7 +22,7 @@ const double TOL_NEWTON_COARSE = 1e-5;  // Coarse mesh
 const double TOL_NEWTON_REF = 1e-3;     // Reference mesh
 
 // Adaptivity
-const double THRESHOLD = 0.3;           // Refined will be all elements whose error
+const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
 const double TOL_ERR_REL = 1e-5;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
@@ -261,8 +261,15 @@ int main() {
 
     // Sort elements according to their error in decreasing order
     int id_array[MAX_ELEM_NUM];
+    for(int i=0; i<mesh->get_n_active_elem(); i++) id_array[i] = i;
     sort_element_errors(mesh->get_n_active_elem(), 
                         err_squared_array, id_array);
+
+    // Print sorted list of elements along with the errors
+    printf("Elements sorted according to their error::\n");
+    for (int i=0; i<mesh->get_n_active_elem(); i++) {
+      printf("Elem[%d], error = %g\n", id_array[i], sqrt(err_squared_array[i]));
+    }
 
     // Decide which elements will be refined
     double max_elem_error = sqrt(err_squared_array[0]);
@@ -270,19 +277,20 @@ int main() {
       if(sqrt(err_squared_array[i]) < THRESHOLD*max_elem_error) id_array[i] = -1; 
     }
     
-    // Print list of elements to be refined
+    // Print elements to be refined
     printf("Elements to be refined:\n");
     for (int i=0; i<mesh->get_n_active_elem(); i++) {
       if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
                                    sqrt(err_squared_array[i]));
     }
 
-    // refine elements in the id_array list whose id_array >= 0
+    if (adapt_iterations == 1) break;
+ 
+   // refine elements in the id_array list whose id_array >= 0
     refine_elements(mesh, mesh_ref, y_prev, y_prev_ref, id_array, err_squared_array);
 
     adapt_iterations++;
 
-    if (adapt_iterations == 3) break;
   };
 
   // plotting the coarse mesh solution
@@ -294,6 +302,16 @@ int main() {
   Linearizer lxx(mesh_ref);
   const char *out_filename2 = "solution_ref.gp";
   lxx.plot_solution(out_filename2, y_prev_ref);
+
+  // plotting the coarse and reference mesh
+  const char *mesh_filename = "mesh.gp";
+  mesh->plot(mesh_filename);
+  const char *mesh_ref_filename = "mesh_ref.gp";
+  mesh_ref->plot(mesh_ref_filename);
+
+  // plotting the error
+  const char *err_filename = "error.gp";
+  mesh->plot_error(err_filename, mesh_ref, y_prev, y_prev_ref);
 
   printf("Done.\n");
   return 1;

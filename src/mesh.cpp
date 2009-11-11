@@ -125,12 +125,37 @@ void Element::get_coeffs(double *y_prev,
   }
 }
 
-// evaluate previous solution and its derivative 
-// at the reference point x_ref
+// evaluate solution and its derivative 
+// at the reference point x_ref (coeffs[][] array provided)
 void Element::get_solution_point(double x_ref,
 			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
                             double val[MAX_EQN_NUM], double der[MAX_EQN_NUM])
 {
+  double x1 = this->x1;
+  double x2 = this->x2;
+  double jac = (x2-x1)/2.;
+  int dof_size = this->dof_size; 
+  int p = this->p;
+  for(int c=0; c<dof_size; c++) {
+    der[c] = val[c] = 0;
+    for(int j=0; j<=p; j++) {
+      val[c] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref);
+      der[c] += coeff[c][j]*lobatto_der_tab_1d[j](x_ref);
+    }
+    der[c] /= jac;
+  }
+} 
+
+// evaluate solution and its derivative 
+// at the reference point x_ref (coeffs[][] array not provided)
+void Element::get_solution_point(double x_ref,
+				 double val[MAX_EQN_NUM], double der[MAX_EQN_NUM],
+                                 double *y_prev, double *bc_left_dir_values,
+                                 double *bc_right_dir_values)
+{
+  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values); 
+
   double x1 = this->x1;
   double x2 = this->x2;
   double jac = (x2-x1)/2.;
@@ -160,6 +185,14 @@ void Element::copy_sons_recursively(Element *e_trg) {
     // right son
     this->sons[1]->copy_sons_recursively(e_trg->sons[1]);
   }
+}
+
+// gets physical coordinate of a reference point x_ref \in [-1,1]
+double Element::get_x_phys(double x_ref) 
+{
+  double a = this->x1;
+  double b = this->x2;
+  return (a+b)/2. + x_ref*(b-a)/2.;
 }
 
 Mesh::Mesh() {
@@ -489,3 +522,151 @@ Mesh *Mesh::replicate()
   return mesh_ref;
 }
 
+void Mesh::plot(const char* filename) 
+{
+    FILE *f = fopen(filename, "wb");
+    if(f == NULL) error("problem opening file in Mesh::plot().");
+    Iterator I(this);
+    Element *e;
+    while ((e = I.next_active_element()) != NULL) {
+      fprintf(f, "%g %d\n", e->x1, 0);
+      fprintf(f, "%g %d\n", e->x1, e->p);
+      fprintf(f, "%g %d\n", e->x2, e->p);
+      fprintf(f, "%g %d\n\n", e->x2, 0);
+    }
+    fclose(f);
+    printf("Mesh written to %s.\n", filename);
+}
+
+// Plots the error between the reference and coarse mesh solutions
+// if the reference refinement was p-refinement
+void Mesh::plot_element_error_p(FILE *f, Element *e, Element *e_ref, 
+                                double *y_prev, double *y_prev_ref,
+                                int subdivision)
+{
+  // calculate coefficients of shape functions on element 'e'
+  double coeffs_e[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  e->get_coeffs(y_prev, coeffs_e, this->bc_left_dir_values,
+                this->bc_right_dir_values); 
+
+  // calculate coefficients of shape functions on element 'e_ref'
+  double coeffs_e_ref[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  e_ref->get_coeffs(y_prev_ref, coeffs_e_ref, this->bc_left_dir_values,
+                this->bc_right_dir_values); 
+
+  for (int i=0; i <= subdivision; i++) {
+    double x_ref = -1. + i*2./subdivision;
+
+    // get coarse mesh solution value and derivative
+    double phys_u, phys_dudx;
+    e->get_solution_point(x_ref, coeffs_e,
+                          &phys_u, &phys_dudx); 
+
+    // get reference solution value and derivative
+    double phys_u_ref, phys_dudx_ref;
+    e_ref->get_solution_point(x_ref, coeffs_e_ref,
+                        &phys_u_ref, &phys_dudx_ref); 
+
+    double x_phys = e->get_x_phys(x_ref);
+    fprintf(f, "%g %g\n", x_phys, phys_u_ref - phys_u);
+  }
+  fprintf(f, "\n");
+}
+
+// Plots the error between the reference and coarse mesh solutions
+// if the reference refinement was hp-refinement
+void Mesh::plot_element_error_hp(FILE *f, Element *e, Element *e_ref_left, 
+                                 Element *e_ref_right, 
+                                 double *y_prev, double *y_prev_ref,
+                                 int subdivision)
+{
+  // we will be using two intervals of 50% length
+  subdivision /= 2;
+
+  // First: left half (-1, 0)
+  // calculate coefficients of shape functions on element 'e'
+  double coeffs_e[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  e->get_coeffs(y_prev, coeffs_e, this->bc_left_dir_values,
+                this->bc_right_dir_values); 
+
+  // calculate coefficients of shape functions on element 'e_ref_left'
+  double coeffs_e_ref_left[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  e_ref_left->get_coeffs(y_prev_ref, coeffs_e_ref_left, this->bc_left_dir_values,
+                this->bc_right_dir_values); 
+
+  for (int i=0; i <= subdivision; i++) {
+    double x_ref_left = -1. + i*1./subdivision;
+    double x_ref_orig = -1. + i*2./subdivision;
+
+    // get coarse mesh solution value and derivative
+    double phys_u_left, phys_dudx_left;
+    e->get_solution_point(x_ref_left, coeffs_e,
+                          &phys_u_left, &phys_dudx_left); 
+
+    // get reference olution value and derivative
+    double phys_u_ref_left, phys_dudx_ref_left;
+    e_ref_left->get_solution_point(x_ref_orig, coeffs_e_ref_left,
+                        &phys_u_ref_left, &phys_dudx_ref_left); 
+
+    double x_phys_left = e->get_x_phys(x_ref_left);
+    fprintf(f, "%g %g\n", x_phys_left, phys_u_ref_left - phys_u_left);
+  }
+  fprintf(f, "\n");
+
+  // Second: right half (0, 1)
+  // calculate coefficients of shape functions on element 'e'
+  // Done above, nothing to do here. 
+
+  // calculate coefficients of shape functions on element 'e_ref_right'
+  double coeffs_e_ref_right[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  e_ref_right->get_coeffs(y_prev_ref, coeffs_e_ref_right, this->bc_left_dir_values,
+                this->bc_right_dir_values); 
+
+  for (int i=0; i <= subdivision; i++) {
+    double x_ref_right = 0 + i*1./subdivision;
+    double x_ref_orig = -1. + i*2./subdivision;
+
+    // get coarse mesh solution value and derivative
+    double phys_u_right, phys_dudx_right;
+    e->get_solution_point(x_ref_right, coeffs_e,
+                          &phys_u_right, &phys_dudx_right); 
+
+    // get reference olution value and derivative
+    double phys_u_ref_right, phys_dudx_ref_right;
+    e_ref_right->get_solution_point(x_ref_orig, coeffs_e_ref_right,
+                        &phys_u_ref_right, &phys_dudx_ref_right);
+
+    double x_phys_right = e->get_x_phys(x_ref_right);
+    fprintf(f, "%g %g\n", x_phys_right, phys_u_ref_right - phys_u_right);
+  }
+  fprintf(f, "\n");
+}
+
+// Plots the error between the reference and coarse mesh solutions
+void Mesh::plot_error(const char *filename, Mesh* mesh_ref, 
+		      double* y_prev, double* y_prev_ref, int sudivision)
+{
+  FILE *f = fopen(filename, "wb");
+  if(f == NULL) error("problem opening file in Mesh::plot_error().");
+  Iterator *I = new Iterator(this);
+  Iterator *I_ref = new Iterator(mesh_ref);
+
+  // simultaneous traversal of 'this' and 'mesh_ref'
+  Element *e;
+  while ((e = I->next_active_element()) != NULL) {
+    Element *e_ref = I_ref->next_active_element();
+    if (e->level == e_ref->level) { // element 'e' was not refined in space
+                                    // for reference solution
+      plot_element_error_p(f, e, e_ref, y_prev, y_prev_ref);
+    }
+    else { // element 'e' was refined in space for reference solution
+      Element* e_ref_left = e_ref;
+      Element* e_ref_right = I_ref->next_active_element();
+      plot_element_error_hp(f, e, e_ref_left, e_ref_right, 
+                            y_prev, y_prev_ref);
+    }
+  }
+  
+  printf("Error function written to %s.\n", filename);
+  fclose(f);
+}

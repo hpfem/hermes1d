@@ -193,14 +193,10 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
     x_phys = this->mesh->get_right_endpoint();
   }
 
-  // calculate coefficients of shape functions on element m
-  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e->get_coeffs(y_prev, coeffs, this->mesh->bc_left_dir_values,
-                this->mesh->bc_right_dir_values); 
-
   // get solution value and derivative at the boundary point
-  e->get_solution_point(x_ref, coeffs,
-                        phys_u_prev, phys_du_prevdx); 
+  e->get_solution_point(x_ref, phys_u_prev, phys_du_prevdx,
+                        y_prev, this->mesh->bc_left_dir_values,
+                        this->mesh->bc_right_dir_values); 
 
   // surface bilinear forms
   if(matrix_flag == 0 || matrix_flag == 1) {
