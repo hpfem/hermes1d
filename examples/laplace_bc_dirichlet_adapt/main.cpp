@@ -253,7 +253,7 @@ int main() {
 
     // Decide whether the relative error is sufficiently small
     double err_rel = err_total/ref_sol_L2_norm;
-    printf("Estimated relative error = %g \%\n", 100.*err_rel);
+    printf("Estimated relative error = %g %%\n", 100.*err_rel);
     if(err_rel < TOL_ERR_REL) break;
 
     // Sort elements according to their error in decreasing order
