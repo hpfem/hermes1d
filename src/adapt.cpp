@@ -32,39 +32,31 @@ double calc_elem_L2_norm_squared(Element *e, double *y_prev,
 			double bc_right_dir_values[MAX_EQN_NUM]) 
 {
   int n_eq = e->dof_size;
-  double phys_x[MAX_PTS_NUM];          // quad points
-  // values of coarse mesh solution for all solution components
-  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM]; 
-  double phys_weights[MAX_PTS_NUM];    // quad weights
+  double phys_x[MAX_PTS_NUM];         // quad points in physical element
+  double phys_weights[MAX_PTS_NUM];   // quad weights in physical element
+  // values of solution for all solution components
+  double phys_val[MAX_EQN_NUM][MAX_PTS_NUM]; 
+  double phys_der[MAX_EQN_NUM][MAX_PTS_NUM]; // not used
 
   // integration order
   int order = 2*e->p;
   int pts_num = 0;
 
-  // create Gauss quadrature on (-1, 1)
-  // FIXME: this only transforms the quadrature from (-1, 1) to (-1, 1),
-  //        so it should be simplified
-  create_element_quadrature(-1, 1, order, phys_x, phys_weights,
+  // create Gauss quadrature in 'e'
+  create_phys_element_quadrature(e->x1, e->x2, order, phys_x, phys_weights,
                             &pts_num); 
 
-  // evaluate coarse-mesh solution and its derivative 
-  // at all quadrature points in (-1, 1), for every 
-  // solution component
-  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
-                bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_coarse[c][i] = val[c];
-  }
+  // evaluate solution and its derivative 
+  // at all quadrature points in 'e', for every solution component
+  e->get_solution(phys_x, pts_num, phys_val, phys_der, y_prev,
+                  bc_left_dir_values, bc_right_dir_values);
 
   // integrate square over (-1, 1)
   double norm_squared[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) {
     norm_squared[c] = 0;
     for (int i=0; i<pts_num; i++) {
-      double val = phys_val_coarse[c][i];
+      double val = phys_val[c][i];
       norm_squared[c] += val * val * phys_weights[i];
     }
   }
@@ -80,53 +72,30 @@ double calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
 {
-  int n_eq = e->dof_size;
-  double phys_x[MAX_PTS_NUM];          // quad points
-  // values of coarse mesh solution for all solution components
-  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM]; 
-  // values of fine mesh solution for all solution components
-  double phys_val_fine[MAX_EQN_NUM][MAX_PTS_NUM];   
-  double phys_weights[MAX_PTS_NUM];    // quad weights
-
+  // create Gauss quadrature on 'e'
   int order = 2*e_ref->p;
-  int pts_num = 0;
+  int pts_num;
+  double phys_x[MAX_PTS_NUM];          // quad points
+  double phys_weights[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e->x1, e->x2, order, phys_x, phys_weights, &pts_num); 
 
-  // create Gauss quadrature on (-1, 1)
-  // FIXME: this only transforms the quadrature from (-1, 1) to (-1, 1),
-  // so it should be simplified
-  create_element_quadrature(-1, 1, order, phys_x, phys_weights,
-                            &pts_num); 
+  // get coarse mesh solution values and derivatives
+  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(phys_x, pts_num, phys_u, phys_dudx, y_prev, 
+                  bc_left_dir_values, bc_right_dir_values); 
 
-  // evaluate coarse-mesh solution and its derivative 
-  // at all quadrature points in (-1, 1), for every 
-  // solution component
-  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
-                bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_coarse[c][i] = val[c];
-  }
+  // get fine mesh solution values and derivatives
+  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref->get_solution(phys_x, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
+                  bc_left_dir_values, bc_right_dir_values); 
 
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (-1, 1), for every 
-  // solution component
-  e_ref->get_coeffs(y_prev, coeffs, bc_left_dir_values,
-                         bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref->get_solution_point(phys_x[i], coeffs, 
-		       	           val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
-  }
-
-  // integrate over (-1, 1)
+  // integrate over 'e'
   double norm_squared[MAX_EQN_NUM];
+  int n_eq = e->dof_size;
   for (int c=0; c<n_eq; c++) {
     norm_squared[c] = 0;
     for (int i=0; i<pts_num; i++) {
-      double diff = phys_val_fine[c][i] - phys_val_coarse[c][i];
+      double diff = phys_u_ref[c][i] - phys_u[c][i];
       norm_squared[c] += diff*diff*phys_weights[i];
     }
   }
@@ -143,95 +112,60 @@ double calc_elem_L2_error_squared_hp(Element *e,
                                    double bc_left_dir_values[MAX_EQN_NUM],
 			           double bc_right_dir_values[MAX_EQN_NUM]) 
 {
-  int n_eq = e->dof_size;
-  double phys_x[MAX_PTS_NUM];          // quad points
-  // values of coarse mesh solution for all solution components
-  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM]; 
-  // values of fine mesh solution for all solution components
-  double phys_val_fine[MAX_EQN_NUM][MAX_PTS_NUM];   
-  double phys_weights[MAX_PTS_NUM];    // quad weights
+  // create Gauss quadrature on 'e_ref_left'
+  int order_left = 2*e_ref_left->p;
+  int pts_num_left;
+  double phys_x_left[MAX_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
+                                 order_left, phys_x_left, phys_weights_left, &pts_num_left); 
 
-  // first process interval (-1, 0)
-  int order = 2*e_ref_left->p;
-  int pts_num = 0;
+  // get coarse mesh solution values and derivatives on 'e_ref_left'
+  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(phys_x_left, pts_num_left, phys_u_left, phys_dudx_left, y_prev, 
+                  bc_left_dir_values, bc_right_dir_values); 
 
-  // create Gauss quadrature on (-1, 0)
-  create_element_quadrature(-1, 0, order, phys_x, phys_weights,
-                            &pts_num); 
+  // get fine mesh solution values and derivatives on 'e_ref_left'
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
+                  bc_left_dir_values, bc_right_dir_values); 
 
-  // evaluate coarse-mesh solution and its derivative 
-  // at all quadrature points in (-1, 0), for every 
-  // solution component
-  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
-                bc_right_dir_values); 
-  
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_coarse[c][i] = val[c];
-  }
-
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (-1, 0), for every 
-  // solution component
-  e_ref_left->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values,
-                         bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref_left->get_solution_point(phys_x[i], coeffs, 
-		       	           val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
-  }
-
-  // integrate over (-1, 0)
+  // integrate over 'e_ref_left'
   double norm_squared_left[MAX_EQN_NUM];
+  int n_eq = e->dof_size;
   for (int c=0; c<n_eq; c++) {
     norm_squared_left[c] = 0;
-    for (int i=0; i<pts_num; i++) {
-      double diff = phys_val_fine[c][i] - phys_val_coarse[c][i];
-      norm_squared_left[c] += diff*diff*phys_weights[i];
+    for (int i=0; i<pts_num_left; i++) {
+      double diff = phys_u_ref_left[c][i] - phys_u_left[c][i];
+      norm_squared_left[c] += diff*diff*phys_weights_left[i];
     }
   }
 
-  // next process interval (0, 1)
-  order = 2*e_ref_right->p;
-  pts_num = 0;
+  // create Gauss quadrature on 'e_ref_right'
+  int order_right = 2*e_ref_right->p;
+  int pts_num_right;
+  double phys_x_right[MAX_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
+                                 order_right, phys_x_right, phys_weights_right, &pts_num_right); 
 
-  // create Gauss quadrature on (0, 1)
-  create_element_quadrature(0, 1, order, phys_x, phys_weights,
-                            &pts_num); 
+  // get coarse mesh solution values and derivatives on 'e_ref_right'
+  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(phys_x_right, pts_num_right, phys_u_right, phys_dudx_right, y_prev, 
+                  bc_left_dir_values, bc_right_dir_values); 
 
-  // evaluate coarse-mesh solution and its derivative 
-  // at all quadrature points in (0, 1), for every 
-  // solution component
-  e->get_coeffs(y_prev, coeffs, bc_left_dir_values,
-                bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_coarse[c][i] = val[c];
-  }
+  // get fine mesh solution values and derivatives on 'e_ref_right'
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_right->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
+                  y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (0, 1), for every 
-  // solution component
-  e_ref_right->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values,
-                         bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref_right->get_solution_point(phys_x[i], coeffs, 
-		       	           val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
-  }
-
-  // integrate over (0, 1)
+  // integrate over 'e_ref_right'
   double norm_squared_right[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) {
     norm_squared_right[c] = 0;
-    for (int i=0; i<pts_num; i++) {
-      double diff = phys_val_fine[c][i] - phys_val_coarse[c][i];
-      norm_squared_right[c] += diff*diff*phys_weights[i];
+    for (int i=0; i<pts_num_right; i++) {
+      double diff = phys_u_ref_right[c][i] - phys_u_right[c][i];
+      norm_squared_right[c] += diff*diff*phys_weights_right[i];
     }
   }
 
@@ -322,50 +256,38 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
-// (discontinuous) polynomials of degree 'p_left' on (-1, 0)
-// and degree 'p_right' on (0, 1). 
+// (discontinuous) polynomials of degree 'p_left' on 'e_ref_left'
+// and degree 'p_right' on 'e_ref_right'
 double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
                                    double *y_prev_ref, int p_left, int p_right, 
                                    double bc_left_dir_values[MAX_EQN_NUM],
 		                   double bc_right_dir_values[MAX_EQN_NUM])
 {
   int n_eq = e->dof_size;
-  double phys_x[MAX_PTS_NUM];                      // quad points
-  double leg_pol_values[MAX_P+1][MAX_PTS_NUM];     // values of Legendre polynomials
-  // values of coarse mesh solution for all solution components
-  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM];  
-  // values of fine mesh solution for all solution components
-  double phys_val_fine[MAX_EQN_NUM][MAX_PTS_NUM];   
-  double phys_weights[MAX_PTS_NUM];                // quad weights
-  double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];   // for every solution component
-  double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];  // for every solution component
 
-  // first in interval (-1, 0): calculate L2 projection
-  // of the reference solution on transformed Legendre 
-  // polynomials of degree 'p_left' and calculate error in L2-norm
-  int order = 2*max(e_ref_left->p, p_left);
-  int pts_num = 0;
+  // First in 'e_ref_left': 
+  // Calculate L2 projection of the reference solution on 
+  // transformed Legendre polynomials of degree 'p_left'
 
-  // create Gauss quadrature on (-1, 0)
-  create_element_quadrature(-1, 0, order, phys_x, phys_weights, &pts_num); 
+  // create Gauss quadrature on 'e_ref_left'
+  int order_left = 2*max(e_ref_left->p, p_left);
+  int pts_num_left;
+  double phys_x_left[MAX_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
+                                 order_left, phys_x_left, phys_weights_left, &pts_num_left); 
 
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (-1, 0), for every 
-  // solution component
-  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref_left->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values,
-                         bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref_left->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
-  }
+  // get fine mesh solution values and derivatives on 'e_ref_left'
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
+                  bc_left_dir_values, bc_right_dir_values); 
 
-  // fill values of the transformed Legendre
-  // polynomials in the integration points in (-1, 0)
+  // get values of transformed Legendre polynomials in 'e_ref_left'
+  double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j<pts_num; j++) { // filling values at integration points
-      leg_pol_values[m][j] = legendre_left(m, phys_x[j]);
+    for(int j=0; j<pts_num_left; j++) {  
+      leg_pol_values_left[m][j] = legendre_left(m, inverse_map(e_ref_left->x1, 
+					   e_ref_left->x2, phys_x_left[j]));
     }
   }
 
@@ -374,173 +296,159 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   // component. Since the basis is orthonormal, these 
   // are just integrals of the fine mesh solution with 
   // the transformed Legendre polynomials
+  double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
     for(int c=0; c<n_eq; c++) { // loop over solution components
       proj_coeffs_left[c][m] = 0;
-      for(int j=0; j<pts_num; j++) { // loop over integration points
+      for(int j=0; j<pts_num_left; j++) { // loop over integration points
         proj_coeffs_left[c][m] += 
-          phys_val_fine[c][j] * leg_pol_values[m][j] * phys_weights[j];
+          phys_u_ref_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
       }
     }
   }
 
-  // evaluate the projection in (-1, 0) for every solution component
+  // evaluate the projection in 'e_ref_left' for every solution component
   // and every integration point
+  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
-    for (int j=0; j<pts_num; j++) { // loop over integration points
-      phys_val_coarse[c][j] = 0;
+    for (int j=0; j<pts_num_left; j++) { // loop over integration points
+      phys_u_left[c][j] = 0;
       for (int m=0; m<p_left+1; m++) { // loop over transf. Leg. polynomials
-        phys_val_coarse[c][j] += 
-          leg_pol_values[m][j] + proj_coeffs_left[c][m];
+        phys_u_left[c][j] += 
+          leg_pol_values_left[m][j] + proj_coeffs_left[c][m];
       }
     }
   }
 
   // calculate the error squared in L2 norm for every solution  
-  // component in (-1, 0)
+  // component in 'e_ref_left'
   double err_squared_left[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_left[c] = 0;
-    for (int j=0; j<pts_num; j++) { // loop over integration points
-      double diff = phys_val_fine[c][j] - phys_val_coarse[c][j];
-      err_squared_left[c] += diff * diff * phys_weights[j]; 
+    for (int j=0; j<pts_num_left; j++) { // loop over integration points
+      double diff = phys_u_ref_left[c][j] - phys_u_left[c][j];
+      err_squared_left[c] += diff * diff * phys_weights_left[j]; 
     }
   }
 
-  // next in interval (0, 1): calculate L2 projection 
-  // of the reference solution on transformed Legendre polynomials 
-  // of degree 'p_right' and calculate error in L2-norm
-  order = 2*max(e_ref_right->p, p_right);
-  pts_num = 0;
+  // Second on 'e_ref_right': 
+  // Calculate L2 projection of the reference solution on 
+  // transformed Legendre polynomials of degree 'p_right'
 
-  // create Gauss quadrature on (0, 1)
-  create_element_quadrature(0, 1, order, phys_x, phys_weights, &pts_num); 
+  // create Gauss quadrature on 'e_ref_right'
+  int order_right = 2*max(e_ref_right->p, p_right);
+  int pts_num_right;
+  double phys_x_right[MAX_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
+                                 order_right, phys_x_right, phys_weights_right, &pts_num_right); 
 
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (0, 1), for every 
-  // solution component
-  e_ref_right->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values,
-                          bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref_right->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
+  // get fine mesh solution values and derivatives on 'e_ref_right'
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_right->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
+                  y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+
+  // get values of transformed Legendre polynomials in 'e_ref_right'
+  double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+  for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
+    for(int j=0; j<pts_num_right; j++) {
+      leg_pol_values_right[m][j] = legendre_right(m, inverse_map(e_ref_right->x1, 
+					   e_ref_right->x2, phys_x_right[j]));
+    }
   }
-
-  // fill values of the transformed Legendre
-  // polynomials in the integration points in (0, 1)
-  // NOTE: these are the same as in (-1, 0), nothing to do here.
 
   // calculate the projection coefficients for every 
   // transformed Legendre polynomial and every solution 
   // component. Since the basis is orthonormal, these 
   // are just integrals of the fine mesh solution with 
   // the transformed Legendre polynomials
+  double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
     for(int c=0; c<n_eq; c++) { // loop over solution components
       proj_coeffs_right[c][m] = 0;
-      for(int j=0; j<pts_num; j++) { // loop over integration points
+      for(int j=0; j<pts_num_right; j++) { // loop over integration points
         proj_coeffs_right[c][m] += 
-          phys_val_fine[c][j] * leg_pol_values[m][j] * phys_weights[j];
+          phys_u_ref_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
       }
     }
   }
 
-  // evaluate the projection in (0, 1) for every solution component
+  // evaluate the projection in 'e_ref_right' for every solution component
   // and every integration point
-  for (int c=0; c<n_eq; c++) {           // loop over solution components
-    for (int j=0; j<pts_num; j++) {      // loop over integration points
-      phys_val_coarse[c][j] = 0;
-      for (int m=0; m<p_right+1; m++) {  // loop over transf. Leg. polynomials
-        phys_val_coarse[c][j] += 
-          leg_pol_values[m][j] + proj_coeffs_right[c][m];
+  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  for (int c=0; c<n_eq; c++) { // loop over solution components
+    for (int j=0; j<pts_num_right; j++) { // loop over integration points
+      phys_u_right[c][j] = 0;
+      for (int m=0; m<p_right+1; m++) { // loop over transf. Leg. polynomials
+        phys_u_right[c][j] += 
+          leg_pol_values_right[m][j] + proj_coeffs_right[c][m];
       }
     }
   }
 
   // calculate the error squared in L2 norm for every solution  
-  // component in (0, 1)
+  // component in 'e_ref_right'
   double err_squared_right[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_right[c] = 0;
-    for (int j=0; j<pts_num; j++) { // loop over integration points
-      double diff = phys_val_fine[c][j] - phys_val_coarse[c][j];
-      err_squared_right[c] += diff * diff * phys_weights[j]; 
+    for (int j=0; j<pts_num_right; j++) { // loop over integration points
+      double diff = phys_u_ref_right[c][j] - phys_u_right[c][j];
+      err_squared_right[c] += diff * diff * phys_weights_right[j]; 
     }
   }
 
-  // calculating resulting error squared for 
-  // every solution component
-  double err_squared[MAX_EQN_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
-    err_squared[c] = err_squared_left[c] + err_squared_right[c];
-  }
-
-  // summing the errors squared over all components on that 
-  // element, and taking a square root. NOTE: this is just 
-  // one of many possible ways to merge the errors together
+  // summing errors on 'e_ref_left' and 'e_ref_right'
   double err_total = 0;
   for (int c=0; c<n_eq; c++) { // loop over solution components
-    err_total += err_squared[c];
+    err_total += (err_squared_left[c] + err_squared_right[c]);
   }
   err_total = sqrt(err_total);
 
-  // penalizing the error by the number of DOF that this 
-  // candidate would bring to the system
-  // NOTE: this is the most tricky part. Check how this is 
-  // done in Hermes2D
-  double error_scaled = -log(err_total); // FIXME: this should involve 
-                                         // penalization by the number of 
-                                         // newly added degrees of freedom,
-                                         // i.e., also poly order on element 'e'
+  // penalizing the error by the number of DOF induced by this 
+  // refinement candidate
+  // NOTE: this may need some experimantation
+  int dof_orig = e->p + 1;
+  int dof_new = p_left + p_right + 1; 
+  int dof_added = dof_new - dof_orig; 
+  double error_scaled = -log(err_total) / dof_added; 
+
   return error_scaled; 
 }
 
-// Assumes that reference solution is defined on two half-elements 'e_ref_left'
-// and 'e_ref_right'. The reference solution is projected onto the space of 
-// (discontinuous) polynomials of degree 'p_left' on (-1, 0)
-// and degree 'p_right' on (0, 1). 
+// Assumes that reference solution is defined on one single element 'e_ref' = 'e'. 
+// The reference solution is projected onto the space of (discontinuous) 
+// polynomials of degree 'p_left' on the left half of 'e' and degree 
+// 'p_right' on the right half of 'e' 
 double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
-                                  double *y_prev_ref, int p_left, int p_right,
-                                  double bc_left_dir_values[MAX_EQN_NUM],
-		                  double bc_right_dir_values[MAX_EQN_NUM])
+                                    double *y_prev_ref, int p_left, int p_right,
+                                    double bc_left_dir_values[MAX_EQN_NUM],
+		                    double bc_right_dir_values[MAX_EQN_NUM])
 {
   int n_eq = e->dof_size;
-  double phys_x[MAX_PTS_NUM];                     // quad points
-  double leg_pol_values[MAX_P+1][MAX_PTS_NUM];     // values of Legendre polynomials
-  // values of coarse mesh solution for all solution components
-  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM];  
-  // values of fine mesh solution for all solution components
-  double phys_val_fine[MAX_EQN_NUM][MAX_PTS_NUM];   
-  double phys_weights[MAX_PTS_NUM];                // quad weights
-  double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];   // for every solution component
-  double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];  // for every solution component
 
-  // first in interval (-1, 0): calculate L2 projection
-  // of the reference solution on transformed Legendre 
-  // polynomials of degree 'p_left' and calculate error in L2-norm
-  int order = 2*max(e_ref->p, p_left);
-  int pts_num = 0;
+  // First in the left half of 'e': 
+  // Calculate L2 projection of the reference solution on 
+  // transformed Legendre polynomials of degree 'p_left'
 
-  // create Gauss quadrature on (-1, 0)
-  create_element_quadrature(-1, 0, order, phys_x, phys_weights, &pts_num); 
+  // create Gauss quadrature on the left half
+  int order_left = 2*max(e_ref->p, p_left);
+  int pts_num_left;
+  double phys_x_left[MAX_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e->x1, (e->x1 + e->x2)/2., 
+                                 order_left, phys_x_left, phys_weights_left, &pts_num_left); 
 
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (-1, 0), for every 
-  // solution component
-  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values, bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
-  }
+  // get fine mesh solution values and derivatives on the left half
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
+                  bc_left_dir_values, bc_right_dir_values); 
 
-  // fill values of the transformed Legendre
-  // polynomials in the integration points in (-1, 0)
+  // get values of transformed Legendre polynomials in the left half
+  double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j<pts_num; j++) { // filling values at integration points
-      leg_pol_values[m][j] = legendre_left(m, phys_x[j]);
+    for(int j=0; j<pts_num_left; j++) {  
+      leg_pol_values_left[m][j] = legendre_left(m, inverse_map(e->x1, (e->x1 + e->x2)/2,  
+					        phys_x_left[j]));
     }
   }
 
@@ -549,397 +457,371 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   // component. Since the basis is orthonormal, these 
   // are just integrals of the fine mesh solution with 
   // the transformed Legendre polynomials
+  double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
     for(int c=0; c<n_eq; c++) { // loop over solution components
       proj_coeffs_left[c][m] = 0;
-      for(int j=0; j<pts_num; j++) { // loop over integration points
+      for(int j=0; j<pts_num_left; j++) { // loop over integration points
         proj_coeffs_left[c][m] += 
-          phys_val_fine[c][j] * leg_pol_values[m][j] * phys_weights[j];
+          phys_u_ref_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
       }
     }
   }
 
-  // evaluate the projection in (-1, 0) for every solution component
+  // evaluate the projection on the left half for every solution component
   // and every integration point
+  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
-    for (int j=0; j<pts_num; j++) { // loop over integration points
-      phys_val_coarse[c][j] = 0;
+    for (int j=0; j<pts_num_left; j++) { // loop over integration points
+      phys_u_left[c][j] = 0;
       for (int m=0; m<p_left+1; m++) { // loop over transf. Leg. polynomials
-        phys_val_coarse[c][j] += 
-          leg_pol_values[m][j] + proj_coeffs_left[c][m];
+        phys_u_left[c][j] += 
+          leg_pol_values_left[m][j] + proj_coeffs_left[c][m];
       }
     }
   }
 
   // calculate the error squared in L2 norm for every solution  
-  // component in (-1, 0)
+  // component in the left half
   double err_squared_left[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_left[c] = 0;
-    for (int j=0; j<pts_num; j++) { // loop over integration points
-      double diff = phys_val_fine[c][j] - phys_val_coarse[c][j];
-      err_squared_left[c] += diff * diff * phys_weights[j]; 
+    for (int j=0; j<pts_num_left; j++) { // loop over integration points
+      double diff = phys_u_ref_left[c][j] - phys_u_left[c][j];
+      err_squared_left[c] += diff * diff * phys_weights_left[j]; 
     }
   }
 
-  // next in interval (0, 1): calculate L2 projection 
-  // of the reference solution on transformed Legendre polynomials 
-  // of degree 'p_right' and calculate error in L2-norm
-  order = 2*max(e_ref->p, p_right);
-  pts_num = 0;
+  // Second on the right half: 
+  // Calculate L2 projection of the reference solution on 
+  // transformed Legendre polynomials of degree 'p_right'
 
-  // create Gauss quadrature on (0, 1)
-  create_element_quadrature(0, 1, order, phys_x, phys_weights, &pts_num); 
+  // create Gauss quadrature on the right half
+  int order_right = 2*max(e_ref->p, p_right);
+  int pts_num_right;
+  double phys_x_right[MAX_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature((e->x1 + e->x2)/2., e->x2, 
+                                 order_right, phys_x_right, phys_weights_right, &pts_num_right); 
 
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (0, 1), for every 
-  // solution component
-  e_ref->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values, bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
+  // get fine mesh solution values and derivatives on the right half
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
+                  y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+
+  // get values of transformed Legendre polynomials on the right half
+  double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+  for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
+    for(int j=0; j<pts_num_right; j++) {
+      leg_pol_values_right[m][j] = legendre_right(m, inverse_map((e->x1 + e->x2)/2, e->x2,  
+					   phys_x_right[j]));
+    }
   }
-
-  // fill values of the transformed Legendre
-  // polynomials in the integration points in (0, 1)
-  // NOTE: these are the same as in (-1, 0), nothing to do here.
 
   // calculate the projection coefficients for every 
   // transformed Legendre polynomial and every solution 
   // component. Since the basis is orthonormal, these 
   // are just integrals of the fine mesh solution with 
   // the transformed Legendre polynomials
+  double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
     for(int c=0; c<n_eq; c++) { // loop over solution components
       proj_coeffs_right[c][m] = 0;
-      for(int j=0; j<pts_num; j++) { // loop over integration points
+      for(int j=0; j<pts_num_right; j++) { // loop over integration points
         proj_coeffs_right[c][m] += 
-          phys_val_fine[c][j] * leg_pol_values[m][j] * phys_weights[j];
+          phys_u_ref_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
       }
     }
   }
 
-  // evaluate the projection in (0, 1) for every solution component
+  // evaluate the projection on the right half for every solution component
   // and every integration point
-  for (int c=0; c<n_eq; c++) {           // loop over solution components
-    for (int j=0; j<pts_num; j++) {      // loop over integration points
-      phys_val_coarse[c][j] = 0;
-      for (int m=0; m<p_right+1; m++) {  // loop over transf. Leg. polynomials
-        phys_val_coarse[c][j] += 
-          leg_pol_values[m][j] + proj_coeffs_right[c][m];
+  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  for (int c=0; c<n_eq; c++) { // loop over solution components
+    for (int j=0; j<pts_num_right; j++) { // loop over integration points
+      phys_u_right[c][j] = 0;
+      for (int m=0; m<p_right+1; m++) { // loop over transf. Leg. polynomials
+        phys_u_right[c][j] += 
+          leg_pol_values_right[m][j] + proj_coeffs_right[c][m];
       }
     }
   }
 
   // calculate the error squared in L2 norm for every solution  
-  // component in (0, 1)
+  // component on the right half
   double err_squared_right[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_right[c] = 0;
-    for (int j=0; j<pts_num; j++) { // loop over integration points
-      double diff = phys_val_fine[c][j] - phys_val_coarse[c][j];
-      err_squared_right[c] += diff * diff * phys_weights[j]; 
+    for (int j=0; j<pts_num_right; j++) { // loop over integration points
+      double diff = phys_u_ref_right[c][j] - phys_u_right[c][j];
+      err_squared_right[c] += diff * diff * phys_weights_right[j]; 
     }
   }
 
-  // calculating resulting error squared for 
-  // every solution component
-  double err_squared[MAX_EQN_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
-    err_squared[c] = err_squared_left[c] + err_squared_right[c];
-  }
-
-  // summing the errors squared over all components on that 
-  // element, and taking a square root. NOTE: this is just 
-  // one of many possible ways to merge the errors together
+  // summing errors on the two halves
   double err_total = 0;
   for (int c=0; c<n_eq; c++) { // loop over solution components
-    err_total += err_squared[c];
+    err_total += (err_squared_left[c] + err_squared_right[c]);
   }
   err_total = sqrt(err_total);
 
-  // penalizing the error by the number of DOF that this 
-  // candidate would bring to the system
-  // NOTE: this is the most tricky part. Check how this is 
-  // done in Hermes2D
-  double error_scaled = -log(err_total); // FIXME: this should involve 
-                                         // penalization by the number of 
-                                         // newly added degrees of freedom,
-                                         // i.e., also poly order on element 'e'
-  return error_scaled; 
+  // penalizing the error by the number of DOF induced by this 
+  // refinement candidate
+  // NOTE: this may need some experimantation
+  int dof_orig = e->p + 1;
+  int dof_new = p_left + p_right + 1; 
+  int dof_added = dof_new - dof_orig; 
+  double error_scaled = -log(err_total) / dof_added; 
+
+  return error_scaled;
 }
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
-// polynomials of degree 'p' on (-1, 1). 
+// polynomials of degree 'p' on 'e'
 double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
                                     double *y_prev_ref, int p,
                                     double bc_left_dir_values[MAX_EQN_NUM],
 		                    double bc_right_dir_values[MAX_EQN_NUM])
 {
   int n_eq = e->dof_size;
-  double phys_x_left[MAX_PTS_NUM];                          // quad points
-  double phys_x_right[MAX_PTS_NUM];                         // quad points
-  double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];         // values of Legendre polynomials
-  double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];        // values of Legendre polynomials
-  // values of coarse mesh solution for all solution components
-  double phys_val_coarse_left[MAX_EQN_NUM][MAX_PTS_NUM];  
-  double phys_val_coarse_right[MAX_EQN_NUM][MAX_PTS_NUM];  
-  // values of fine mesh solution for all solution components
-  double phys_val_fine_left[MAX_EQN_NUM][MAX_PTS_NUM];   
-  double phys_val_fine_right[MAX_EQN_NUM][MAX_PTS_NUM];   
-  double phys_weights_left[MAX_PTS_NUM];                    // quad weights
-  double phys_weights_right[MAX_PTS_NUM];                   // quad weights
-  double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];            // not the entire coefficient!
-  double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];           // not the entire coefficient!
-  double proj_coeffs[MAX_EQN_NUM][MAX_P+1];                 // sum of the left and right parts
 
-  // first in interval (-1, 0): 
+  // First in 'e_ref_left': 
+  // Calculate first part of projection coefficients
+
+  // create Gauss quadrature on 'e_ref_left'
   int order_left = 2*max(e_ref_left->p, p);
-  int pts_num_left = 0;
-  // create Gauss quadrature on (-1, 0)
-  create_element_quadrature(-1, 0, order_left, phys_x_left, phys_weights_left, &pts_num_left); 
+  int pts_num_left;
+  double phys_x_left[MAX_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
+                                 order_left, phys_x_left, phys_weights_left, &pts_num_left); 
 
-  // first in interval (0, 1): 
-  int order_right = 2*max(e_ref_right->p, p);
-  int pts_num_right = 0;
-  // create Gauss quadrature on (0, 1)
-  create_element_quadrature(0, 1, order_right, phys_x_right, phys_weights_right, &pts_num_right); 
+  // get fine mesh solution values and derivatives on 'e_ref_left'
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, phys_dudx_ref_left, 
+                           y_prev_ref, 
+                           bc_left_dir_values, bc_right_dir_values); 
 
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (-1, 0), for every 
-  // solution component
-  double coeffs_left[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref_left->get_coeffs(y_prev_ref, coeffs_left, bc_left_dir_values,
-                         bc_right_dir_values); 
-  for (int i=0; i<pts_num_left; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref_left->get_solution_point(phys_x_left[i], coeffs_left, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine_left[c][i] = val[c];
-  }
-
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (0, 1), for every 
-  // solution component
-  double coeffs_right[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref_right->get_coeffs(y_prev_ref, coeffs_right, bc_left_dir_values,
-                         bc_right_dir_values); 
-  for (int i=0; i<pts_num_right; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref_right->get_solution_point(phys_x_right[i], coeffs_right, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine_right[c][i] = val[c];
-  }
-
-  // fill values of the Legendre
-  // polynomials in the integration points in (-1, 0)
-  for(int m=0; m < p + 1; m++) {       // loop over Leg. polynomials
-    for(int j=0; j<pts_num_left; j++) {     // filling values at integration points
-      leg_pol_values_left[m][j] = legendre(m, phys_x_left[j]);
+  // get values of (original) Legendre polynomials in 'e_ref_left'
+  double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+  for(int m=0; m < p + 1; m++) { // loop over transf. Leg. polynomials
+    for(int j=0; j<pts_num_left; j++) {  
+      leg_pol_values_left[m][j] = legendre(m, inverse_map(e_ref_left->x1, 
+					   e_ref_left->x2, phys_x_left[j]));
     }
   }
 
-  // fill values of the Legendre
-  // polynomials in the integration points in (0, 1)
-  for(int m=0; m < p + 1; m++) {       // loop over Leg. polynomials
-    for(int j=0; j<pts_num_right; j++) {     // filling values at integration points
-      leg_pol_values_right[m][j] = legendre(m, phys_x_right[j]);
-    }
-  }
-
-  // calculate the projection coefficients on the 
-  // interval (-1, 1)... for every 
-  // Legendre polynomial and every solution 
-  // component. 
+  // calculate first part of the projection coefficients 
+  double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m<p + 1; m++) { // loop over Leg. polynomials
     for(int c=0; c<n_eq; c++) { // loop over solution components
-      proj_coeffs[c][m] = 0;
-      for(int j=0; j<pts_num_left; j++) { // loop over integration points left
-        proj_coeffs[c][m] += 
-          phys_val_fine_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
-      }
-      for(int j=0; j<pts_num_right; j++) { // loop over integration points right
-        proj_coeffs[c][m] += 
-          phys_val_fine_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
+      proj_coeffs_left[c][m] = 0;
+      for(int j=0; j<pts_num_left; j++) { // loop over integration points
+        proj_coeffs_left[c][m] += 
+          phys_u_ref_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
       }
     }
   }
 
-  // evaluate the projection in (-1, 0) for every solution component
+  // Second in 'e_ref_right': 
+  // Calculate second part of projection coefficients
+
+  // create Gauss quadrature on 'e_ref_right'
+  int order_right = 2*max(e_ref_right->p, p);
+  int pts_num_right;
+  double phys_x_right[MAX_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
+                                 order_right, phys_x_right, phys_weights_right, &pts_num_right); 
+
+  // get fine mesh solution values and derivatives on 'e_ref_right'
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_right->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
+                  y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+
+  // get values of (original) Legendre polynomials in 'e_ref_right'
+  double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+    for(int j=0; j<pts_num_right; j++) {
+      leg_pol_values_right[m][j] = legendre(m, inverse_map(e_ref_right->x1, 
+					    e_ref_right->x2, phys_x_right[j]));
+    }
+  }
+
+  // calculate the second part of the projection coefficients
+  double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
+  for(int m=0; m < p + 1; m++) { // loop over transf. Leg. polynomials
+    for(int c=0; c<n_eq; c++) { // loop over solution components
+      proj_coeffs_right[c][m] = 0;
+      for(int j=0; j<pts_num_right; j++) { // loop over integration points
+        proj_coeffs_right[c][m] += 
+          phys_u_ref_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
+      }
+    }
+  }
+
+  // add the two parts of projection coefficients
+  double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
+  for(int m=0; m < p + 1; m++) { // loop over transf. Leg. polynomials
+    for(int c=0; c<n_eq; c++) { // loop over solution components
+      proj_coeffs[c][m] = proj_coeffs_left[c][m] + proj_coeffs_right[c][m];
+    }
+  }
+
+  // evaluate the projection in 'e_ref_left' for every solution component
   // and every integration point
+  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points left
-      phys_val_coarse_left[c][j] = 0;
+      phys_u_left[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
-        phys_val_coarse_left[c][j] += 
+        phys_u_left[c][j] += 
           leg_pol_values_left[m][j] + proj_coeffs[c][m];
       }
     }
   }
 
-  // evaluate the projection in (0, 1) for every solution component
+  // evaluate the projection in 'e_ref_right' for every solution component
   // and every integration point
+  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_right; j++) { // loop over integration points right
-      phys_val_coarse_right[c][j] = 0;
+      phys_u_right[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
-        phys_val_coarse_right[c][j] += 
+        phys_u_right[c][j] += 
           leg_pol_values_right[m][j] + proj_coeffs[c][m];
       }
     }
   }
 
   // calculate the error squared in L2 norm for every solution  
-  // component in (-1, 0)
+  // component in 'e_ref_left'
   double err_squared_left[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_left[c] = 0;
     for (int j=0; j<pts_num_left; j++) { // loop over integration points left
-      double diff = phys_val_fine_left[c][j] - phys_val_coarse_left[c][j];
+      double diff = phys_u_ref_left[c][j] - phys_u_left[c][j];
       err_squared_left[c] += diff * diff * phys_weights_left[j]; 
     }
   }
 
   // calculate the error squared in L2 norm for every solution  
-  // component in (0, 1)
+  // component in 'e_ref_right'
   double err_squared_right[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_right[c] = 0;
-    for (int j=0; j<pts_num_right; j++) { // loop over integration points right
-      double diff = phys_val_fine_right[c][j] - phys_val_coarse_right[c][j];
+    for (int j=0; j<pts_num_right; j++) { // loop over integration points left
+      double diff = phys_u_ref_right[c][j] - phys_u_right[c][j];
       err_squared_right[c] += diff * diff * phys_weights_right[j]; 
     }
   }
 
-  // calculating resulting error squared for 
-  // every solution component
-  double err_squared[MAX_EQN_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
-    err_squared[c] = err_squared_left[c] + err_squared_right[c];
-  }
-
-  // summing the errors squared over all components on that 
-  // element, and taking a square root. NOTE: this is just 
-  // one of many possible ways to merge the errors together
+  // summing errors over components
   double err_total = 0;
   for (int c=0; c<n_eq; c++) { // loop over solution components
-    err_total += err_squared[c];
+    err_total += (err_squared_left[c] + err_squared_right[c]);
   }
   err_total = sqrt(err_total);
 
-  // penalizing the error by the number of DOF that this 
-  // candidate would bring to the system
-  // NOTE: this is the most tricky part. Check how this is 
-  // done in Hermes2D
-  double error_scaled = -log(err_total); // FIXME: this should involve 
-                                         // penalization by the number of 
-                                         // newly added degrees of freedom,
-                                         // i.e., also poly order on element 'e'
+  // penalizing the error by the number of DOF induced by this 
+  // refinement candidate
+  // NOTE: this may need some experimantation
+  int dof_orig = e->p + 1;
+  int dof_new = p + 1; 
+  int dof_added = dof_new - dof_orig; 
+  double error_scaled = -log(err_total) / dof_added; 
+
   return error_scaled; 
 }
 
 // Assumes that reference solution is defined on one single element 
 // 'e_ref' (reference refinement did not split the element in space). 
 // The reference solution is projected onto the space of 
-// polynomials of degree 'p' on (-1, 1). 
+// polynomials of degree 'p' on 'e'
 double check_ref_coarse_p_fine_p(Element *e, Element *e_ref,
                                  double *y_prev_ref, int p,
                                  double bc_left_dir_values[MAX_EQN_NUM],
 		                 double bc_right_dir_values[MAX_EQN_NUM])
 {
-  int n_eq = e_ref->dof_size;
+  int n_eq = e->dof_size;
+
+  // Calculate L2 projection of the reference solution on 
+  // (original) Legendre polynomials of degree 'p'
+
+  // create Gauss quadrature on 'e'
+  int order = 2*max(e->p, p);
+  int pts_num;
   double phys_x[MAX_PTS_NUM];          // quad points
-  double leg_pol_values[MAX_P+1][MAX_PTS_NUM];  // values of Legendre polynomials
-  // values of coarse mesh solution for all solution components
-  double phys_val_coarse[MAX_EQN_NUM][MAX_PTS_NUM];   
-  // values of fine mesh solution for all solution components
-  double phys_val_fine[MAX_EQN_NUM][MAX_PTS_NUM];   
   double phys_weights[MAX_PTS_NUM];    // quad weights
-  double proj_coeffs[MAX_EQN_NUM][MAX_P+1]; // for every solution component
+  create_phys_element_quadrature(e->x1, e->x2, 
+                                 order, phys_x, phys_weights, &pts_num); 
 
-  // integration order
-  int order = 2*e_ref->p;
-  int pts_num = 0;
+  // get fine mesh solution values and derivatives on 'e_ref'
+  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref->get_solution(phys_x, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
+                      bc_left_dir_values, bc_right_dir_values); 
 
-  // create Gauss quadrature on (-1, 1)
-  // FIXME: this transformation is useless
-  create_element_quadrature(-1, 1, order, phys_x, phys_weights, &pts_num); 
-
-  // evaluate fine-mesh solution and its derivative 
-  // at all quadrature points in (-1, 1), for every 
-  // solution component
-  double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref->get_coeffs(y_prev_ref, coeffs, bc_left_dir_values,
-                    bc_right_dir_values); 
-  for (int i=0; i<pts_num; i++) {
-    double val[MAX_EQN_NUM], der[MAX_EQN_NUM];
-    e_ref->get_solution_point(phys_x[i], coeffs, val, der);
-    for(int c=0; c<n_eq; c++) phys_val_fine[c][i] = val[c];
-  }
-
-  // fill values of the Legendre
-  // polynomials in the integration points in (-1, 1)
-  for(int m=0; m<p + 1; m++) { // loop over Leg. polynomials
-    for(int j=0; j<pts_num; j++) {  // filling values at integration points
-      leg_pol_values[m][j] = legendre(m, phys_x[j]);
+  // get values of (original) Legendre polynomials in 'e'
+  double leg_pol_values[MAX_P+1][MAX_PTS_NUM];
+  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+    for(int j=0; j<pts_num; j++) {  
+      leg_pol_values[m][j] = legendre(m, inverse_map(e->x1, 
+					   e->x2, phys_x[j]));
     }
   }
 
-  // calculate the projection coefficients for every 
-  // Legendre polynomial and every solution 
-  // component. Since the basis is orthonormal, these 
-  // are just integrals of the fine mesh solution with 
-  // the Legendre polynomials
-  for(int m=0; m<p + 1; m++) { // loop over Leg. polynomials
+  // calculate the projection coefficients 
+  double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
+  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
     for(int c=0; c<n_eq; c++) { // loop over solution components
       proj_coeffs[c][m] = 0;
-      for(int j=0; j<pts_num; j++) { // loop over integration points
-        proj_coeffs[c][m] += 
-          phys_val_fine[c][j] * leg_pol_values[m][j] * phys_weights[j];
+      for(int j=0; j < pts_num; j++) { // loop over integration points
+        proj_coeffs[c][m] +=
+          phys_u_ref[c][j] * leg_pol_values[m][j] * phys_weights[j];
       }
     }
   }
 
-  // evaluate the projection in (-1, 1) for every solution component
+  // evaluate the projection in 'e' for every solution component
   // and every integration point
+  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num; j++) { // loop over integration points
-      phys_val_coarse[c][j] = 0;
-      for (int m=0; m<p+1; m++) { // loop over Leg. polynomials
-        phys_val_coarse[c][j] += 
+      phys_u[c][j] = 0;
+      for (int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+        phys_u[c][j] += 
           leg_pol_values[m][j] + proj_coeffs[c][m];
       }
     }
   }
 
   // calculate the error squared in L2 norm for every solution  
-  // component in (-1, 1)
+  // component in 'e'
   double err_squared[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared[c] = 0;
-    for (int j=0; j<pts_num; j++) { // loop over integration points
-      double diff = phys_val_fine[c][j] - phys_val_coarse[c][j];
+    for (int j=0; j < pts_num; j++) { // loop over integration points
+      double diff = phys_u_ref[c][j] - phys_u[c][j];
       err_squared[c] += diff * diff * phys_weights[j]; 
     }
   }
 
-  // summing the errors squared over all components on that 
-  // element, and taking a square root. NOTE: this is just 
-  // one of many possible ways to merge the errors together
+  // summing errors over components
   double err_total = 0;
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += err_squared[c];
   }
   err_total = sqrt(err_total);
 
-  // penalizing the error by the number of DOF that this 
-  // candidate would bring to the system
-  // NOTE: this is the most tricky part. Check how this is 
-  // done in Hermes2D
-  double error_scaled = -log(err_total); // FIXME: this should involve 
-                                         // penalization by the number of 
-                                         // newly added degrees of freedom,
-                                         // i.e., also poly order on element 'e'
+
+  // penalizing the error by the number of DOF induced by this 
+  // refinement candidate
+  // NOTE: this may need some experimantation
+  int dof_orig = e->p + 1;
+  int dof_new = p + 1; 
+  int dof_added = dof_new - dof_orig; 
+  double error_scaled = -log(err_total) / dof_added; 
 
   return error_scaled; 
 }

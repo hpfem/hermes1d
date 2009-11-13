@@ -1681,8 +1681,14 @@ static int std_np_1d[] =
 
 extern Quad1DStd g_quad_1d_std;
 
-// transformation of quadrature to physical element
-void create_element_quadrature(double a, double b, 
-                        int order, double *pts, 
-			       double *weights, int *num);
+// Gauss quadrature of order 'order' in (-1,1)
+void create_ref_element_quadrature(int order, double *x_ref, 
+                                   double *w_ref, int *pts_num);
+
+// Gauss quadrature of order 'order' in (a, b)
+void create_phys_element_quadrature(double a, double b, 
+                                    int order, double *x_phys, 
+                                    double *w_phys, int *pts_num);
+
+
 #endif

@@ -41,13 +41,19 @@ public:
                     double bc_left_dir_values[MAX_EQN_NUM],
                     double bc_right_dir_values[MAX_EQN_NUM]);
     void get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-         int pts_num, double pts_array[MAX_PTS_NUM], 
-         double val[MAX_EQN_NUM][MAX_PTS_NUM], 
-         double der[MAX_EQN_NUM][MAX_PTS_NUM]);
+         int pts_num, double x_phys[MAX_PTS_NUM], 
+         double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
+         double der_phys[MAX_EQN_NUM][MAX_PTS_NUM]);
+    void get_solution(double x_phys[MAX_PTS_NUM], int pts_num,  
+                      double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
+                      double der_phys[MAX_EQN_NUM][MAX_PTS_NUM],
+                      double *y_prev, 
+                      double bc_left_dir_values[MAX_EQN_NUM],
+                      double bc_right_dir_values[MAX_EQN_NUM]);
     void get_solution_point(double x_ref,
          double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
 	 double val[MAX_EQN_NUM], double der[MAX_EQN_NUM]);
-    void get_solution_point(double x_ref,
+    void get_solution_point(double x_phys,
 			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM], 
                             double *y_prev, double *bc_left_dir_values,
                             double *bc_right_dir_values);
@@ -112,10 +118,10 @@ class Mesh {
         void reference_refinement(int start_elem_id, int elem_num);
         Mesh *replicate(); 
         void plot(const char* filename); // plots the mesh and polynomial degrees of elements
-        void plot_element_error_p(FILE *f, Element *p, Element *e_ref, 
+        void plot_element_error_p(FILE *f[MAX_EQN_NUM], Element *p, Element *e_ref, 
 				  double* y_prev, double* y_prev_ref, 
                                   int subdivision = 20); // plots error wrt. reference solution
-        void plot_element_error_hp(FILE *f, Element *p, Element *e_ref_left, Element *e_ref_right, 
+        void plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *p, Element *e_ref_left, Element *e_ref_right, 
 				   double* y_prev, double* y_prev_ref, 
                                    int subdivision = 20); // plots error wrt. reference solution
                                                              // if ref. refinement was hp-refinement
@@ -136,6 +142,9 @@ class Mesh {
         Element *base_elems;
 
 };
+
+// transforms point 'x_phys' from element (x1, x2) to (-1, 1)
+double inverse_map(double x1, double x2, double x_phys);
 
 
 #endif

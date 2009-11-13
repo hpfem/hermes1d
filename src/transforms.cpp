@@ -42,13 +42,13 @@ double phi(int i, double x)
 double projection_inner_product(double i, double j, int right, int order)
 {
     double phys_x[MAX_PTS_NUM];                  // quad points
-    double phys_weights[MAX_PTS_NUM];              // quad weights
+    double phys_weights[MAX_PTS_NUM];            // quad weights
     int    pts_num = 0;
     if (right) {
-        create_element_quadrature(0, 1, order, phys_x, phys_weights,
+        create_phys_element_quadrature(0, 1, order, phys_x, phys_weights,
                 &pts_num); 
     } else {
-        create_element_quadrature(-1, 0, order, phys_x, phys_weights,
+        create_phys_element_quadrature(-1, 0, order, phys_x, phys_weights,
                 &pts_num); 
     }
 
@@ -65,10 +65,10 @@ double projection_rhs_integral(int j_coarse, int i_fine, int right, int order)
     double phys_weights[MAX_PTS_NUM];              // quad weights
     int    pts_num = 0;
     if (right) {
-        create_element_quadrature(0, 1, order, phys_x, phys_weights,
+        create_phys_element_quadrature(0, 1, order, phys_x, phys_weights,
                 &pts_num); 
     } else {
-        create_element_quadrature(-1, 0, order, phys_x, phys_weights,
+        create_phys_element_quadrature(-1, 0, order, phys_x, phys_weights,
                 &pts_num); 
     }
 

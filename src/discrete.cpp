@@ -62,25 +62,18 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
     // decide quadrature order and set up 
     // quadrature weights and points in element m
     // FIXME: for some equations this may not be enough!
-    int order = 20; // 2*e->p;
+    int order = 3*e->p;
 
-    // prepare quadrature points and weights in physical element m
-    create_element_quadrature(e->x1, e->x2,  
-	               order, phys_pts, phys_weights, &pts_num); 
-
-    // prepare quadrature points in reference interval (-1, 1)
-    double ref_pts_array[MAX_PTS_NUM];
-    double2 *ref_tab = g_quad_1d_std.get_points(order);
-    for (int j=0; j<pts_num; j++) ref_pts_array[j] = ref_tab[j][0];
+    // prepare quadrature points and weights in element 'e'
+    create_phys_element_quadrature(e->x1, e->x2,  
+	                           order, phys_pts, phys_weights, &pts_num); 
 
     // evaluate previous solution and its derivative 
     // at all quadrature points in the element, 
     // for every solution component
-    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-    e->get_coeffs(y_prev, coeffs, this->mesh->bc_left_dir_values,
-                  this->mesh->bc_right_dir_values); 
-    e->get_solution(coeffs, pts_num, 
-                    ref_pts_array, phys_u_prev, phys_du_prevdx); 
+    e->get_solution(phys_pts, pts_num, 
+                    phys_u_prev, phys_du_prevdx, y_prev, 
+                    this->mesh->bc_left_dir_values, this->mesh->bc_right_dir_values); 
 
     // volumetric bilinear forms
     if(matrix_flag == 0 || matrix_flag == 1) 
@@ -194,7 +187,7 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
   }
 
   // get solution value and derivative at the boundary point
-  e->get_solution_point(x_ref, phys_u_prev, phys_du_prevdx,
+  e->get_solution_point(x_phys, phys_u_prev, phys_du_prevdx,
                         y_prev, this->mesh->bc_left_dir_values,
                         this->mesh->bc_right_dir_values); 
 

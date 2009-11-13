@@ -65,7 +65,6 @@ void Element::init(double x1, double x2, int p_init, int n_eq)
   this->dof_alloc();
 }
 
-
 void Element::dof_alloc() 
 {
   this->dof = (int**)malloc(dof_size*sizeof(int*));
@@ -77,30 +76,6 @@ void Element::dof_alloc()
     for(int i=0; i<MAX_POLYORDER + 1; i++) this->dof[c][i] = 0;
   }
 }
-
-// evaluate previous solution and its derivative 
-// in the "pts_array" points
-void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                           int pts_num, double pts_array[MAX_PTS_NUM], 
-                           double val[MAX_EQN_NUM][MAX_PTS_NUM], 
-                           double der[MAX_EQN_NUM][MAX_PTS_NUM])
-{
-  double x1 = this->x1;
-  double x2 = this->x2;
-  double jac = (x2-x1)/2.; 
-  int dof_size = this->dof_size;
-  int p = this->p;
-  for(int c=0; c<dof_size; c++) { 
-    for (int i=0 ; i<pts_num; i++) {
-      der[c][i] = val[c][i] = 0;
-      for(int j=0; j<=p; j++) {
-        val[c][i] += coeff[c][j]*lobatto_fn_tab_1d[j](pts_array[i]);
-        der[c][i] += coeff[c][j]*lobatto_der_tab_1d[j](pts_array[i]);
-      }
-      der[c][i] /= jac;
-    }
-  }
-} 
 
 // return coefficients for all shape functions on the element m,
 // for all solution components
@@ -125,17 +100,70 @@ void Element::get_coeffs(double *y_prev,
   }
 }
 
+// transforms point 'x_phys' from element (x1, x2) to (-1, 1)
+double inverse_map(double x1, double x2, double x_phys) 
+{
+  double c = x1 - x2;
+  double a = -2/c;
+  double b = (x1 + x2)/c; 
+  return a*x_phys + b;
+}
+
+// Evaluate solution and its derivatives in the points 'x_phys' 
+// in the element (coeffs[][] array provided).
+void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                           int pts_num, double x_phys[MAX_PTS_NUM], 
+                           double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
+                           double der_phys[MAX_EQN_NUM][MAX_PTS_NUM])
+{
+  double x1 = this->x1;
+  double x2 = this->x2;
+  double jac = (x2-x1)/2.; // Jacobian of reference map
+  int dof_size = this->dof_size;
+  int p = this->p;
+  double x_ref[MAX_PTS_NUM];
+  // transforming points to (-1, 1)
+  for (int i=0 ; i<pts_num; i++) x_ref[i] = inverse_map(x1, x2, x_phys[i]);
+  // filling the values and derivatives
+  for(int c=0; c<dof_size; c++) { 
+    for (int i=0 ; i<pts_num; i++) {
+      der_phys[c][i] = val_phys[c][i] = 0;
+      for(int j=0; j<=p; j++) {
+        val_phys[c][i] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref[i]);
+        der_phys[c][i] += coeff[c][j]*lobatto_der_tab_1d[j](x_ref[i]);
+      }
+      der_phys[c][i] /= jac;
+    }
+  }
+} 
+
+// Evaluate solution and its derivatives in the points 'x_phys' 
+// in the element (coeffs[][] array not provided).
+void Element::get_solution(double x_phys[MAX_PTS_NUM], int pts_num,  
+                           double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
+                           double der_phys[MAX_EQN_NUM][MAX_PTS_NUM],
+                           double *y_prev, 
+                           double bc_left_dir_values[MAX_EQN_NUM],
+                           double bc_right_dir_values[MAX_EQN_NUM])
+{
+  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
+  this->get_solution(coeff, pts_num, x_phys, val_phys, der_phys);
+} 
+
 // evaluate solution and its derivative 
-// at the reference point x_ref (coeffs[][] array provided)
-void Element::get_solution_point(double x_ref,
-			    double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                            double val[MAX_EQN_NUM], double der[MAX_EQN_NUM])
+// at the point x_phys (coeffs[][] array provided)
+void Element::get_solution_point(double x_phys,
+			         double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                                 double val[MAX_EQN_NUM], double der[MAX_EQN_NUM])
 {
   double x1 = this->x1;
   double x2 = this->x2;
   double jac = (x2-x1)/2.;
   int dof_size = this->dof_size; 
   int p = this->p;
+  // transforming point x_phys to (-1, 1)
+  double x_ref = inverse_map(x1, x2, x_phys);
   for(int c=0; c<dof_size; c++) {
     der[c] = val[c] = 0;
     for(int j=0; j<=p; j++) {
@@ -147,28 +175,15 @@ void Element::get_solution_point(double x_ref,
 } 
 
 // evaluate solution and its derivative 
-// at the reference point x_ref (coeffs[][] array not provided)
-void Element::get_solution_point(double x_ref,
-				 double val[MAX_EQN_NUM], double der[MAX_EQN_NUM],
+// at the point x_phys (coeffs[][] array not provided)
+void Element::get_solution_point(double x_phys,
+				 double val_phys[MAX_EQN_NUM], double der_phys[MAX_EQN_NUM],
                                  double *y_prev, double *bc_left_dir_values,
                                  double *bc_right_dir_values)
 {
   double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
   this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values); 
-
-  double x1 = this->x1;
-  double x2 = this->x2;
-  double jac = (x2-x1)/2.;
-  int dof_size = this->dof_size; 
-  int p = this->p;
-  for(int c=0; c<dof_size; c++) {
-    der[c] = val[c] = 0;
-    for(int j=0; j<=p; j++) {
-      val[c] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref);
-      der[c] += coeff[c][j]*lobatto_der_tab_1d[j](x_ref);
-    }
-    der[c] /= jac;
-  }
+  this->get_solution_point(x_phys, coeff, val_phys, der_phys);
 } 
 
 // copying elements including their refinement trees 
@@ -540,133 +555,144 @@ void Mesh::plot(const char* filename)
 
 // Plots the error between the reference and coarse mesh solutions
 // if the reference refinement was p-refinement
-void Mesh::plot_element_error_p(FILE *f, Element *e, Element *e_ref, 
+void Mesh::plot_element_error_p(FILE *f[MAX_EQN_NUM], Element *e, Element *e_ref, 
                                 double *y_prev, double *y_prev_ref,
                                 int subdivision)
 {
-  // calculate coefficients of shape functions on element 'e'
-  double coeffs_e[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e->get_coeffs(y_prev, coeffs_e, this->bc_left_dir_values,
-                this->bc_right_dir_values); 
+  int n_eq = this->get_n_eq();
+  int pts_num = subdivision + 1;
+  double x1 = e->x1;
+  double x2 = e->x2;
 
-  // calculate coefficients of shape functions on element 'e_ref'
-  double coeffs_e_ref[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref->get_coeffs(y_prev_ref, coeffs_e_ref, this->bc_left_dir_values,
-                this->bc_right_dir_values); 
-
-  for (int i=0; i <= subdivision; i++) {
-    double x_ref = -1. + i*2./subdivision;
-
-    // get coarse mesh solution value and derivative
-    double phys_u, phys_dudx;
-    e->get_solution_point(x_ref, coeffs_e,
-                          &phys_u, &phys_dudx); 
-
-    // get reference solution value and derivative
-    double phys_u_ref, phys_dudx_ref;
-    e_ref->get_solution_point(x_ref, coeffs_e_ref,
-                        &phys_u_ref, &phys_dudx_ref); 
-
-    double x_phys = e->get_x_phys(x_ref);
-    fprintf(f, "%g %g\n", x_phys, phys_u_ref - phys_u);
+  // calculate point array
+  double x_phys[MAX_PTS_NUM];  
+  double h = (x2 - x1)/subdivision; 
+  for (int i=0; i < pts_num; i++) {
+    x_phys[i] = x1 + i*h;
   }
-  fprintf(f, "\n");
+
+  // get coarse mesh solution values and derivatives
+  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
+                  this->bc_left_dir_values, this->bc_right_dir_values); 
+
+  // get fine mesh solution values and derivatives
+  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(x_phys, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
+                  this->bc_left_dir_values, this->bc_right_dir_values); 
+
+  for (int c=0; c < n_eq; c++) {
+    for (int i=0; i < pts_num; i++) {
+      fprintf(f[c], "%g %g\n", x_phys[i], phys_u_ref[c][i] - phys_u[c][i]);
+    }
+    fprintf(f[c], "\n");
+  }
 }
 
 // Plots the error between the reference and coarse mesh solutions
 // if the reference refinement was hp-refinement
-void Mesh::plot_element_error_hp(FILE *f, Element *e, Element *e_ref_left, 
+void Mesh::plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *e, Element *e_ref_left, 
                                  Element *e_ref_right, 
                                  double *y_prev, double *y_prev_ref,
                                  int subdivision)
 {
+  int n_eq = this->get_n_eq();
   // we will be using two intervals of 50% length
   subdivision /= 2;
+  int pts_num = subdivision + 1;
 
   // First: left half (-1, 0)
-  // calculate coefficients of shape functions on element 'e'
-  double coeffs_e[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e->get_coeffs(y_prev, coeffs_e, this->bc_left_dir_values,
-                this->bc_right_dir_values); 
+  double x1 = e_ref_left->x1;
+  double x2 = e_ref_left->x2;
 
-  // calculate coefficients of shape functions on element 'e_ref_left'
-  double coeffs_e_ref_left[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref_left->get_coeffs(y_prev_ref, coeffs_e_ref_left, this->bc_left_dir_values,
-                this->bc_right_dir_values); 
-
-  for (int i=0; i <= subdivision; i++) {
-    double x_ref_left = -1. + i*1./subdivision;
-    double x_ref_orig = -1. + i*2./subdivision;
-
-    // get coarse mesh solution value and derivative
-    double phys_u_left, phys_dudx_left;
-    e->get_solution_point(x_ref_left, coeffs_e,
-                          &phys_u_left, &phys_dudx_left); 
-
-    // get reference olution value and derivative
-    double phys_u_ref_left, phys_dudx_ref_left;
-    e_ref_left->get_solution_point(x_ref_orig, coeffs_e_ref_left,
-                        &phys_u_ref_left, &phys_dudx_ref_left); 
-
-    double x_phys_left = e->get_x_phys(x_ref_left);
-    fprintf(f, "%g %g\n", x_phys_left, phys_u_ref_left - phys_u_left);
+  // calculate point array
+  double x_phys_left[MAX_PTS_NUM];  
+  double h = (x2 - x1)/subdivision; 
+  for (int i=0; i < pts_num; i++) {
+    x_phys_left[i] = x1 + i*h;
   }
-  fprintf(f, "\n");
+
+  // get coarse mesh solution values and derivatives
+  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(x_phys_left, pts_num, phys_u_left, phys_dudx_left, y_prev, 
+                  this->bc_left_dir_values, this->bc_right_dir_values); 
+
+  // get fine mesh solution values and derivatives
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_left->get_solution(x_phys_left, pts_num, phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
+                  this->bc_left_dir_values, this->bc_right_dir_values); 
+
+  for (int c=0; c < n_eq; c++) {
+    for (int i=0; i < pts_num; i++) {
+      fprintf(f[c], "%g %g\n", x_phys_left[i], phys_u_ref_left[c][i] - phys_u_left[c][i]);
+    }
+  }
 
   // Second: right half (0, 1)
-  // calculate coefficients of shape functions on element 'e'
-  // Done above, nothing to do here. 
+  x1 = e_ref_right->x1;
+  x2 = e_ref_right->x2;
 
-  // calculate coefficients of shape functions on element 'e_ref_right'
-  double coeffs_e_ref_right[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  e_ref_right->get_coeffs(y_prev_ref, coeffs_e_ref_right, this->bc_left_dir_values,
-                this->bc_right_dir_values); 
-
-  for (int i=0; i <= subdivision; i++) {
-    double x_ref_right = 0 + i*1./subdivision;
-    double x_ref_orig = -1. + i*2./subdivision;
-
-    // get coarse mesh solution value and derivative
-    double phys_u_right, phys_dudx_right;
-    e->get_solution_point(x_ref_right, coeffs_e,
-                          &phys_u_right, &phys_dudx_right); 
-
-    // get reference olution value and derivative
-    double phys_u_ref_right, phys_dudx_ref_right;
-    e_ref_right->get_solution_point(x_ref_orig, coeffs_e_ref_right,
-                        &phys_u_ref_right, &phys_dudx_ref_right);
-
-    double x_phys_right = e->get_x_phys(x_ref_right);
-    fprintf(f, "%g %g\n", x_phys_right, phys_u_ref_right - phys_u_right);
+  // calculate point array
+  double x_phys_right[MAX_PTS_NUM];  
+  h = (x2 - x1)/subdivision; 
+  for (int i=0; i < pts_num; i++) {
+    x_phys_right[i] = x1 + i*h;
   }
-  fprintf(f, "\n");
+
+  // get coarse mesh solution values and derivatives
+  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(x_phys_right, pts_num, phys_u_right, phys_dudx_right, y_prev, 
+                  this->bc_left_dir_values, this->bc_right_dir_values); 
+
+  // get fine mesh solution values and derivatives
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_right->get_solution(x_phys_right, pts_num, phys_u_ref_right, phys_dudx_ref_right, 
+                            y_prev_ref, this->bc_left_dir_values, this->bc_right_dir_values); 
+
+  for (int c=0; c < n_eq; c++) {
+    for (int i=0; i < pts_num; i++) {
+      fprintf(f[c], "%g %g\n", x_phys_right[i], phys_u_ref_right[c][i] - phys_u_right[c][i]);
+    }
+    fprintf(f[c], "\n");
+  }
+
 }
 
 // Plots the error between the reference and coarse mesh solutions
 void Mesh::plot_error(const char *filename, Mesh* mesh_ref, 
 		      double* y_prev, double* y_prev_ref, int sudivision)
 {
-  FILE *f = fopen(filename, "wb");
-  if(f == NULL) error("problem opening file in Mesh::plot_error().");
-  Iterator *I = new Iterator(this);
-  Iterator *I_ref = new Iterator(mesh_ref);
+  int n_eq = this->get_n_eq();
+
+  FILE *f_array[MAX_EQN_NUM];
+  char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
+  for(int c=0; c<n_eq; c++) {
+    if(n_eq == 1)
+        sprintf(final_filename[c], "%s", filename);
+    else
+        sprintf(final_filename[c], "%s_%d", filename, c);
+    f_array[c] = fopen(final_filename[c], "wb");
+    if(f_array[c] == NULL) error("problem opening file in plot_solution().");
+  }
 
   // simultaneous traversal of 'this' and 'mesh_ref'
   Element *e;
+  Iterator *I = new Iterator(this);
+  Iterator *I_ref = new Iterator(mesh_ref);
   while ((e = I->next_active_element()) != NULL) {
     Element *e_ref = I_ref->next_active_element();
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      plot_element_error_p(f, e, e_ref, y_prev, y_prev_ref);
+      plot_element_error_p(f_array, e, e_ref, y_prev, y_prev_ref);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
-      plot_element_error_hp(f, e, e_ref_left, e_ref_right, 
+      plot_element_error_hp(f_array, e, e_ref_left, e_ref_right, 
                             y_prev, y_prev_ref);
     }
   }
-  
-  printf("Error function written to %s.\n", filename);
-  fclose(f);
+  printf("Error function(s) written to %s.\n", filename);
+
+  for(int c=0; c<n_eq; c++) fclose(f_array[c]);
 }

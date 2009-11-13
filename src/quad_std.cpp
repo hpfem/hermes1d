@@ -5,15 +5,27 @@
 
 #include "quad_std.h"
 
-// transformation of quadrature to physical element
-void create_element_quadrature(double a, double b, 
-                        int order, double *pts, double *weights, int *num) {
+// Gauss quadrature of order 'order' in (-1,1)
+void create_ref_element_quadrature(int order, double *x_ref, 
+                                   double *w_ref, int *pts_num) {
   double2 *ref_tab = g_quad_1d_std.get_points(order);
-  *num = g_quad_1d_std.get_num_points(order);
-  for (int i=0;i<*num;i++) {
-    //change points and weights to interval (a, b)
-    pts[i] = (b-a)/2.*ref_tab[i][0]+(b+a)/2.; 
-    weights[i] = ref_tab[i][1]*(b-a)/2.;
+  *pts_num = g_quad_1d_std.get_num_points(order);
+  for (int i=0;i<*pts_num;i++) {
+    x_ref[i] = ref_tab[i][0]; 
+    w_ref[i] = ref_tab[i][1];
+  }
+};
+
+// Gauss quadrature of order 'order' in (a, b)
+void create_phys_element_quadrature(double a, double b, 
+                                    int order, double *x_phys, 
+                                    double *w_phys, int *pts_num) {
+  double2 *ref_tab = g_quad_1d_std.get_points(order);
+  *pts_num = g_quad_1d_std.get_num_points(order);
+  for (int i=0;i<*pts_num;i++) {
+    //change points and weights from (-1, 1) to (a, b)
+    x_phys[i] = (b-a)/2.*ref_tab[i][0]+(b+a)/2.; 
+    w_phys[i] = ref_tab[i][1]*(b-a)/2.;
   }
 };
 
