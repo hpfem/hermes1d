@@ -284,7 +284,7 @@ int main() {
     if (adapt_iterations == 1) break;
  
     // refine elements in the id_array list whose id_array >= 0
-    refine_elements(mesh, mesh_ref, y_prev, y_prev_ref, id_array, err_squared_array);
+    mesh->adapt(mesh_ref, y_prev, y_prev_ref, id_array, err_squared_array);
 
     adapt_iterations++;
 
