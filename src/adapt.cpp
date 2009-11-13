@@ -259,9 +259,9 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
 // (discontinuous) polynomials of degree 'p_left' on 'e_ref_left'
 // and degree 'p_right' on 'e_ref_right'
 double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
-                                   double *y_prev_ref, int p_left, int p_right, 
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-		                   double bc_right_dir_values[MAX_EQN_NUM])
+                                     double *y_prev_ref, int p_left, int p_right, 
+                                     double bc_left_dir_values[MAX_EQN_NUM],
+		                     double bc_right_dir_values[MAX_EQN_NUM])
 {
   int n_eq = e->dof_size;
 
@@ -824,59 +824,6 @@ double check_ref_coarse_p_fine_p(Element *e, Element *e_ref,
   double error_scaled = -log(err_total) / dof_added; 
 
   return error_scaled; 
-}
-
-// Refine all elements in the id_array list whose id_array >= 0
-void refine_elements(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
-                     int *id_array, double *err_squared_array) 
-{
-  int adapt_list[MAX_ELEM_NUM];
-  int num_to_adapt = 0;
-
-  // Create list of ids of elements to be refined, in increasing order
-  for (int i=0; i<mesh->get_n_active_elem(); i++) {
-    if (id_array[i] >= 0) {
-      adapt_list[num_to_adapt] = i;
-      num_to_adapt++;
-    }
-  }
- 
-  // Debug: Printing list of elements to be refined
-  //printf("refine_elements(): Elements to be refined:\n");
-  //for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
-
-  Iterator *I = new Iterator(mesh);
-  Iterator *I_ref = new Iterator(mesh_ref);
-
-  // simultaneous traversal of 'mesh' and 'mesh_ref'
-  Element *e;
-  int counter = 0;
-  while (counter != num_to_adapt) {
-    e = I->next_active_element();
-    Element *e_ref = I_ref->next_active_element();
-    if (e->id == adapt_list[counter]) {
-      counter++;
-      if (e->level == e_ref->level) { // element 'e' was not refined in space
-                                      // for reference solution
-        //calc_best_hp_refinement_p(e, e_ref, y_prev, y_prev_ref, 
-        //                          mesh->bc_left_dir_values,
-	//  		          mesh->bc_right_dir_values);
-      }
-      else { // element 'e' was refined in space for reference solution
-        Element* e_ref_left = e_ref;
-        Element* e_ref_right = I_ref->next_active_element();
-        //calc_best_hp_refinement_h(e, e_ref_left, e_ref_right, y_prev, y_prev_ref, 
-        //                          mesh->bc_left_dir_values,
-	//		          mesh->bc_right_dir_values);
-      }
-      // perform the refinement
-      int p_only = 1;
-      int p_new = 2;
-      int p_new_left = 1, p_new_right = 1;
-      if (p_only) e->p += 1;
-      else e->refine(p_new_left, p_new_right);
-    }
-  }
 }
 
 

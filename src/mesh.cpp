@@ -37,21 +37,27 @@ unsigned Element::is_active()
   return this->active;
 }
 
-void Element::refine(int p_left, int p_right) 
+void Element::refine(int3 cand) 
 {
-  double x1 = this->x1;
-  double x2 = this->x2;
-  double midpoint = (x1 + x2)/2.; 
-  this->sons[0] = new Element(x1, midpoint, p_left, dof_size);
-  this->sons[1] = new Element(midpoint, x2, p_right, dof_size);
-  this->sons[0]->level = this->level + 1; 
-  this->sons[1]->level = this->level + 1; 
-  // copying negative dof to sons if any
-  for(int c=0; c<dof_size; c++) {
-    if (this->dof[c][0] < 0) this->sons[0]->dof[c][0] = this->dof[c][0];
-    if (this->dof[c][1] < 0) this->sons[1]->dof[c][1] = this->dof[c][1];
+  int hp_refinement = cand[0];
+  if(!hp_refinement) {
+    this->p = cand[1];
   }
-  this->active = 0;
+  else {
+    double x1 = this->x1;
+    double x2 = this->x2;
+    double midpoint = (x1 + x2)/2.; 
+    this->sons[0] = new Element(x1, midpoint, cand[1], dof_size);
+    this->sons[1] = new Element(midpoint, x2, cand[2], dof_size);
+    this->sons[0]->level = this->level + 1; 
+    this->sons[1]->level = this->level + 1; 
+    // copying negative dof to sons if any
+    for(int c=0; c<dof_size; c++) {
+      if (this->dof[c][0] < 0) this->sons[0]->dof[c][0] = this->dof[c][0];
+      if (this->dof[c][1] < 0) this->sons[1]->dof[c][1] = this->dof[c][1];
+    }
+    this->active = 0;
+  }
 }
 
 void Element::init(double x1, double x2, int p_init, int n_eq)
@@ -194,7 +200,8 @@ void Element::copy_sons_recursively(Element *e_trg) {
   if(this->sons[0] != NULL) {
     int p_left = this->sons[0]->p;
     int p_right = this->sons[1]->p;
-    e_trg->refine(p_left, p_right);
+    int3 cand = {1, p_left, p_right};
+    e_trg->refine(cand);
     // left son
     this->sons[0]->copy_sons_recursively(e_trg->sons[0]);
     // right son
@@ -302,15 +309,15 @@ Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
 
 // caution - this is expensive (traverses the entire tree 
 // from the beginning until the element is found)
-void Mesh::refine_single_elem(int id, int p_left, int p_right)
+void Mesh::refine_single_elem(int id, int3 cand)
 {
     Iterator I(this);
     Element *e;
     while ((e = I.next_active_element()) != NULL) {
         printf("%d %d\n", e->id, id);
         if (e->id == id) {
-            e->refine(p_left, p_right);
-            this->n_active_elem++;
+            e->refine(cand);
+            if (cand[0] == 1) this->n_active_elem++; // hp-refinement
             return;
         }
     }
@@ -320,7 +327,7 @@ void Mesh::refine_single_elem(int id, int p_left, int p_right)
 // performs mesh refinement using a list of elements to be 
 // refined and a list of corresponding polynomial degree 
 // pairs for the sons
-void Mesh::refine_elems(int elem_num, int *id_array, int2 *p_pair_array)
+void Mesh::refine_elems(int elem_num, int *id_array, int3 *cand_array)
 {
     Iterator *I = new Iterator(this);
     Element *e;
@@ -329,7 +336,7 @@ void Mesh::refine_elems(int elem_num, int *id_array, int2 *p_pair_array)
         if (e->id == id_array[count]) {
             if (count >= elem_num)
                 error("refine_multi_elems: not enough elems specified");
-            e->refine(p_pair_array[count][0], p_pair_array[count][1]);
+            e->refine(cand_array[count]);
             this->n_active_elem++;
             count++;
         }
@@ -346,8 +353,9 @@ void Mesh::reference_refinement(int start_elem_id, int elem_num)
     while ((e = I->next_active_element()) != NULL) {
         if (e->id >= start_elem_id && e->id < start_elem_id + elem_num) {
 	    if (count >= elem_num) return;
-            e->refine(e->p + 1, e->p + 1);
-            this->n_active_elem++;
+            int3 cand = {1, e->p + 1, e->p + 1};
+            e->refine(cand);
+            if (cand[0] == 1) this->n_active_elem++; // if hp-refinement
             count++;
         }
     }
@@ -461,6 +469,78 @@ Element* Mesh::last_active_element()
     e = e->sons[1];
   }
   return e;
+}
+
+int Element::create_cand_list(int3 *cand_list) 
+{
+  int counter = 0;
+  // p->p+1
+  cand_list[counter][0] = 0;
+  cand_list[counter][1] = this->p + 1;
+  cand_list[counter][2] = -1;
+  counter++;
+  // p->p+2
+  cand_list[counter][0] = 0;
+  cand_list[counter][1] = this->p + 2;
+  cand_list[counter][2] = -1;
+  counter++;
+  // p -> (p/2, p/2) 
+  int base_p = this->p / 2; 
+  if (base_p < 1) base_p = 1;
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p;
+  cand_list[counter][2] = base_p;
+  counter++;
+  // p -> (p/2+1, p/2) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p+1;
+  cand_list[counter][2] = base_p;
+  counter++;
+  // p -> (p/2, p/2+1) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p;
+  cand_list[counter][2] = base_p+1;
+  counter++;
+  // p -> (p/2+1, p/2+1) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p+1;
+  cand_list[counter][2] = base_p+1;
+  counter++;
+  // p -> (p/2+2, p/2) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p+2;
+  cand_list[counter][2] = base_p;
+  counter++;
+  // p -> (p/2, p/2+2) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p;
+  cand_list[counter][2] = base_p+2;
+  counter++;
+  // p -> (p/2+1, p/2+2) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p+1;
+  cand_list[counter][2] = base_p+2;
+  counter++;
+  // p -> (p/2+2, p/2+1) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p+2;
+  cand_list[counter][2] = base_p+1;
+  counter++;
+  // p -> (p/2+2, p/2+2) 
+  cand_list[counter][0] = 1;
+  cand_list[counter][1] = base_p+2;
+  cand_list[counter][2] = base_p+2;
+  counter++;
+
+  return counter;
+}
+
+void Element::print_cand_list(int num_cand, int3 *cand_list) 
+{
+  printf("Element (%g, %g): refinement candidates:\n", this->x1, this->x2);
+  for (int i=0; i < num_cand; i++) { 
+    printf("%d %d %d\n", cand_list[i][0], cand_list[i][1], cand_list[i][2]);
+  }
 }
 
 // transformation of k-th shape function defined on Gauss points 
@@ -692,7 +772,67 @@ void Mesh::plot_error(const char *filename, Mesh* mesh_ref,
                             y_prev, y_prev_ref);
     }
   }
-  printf("Error function(s) written to %s.\n", filename);
 
-  for(int c=0; c<n_eq; c++) fclose(f_array[c]);
+  for(int c=0; c<n_eq; c++) {
+    fclose(f_array[c]);
+    printf("Error function written to %s.\n", final_filename[c]);
+  }
 }
+
+// Refine all elements in the id_array list whose id_array >= 0
+void Mesh::adapt(Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
+                 int *id_array, double *err_squared_array) 
+{
+  int adapt_list[MAX_ELEM_NUM];
+  int num_to_adapt = 0;
+
+  // Create list of elements to be refined, in increasing order
+  for (int i=0; i<this->get_n_active_elem(); i++) {
+    if (id_array[i] >= 0) {
+      adapt_list[num_to_adapt] = i;
+      num_to_adapt++;
+    }
+  }
+ 
+  // Debug: Printing list of elements to be refined
+  //printf("refine_elements(): Elements to be refined:\n");
+  //for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
+
+  Iterator *I = new Iterator(this);
+  Iterator *I_ref = new Iterator(mesh_ref);
+
+  // Simultaneous traversal of 'this' and 'mesh_ref'.
+  // For each element, create a list of refinement 
+  // candidates and have it checked. 
+  Element *e;
+  int counter = 0;
+  while (counter != num_to_adapt) {
+    e = I->next_active_element();
+    Element *e_ref = I_ref->next_active_element();
+    if (e->id == adapt_list[counter]) {
+      counter++;
+      int choice = 0;
+      int3 candlist[MAX_CAND_NUM];    // Every refinement candidates consists of three
+                                      // numbers: 1/0 whether it is a p-candidate or not,
+                                      // and then either one or two polynomial degrees
+      int num_cand = e->create_cand_list(candlist);
+      e->print_cand_list(num_cand, candlist);
+      if (e->level == e_ref->level) { // element 'e' was not refined in space
+                                      // for reference solution
+        //choice = select_hp_refinement_ref_p(num_cand, candlist, e, e_ref, y_prev, y_prev_ref, 
+        //                                    this->bc_left_dir_values,
+	//  		                    this->bc_right_dir_values);
+      }
+      else { // element 'e' was refined in space for reference solution
+        Element* e_ref_left = e_ref;
+        Element* e_ref_right = I_ref->next_active_element();
+        //choice = select_hp_refinement_ref_hp(num_cand, candlist, e, e_ref_left, e_ref_right, y_prev, y_prev_ref, 
+        //                                   this->bc_left_dir_values,
+	//		                   this->bc_right_dir_values);
+      }
+      // perform the refinement
+      e->refine(candlist[choice]);
+    }
+  }
+}
+

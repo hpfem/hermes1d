@@ -57,7 +57,9 @@ public:
 			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM], 
                             double *y_prev, double *bc_left_dir_values,
                             double *bc_right_dir_values);
-    void refine(int p_left, int p_right);
+    int create_cand_list(int3 *cand_list);
+    void print_cand_list(int num_cand, int3 *cand_list);
+    void refine(int3 cand);
     unsigned is_active();
     unsigned active;   // flag used by assembling algorithm
     double x1, x2;     // endpoints
@@ -113,9 +115,11 @@ class Mesh {
         Element* last_active_element();
         void set_bc_left_dirichlet(int eq_n, double val);
         void set_bc_right_dirichlet(int eq_n, double val);
-        void refine_single_elem(int id, int p_left, int p_right);
-        void refine_elems(int elem_num, int *id_array, int2 *p_id_array);
+        void refine_single_elem(int id, int3 cand);
+        void refine_elems(int elem_num, int *id_array, int3 *cand_array);
         void reference_refinement(int start_elem_id, int elem_num);
+        void adapt(Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
+                   int *id_array, double *err_squared_array);
         Mesh *replicate(); 
         void plot(const char* filename); // plots the mesh and polynomial degrees of elements
         void plot_element_error_p(FILE *f[MAX_EQN_NUM], Element *p, Element *e_ref, 
@@ -124,10 +128,10 @@ class Mesh {
         void plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *p, Element *e_ref_left, Element *e_ref_right, 
 				   double* y_prev, double* y_prev_ref, 
                                    int subdivision = 20); // plots error wrt. reference solution
-                                                             // if ref. refinement was hp-refinement
+                                                          // if ref. refinement was hp-refinement
         void plot_error(const char *filename, Mesh* mesh_ref, 
 			double* y_prev, double* y_prev_ref, 
-                        int subdivision = 20); // plots error wrt. reference solution
+                        int subdivision = 20);  // plots error wrt. reference solution
 
         int assign_elem_ids();
         double bc_left_dir_values[MAX_EQN_NUM];  // values for the Dirichlet condition left

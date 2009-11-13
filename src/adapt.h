@@ -83,10 +83,4 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
                                  double bc_left_dir_values[MAX_EQN_NUM],
 	  	                 double bc_right_dir_values[MAX_EQN_NUM]);
 
-
-
-// Refine elements in the id_array list whose id_array >= 0
-void refine_elements(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
-                     int *id_array, double *err_squared_array);
-
 #endif

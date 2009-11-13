@@ -16,6 +16,9 @@
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
 
+const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
+                                       // candidates of an element
+
 const int MAX_POLYORDER = 100;         // maximum polynomial degree on elements
 
 const int MAX_ELEM_NUM = 100000;       // maximum number of elements
@@ -32,6 +35,7 @@ typedef double scalar;
 typedef double double2[2];
 
 typedef int int2[2];
+typedef int int3[3];
 
 typedef double (*shape_fn_t)(double);
 
