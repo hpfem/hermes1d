@@ -1,6 +1,4 @@
 #include "hermes1d.h"
-#include "solver_umfpack.h"
-#include "adapt.h"
 
 // ********************************************************************
 
@@ -253,74 +251,92 @@ int main() {
     // Update y_prev by the increment stored in res
     for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
-    // Calculate element errors (squared)
-    double err_squared_array[MAX_ELEM_NUM]; //FIXME - change this to dynamic allocation
-    double err_total = calc_elem_L2_errors_squared(mesh, mesh_ref, y_prev, 
-                       y_prev_ref, err_squared_array);
+    // Estimate element errors (squared)
+    double err_est_squared_array[MAX_ELEM_NUM]; //FIXME - change this to dynamic allocation
+    double err_est_total = calc_elem_est_L2_errors_squared(mesh, mesh_ref, y_prev, 
+                           y_prev_ref, err_est_squared_array);
 
     // Calculate the L2 norm of the reference solution
-    double ref_sol_L2_norm = calc_solution_L2_norm(mesh_ref, y_prev_ref);
+    double ref_sol_L2_norm = calc_approx_sol_L2_norm(mesh_ref, y_prev_ref);
+
+    // Calculate an estimate of the global relative error
+    double err_est_rel = err_est_total/ref_sol_L2_norm;
+    printf("Relative error (est) = %g %%\n", 100.*err_est_rel);
+
+    // If exact solution available, also calculate exact error
+    if (EXACT_SOL_PROVIDED) {
+      // Calculate element errors wrt. exact solution (squared)
+      int order = 20; // heuristic parameter
+      double err_exact_L2_total = calc_exact_sol_L2_error(mesh, y_prev, exact_sol, order);
+
+      // Calculate the L2 norm of the exact solution
+      // (using a fine subdivision and high-order quadrature)
+      int subdivision = 100; // heuristic parameter
+      double exact_sol_L2_norm = calc_exact_sol_L2_norm(exact_sol, N_eq, A, B,
+                                                        subdivision, order);
+      // Calculate an estimate of the global relative error
+      double err_exact_L2_rel = err_exact_L2_total/exact_sol_L2_norm;
+      printf("Relative error (exact) = %g %%\n", 100.*err_exact_L2_rel);
+    }
 
     // Decide whether the relative error is sufficiently small
-    double err_rel = err_total/ref_sol_L2_norm;
-    printf("Estimated relative error = %g %%\n", 100.*err_rel);
-    if(err_rel < TOL_ERR_REL) break;
+    if(err_est_rel < TOL_ERR_REL) break;
 
     // Sort elements according to their error in decreasing order
     int id_array[MAX_ELEM_NUM];
     for(int i=0; i<mesh->get_n_active_elem(); i++) id_array[i] = i;
     sort_element_errors(mesh->get_n_active_elem(), 
-                        err_squared_array, id_array);
+                        err_est_squared_array, id_array);
 
     // Print sorted list of elements along with the errors
     printf("Elements sorted according to their error::\n");
     for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      printf("Elem[%d], error = %g\n", id_array[i], sqrt(err_squared_array[i]));
+      printf("Elem[%d], error = %g\n", id_array[i], sqrt(err_est_squared_array[i]));
     }
 
     // Decide which elements will be refined
-    double max_elem_error = sqrt(err_squared_array[0]);
+    double max_elem_error = sqrt(err_est_squared_array[0]);
     for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      if(sqrt(err_squared_array[i]) < THRESHOLD*max_elem_error) id_array[i] = -1; 
+      if(sqrt(err_est_squared_array[i]) < THRESHOLD*max_elem_error) id_array[i] = -1; 
     }
     
     // Print elements to be refined
     printf("Elements to be refined:\n");
     for (int i=0; i<mesh->get_n_active_elem(); i++) {
       if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
-                                   sqrt(err_squared_array[i]));
+                                   sqrt(err_est_squared_array[i]));
     }
 
     if (adapt_iterations == 3) break;
  
-    // refine elements in the id_array list whose id_array >= 0
-    mesh->adapt(mesh_ref, y_prev, y_prev_ref, id_array, err_squared_array);
+    // Refine elements in the id_array list whose id_array >= 0
+    mesh->adapt(mesh_ref, y_prev, y_prev_ref, id_array, err_est_squared_array);
 
     adapt_iterations++;
   };
 
-  // plotting the coarse mesh solution
+  // Plot the coarse mesh solution
   Linearizer l(mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
-  // plotting the reference solution
+  // Plot the reference solution
   Linearizer lxx(mesh_ref);
   const char *out_filename2 = "solution_ref.gp";
   lxx.plot_solution(out_filename2, y_prev_ref);
 
-  // plotting the coarse and reference mesh
+  // Plot the coarse and reference mesh
   const char *mesh_filename = "mesh.gp";
   mesh->plot(mesh_filename);
   const char *mesh_ref_filename = "mesh_ref.gp";
   mesh_ref->plot(mesh_ref_filename);
 
-  // plotting error estimate (difference of coarse and reference
+  // Plot error estimate (difference of coarse and reference
   // mesh solutions)
   const char *err_est_filename = "error_est.gp";
   mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
 
-  // plotting error wrt. exact solution (if available)
+  // Plot error wrt. exact solution (if available)
   if (EXACT_SOL_PROVIDED) {   
     const char *err_exact_filename = "error_exact.gp";
     mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);

@@ -18,7 +18,7 @@
 // Assumes that the element was not refined in space for the 
 // reference solution. 
 // FIXME: to be moved to the Element class
-double calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
+double calc_elem_est_L2_error_squared_p(Element *e, Element *e_ref,
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]);
@@ -28,7 +28,7 @@ double calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
 // Assumes that the element was refined in space for the 
 // reference solution.
 // FIXME: to be moved to the Element class
-double calc_elem_L2_error_squared_hp(Element *e, 
+double calc_elem_est_L2_error_squared_hp(Element *e, 
                         Element *e_ref_left, Element *e_ref_right,
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
@@ -37,12 +37,12 @@ double calc_elem_L2_error_squared_hp(Element *e,
 // Calculates l2-norm (squared) of the difference between the coarse
 // and reference solutions in all active elements of 'mesh'. Total
 // error is returned.
-double calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
+double calc_elem_est_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
 				   double* y_prev, double* y_prev_ref, 
 				   double *err_squared_array);
 
 // Can be used for both the coarse and reference solutions
-double calc_solution_L2_norm(Mesh* mesh, double* y_prev);
+double calc_approx_sol_L2_norm(Mesh* mesh, double* y_prev);
 
 // Sort err_array[] and returning array of sorted element indices
 void sort_element_errors(int n, double *err_array, int *id_array); 
@@ -82,5 +82,21 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
                                  double *y_prev_ref, int p, 
                                  double bc_left_dir_values[MAX_EQN_NUM],
 	  	                 double bc_right_dir_values[MAX_EQN_NUM]);
+
+// Error wrt. exact solution (if provided) on element 'e' 
+double calc_elem_exact_L2_error_squared(exact_sol_type exact_sol,
+                                        Element *e, double *y_prev, 
+                                        double *bc_left_dir_values,
+			                double *bc_right_dir_values,
+                                        int order);
+
+// Error wrt. exact solution (if provided) on the entire interval (A, B) 
+double calc_exact_sol_L2_error(Mesh *mesh, double *y_prev, 
+                               exact_sol_type exact_sol, int order); 
+
+// Calculates L2 norm of function exact_sol in interval (A, B)
+double calc_exact_sol_L2_norm(exact_sol_type exact_sol, int n_eq, 
+                                   double A, double B, int subdivision, 
+                                   int order);
 
 #endif

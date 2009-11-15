@@ -4,6 +4,7 @@
 // Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
 #include "transforms.h"
+#include "common.h"
 
 // transform values from (-1, 0) to (-1, 1)
 #define map_left(x) (2*x+1)
@@ -67,7 +68,7 @@ double calc_elem_L2_norm_squared(Element *e, double *y_prev,
   return elem_norm_squared;
 }
 
-double calc_elem_L2_error_squared_p(Element *e, Element *e_ref, 
+double calc_elem_est_L2_error_squared_p(Element *e, Element *e_ref, 
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
@@ -106,7 +107,7 @@ double calc_elem_L2_error_squared_p(Element *e, Element *e_ref,
   return err_squared;
 }
 
-double calc_elem_L2_error_squared_hp(Element *e, 
+double calc_elem_est_L2_error_squared_hp(Element *e, 
 				   Element *e_ref_left, Element *e_ref_right,
                                    double *y_prev, double *y_prev_ref, 
                                    double bc_left_dir_values[MAX_EQN_NUM],
@@ -150,14 +151,18 @@ double calc_elem_L2_error_squared_hp(Element *e,
                                  order_right, phys_x_right, phys_weights_right, &pts_num_right); 
 
   // get coarse mesh solution values and derivatives on 'e_ref_right'
-  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(phys_x_right, pts_num_right, phys_u_right, phys_dudx_right, y_prev, 
+  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(phys_x_right, pts_num_right, phys_u_right, 
+                  phys_dudx_right, y_prev, 
                   bc_left_dir_values, bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives on 'e_ref_right'
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_right->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
-                  y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_right->get_solution(phys_x_right, pts_num_right, 
+                            phys_u_ref_right, phys_dudx_ref_right, 
+                            y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // integrate over 'e_ref_right'
   double norm_squared_right[MAX_EQN_NUM];
@@ -176,7 +181,7 @@ double calc_elem_L2_error_squared_hp(Element *e,
   return err_squared;
 }
 
-double calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
+double calc_elem_est_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
 				   double* y_prev, double* y_prev_ref, 
 				   double *err_squared_array)
 {
@@ -191,14 +196,14 @@ double calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref,
     double err_squared;
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      err_squared = calc_elem_L2_error_squared_p(e, e_ref, y_prev, y_prev_ref, 
+      err_squared = calc_elem_est_L2_error_squared_p(e, e_ref, y_prev, y_prev_ref, 
                                          mesh->bc_left_dir_values,
 			                 mesh->bc_right_dir_values);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
-      err_squared = calc_elem_L2_error_squared_hp(e, e_ref_left, e_ref_right, 
+      err_squared = calc_elem_est_L2_error_squared_hp(e, e_ref_left, e_ref_right, 
                                           y_prev, y_prev_ref, 
                                           mesh->bc_left_dir_values,
 			                  mesh->bc_right_dir_values);
@@ -209,7 +214,7 @@ double calc_elem_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref,
   return sqrt(err_total_squared);
 }
 
-double calc_solution_L2_norm(Mesh* mesh, double* y_prev)
+double calc_approx_sol_L2_norm(Mesh* mesh, double* y_prev)
 {
   double norm_squared = 0;
   Iterator *I = new Iterator(mesh);
@@ -814,7 +819,6 @@ double check_ref_coarse_p_fine_p(Element *e, Element *e_ref,
   }
   err_total = sqrt(err_total);
 
-
   // penalizing the error by the number of DOF induced by this 
   // refinement candidate
   // NOTE: this may need some experimantation
@@ -824,6 +828,103 @@ double check_ref_coarse_p_fine_p(Element *e, Element *e_ref,
   double error_scaled = -log(err_total) / dof_added; 
 
   return error_scaled; 
+}
+
+double calc_exact_sol_L2_norm(exact_sol_type exact_sol, int n_eq, 
+                              double A, double B, int subdivision, 
+                              int order)
+{
+  double norm_squared = 0;
+  double h = (B - A)/subdivision;
+  for (int i=0; i < subdivision; i++) {
+    double a = i*h;
+    double b = a + h;
+    int pts_num;
+    double x_phys[MAX_PTS_NUM];
+    double w_phys[MAX_PTS_NUM];
+    create_phys_element_quadrature(a, b, order, x_phys, 
+                                   w_phys, &pts_num);
+    double val = 0;
+    for (int j=0; j<pts_num; j++) {
+      double fn_val[MAX_EQN_NUM];
+      double fn_der[MAX_EQN_NUM];
+      exact_sol(x_phys[j], fn_val, fn_der);
+      double val0 = 0;
+      for (int c=0; c<n_eq; c++) {
+        val0 += fn_val[c] * fn_val[c];
+      }
+      val += val0 * w_phys[j];
+    }
+  
+    norm_squared += val;
+  }
+  return sqrt(norm_squared);
+}
+
+double calc_elem_exact_L2_error_squared(exact_sol_type exact_sol,
+                                        Element *e, double *y_prev, 
+                                        double *bc_left_dir_values,
+			                double *bc_right_dir_values,
+                                        int order)
+{
+  // create Gauss quadrature on 'e'
+  int pts_num;
+  double phys_x[MAX_PTS_NUM];          // quad points
+  double phys_weights[MAX_PTS_NUM];    // quad weights
+  create_phys_element_quadrature(e->x1, e->x2, order, phys_x, 
+                                 phys_weights, &pts_num); 
+
+  // get coarse mesh solution values and derivatives
+  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(phys_x, pts_num, phys_u, phys_dudx, y_prev, 
+                  bc_left_dir_values, bc_right_dir_values); 
+
+  // get exact solution values and derivatives
+  int n_eq = e->dof_size;
+  double phys_u_exact[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_exact[MAX_EQN_NUM][MAX_PTS_NUM];
+  for (int j=0; j<pts_num; j++) {
+    double phys_u_exact_pt[MAX_EQN_NUM], 
+           phys_dudx_exact_pt[MAX_EQN_NUM]; 
+    exact_sol(phys_x[j], phys_u_exact_pt, phys_dudx_exact_pt); 
+    for (int c=0; c < n_eq; c++) {
+      phys_u_exact[c][j] = phys_u_exact_pt[c];
+    }
+  }
+
+  // integrate over 'e'
+  double norm_squared[MAX_EQN_NUM];
+  for (int c=0; c<n_eq; c++) {
+    norm_squared[c] = 0;
+    for (int i=0; i<pts_num; i++) {
+      double diff = phys_u_exact[c][i] - phys_u[c][i];
+      norm_squared[c] += diff * diff * phys_weights[i];
+    }
+  }
+
+  double err_squared = 0;
+  for (int c=0; c<n_eq; c++)  
+    err_squared += norm_squared[c];
+
+  return err_squared;
+}
+
+double calc_exact_sol_L2_error(Mesh *mesh, double *y_prev, 
+                               exact_sol_type exact_sol, int order) 
+{
+  double total_err_squared = 0;
+  Iterator *I = new Iterator(mesh);
+  Element *e;
+  while ((e = I->next_active_element()) != NULL) {
+      double elem_err_squared = 
+        calc_elem_exact_L2_error_squared(exact_sol, e, y_prev, 
+                                         mesh->bc_left_dir_values,
+			                 mesh->bc_right_dir_values,
+                                         order);
+      total_err_squared += elem_err_squared;
+  }
+  return sqrt(total_err_squared);
 }
 
 
