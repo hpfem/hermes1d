@@ -129,10 +129,15 @@ class Mesh {
 				   double* y_prev, double* y_prev_ref, 
                                    int subdivision = 20); // plots error wrt. reference solution
                                                           // if ref. refinement was hp-refinement
-        void plot_error(const char *filename, Mesh* mesh_ref, 
+        void plot_element_error_exact(FILE *f[MAX_EQN_NUM], Element *p, 
+				   double* y_prev, exact_sol_type exact_sol,
+                                   int subdivision = 20); // plots error wrt. reference solution
+                                                          // if ref. refinement was hp-refinement
+        void plot_error_est(const char *filename, Mesh* mesh_ref, 
 			double* y_prev, double* y_prev_ref, 
                         int subdivision = 20);  // plots error wrt. reference solution
-
+        void plot_error_exact(const char *filename, double* y_prev, exact_sol_type exact_sol, 
+                        int subdivision = 20); // plots error wrt. exact solution
         int assign_elem_ids();
         double bc_left_dir_values[MAX_EQN_NUM];  // values for the Dirichlet condition left
         double bc_right_dir_values[MAX_EQN_NUM]; // values for the Dirichlet condition right

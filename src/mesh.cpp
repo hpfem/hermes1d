@@ -738,9 +738,41 @@ void Mesh::plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *e, Element *e_re
 
 }
 
+// Plots the error wrt. the exact solution (if available)
+void Mesh::plot_element_error_exact(FILE *f[MAX_EQN_NUM], Element *e, 
+                                    double *y_prev, exact_sol_type exact_sol, int subdivision)
+{
+  int n_eq = this->get_n_eq();
+  int pts_num = subdivision + 1;
+  double x1 = e->x1;
+  double x2 = e->x2;
+
+  // calculate point array
+  double x_phys[MAX_PTS_NUM];  
+  double h = (x2 - x1)/subdivision; 
+  for (int i=0; i < pts_num; i++) {
+    x_phys[i] = x1 + i*h;
+  }
+
+  // get coarse mesh solution values and derivatives
+  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
+  e->get_solution(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
+                  this->bc_left_dir_values, this->bc_right_dir_values); 
+
+  for (int i=0; i < pts_num; i++) {
+    double exact_sol_point[MAX_EQN_NUM];
+    double exact_der_point[MAX_EQN_NUM];
+    exact_sol(x_phys[i], exact_sol_point, exact_der_point);
+    for (int c=0; c < n_eq; c++) {
+      fprintf(f[c], "%g %g\n", x_phys[i], exact_sol_point[c] - phys_u[c][i]);
+    }
+  }
+  for (int c=0; c < n_eq; c++) fprintf(f[c], "\n");
+}
+
 // Plots the error between the reference and coarse mesh solutions
-void Mesh::plot_error(const char *filename, Mesh* mesh_ref, 
-		      double* y_prev, double* y_prev_ref, int sudivision)
+void Mesh::plot_error_est(const char *filename, Mesh* mesh_ref, 
+		      double* y_prev, double* y_prev_ref, int subdivision)
 {
   int n_eq = this->get_n_eq();
 
@@ -752,7 +784,7 @@ void Mesh::plot_error(const char *filename, Mesh* mesh_ref,
     else
         sprintf(final_filename[c], "%s_%d", filename, c);
     f_array[c] = fopen(final_filename[c], "wb");
-    if(f_array[c] == NULL) error("problem opening file in plot_solution().");
+    if(f_array[c] == NULL) error("problem opening file in plot_error_est().");
   }
 
   // simultaneous traversal of 'this' and 'mesh_ref'
@@ -763,19 +795,49 @@ void Mesh::plot_error(const char *filename, Mesh* mesh_ref,
     Element *e_ref = I_ref->next_active_element();
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      plot_element_error_p(f_array, e, e_ref, y_prev, y_prev_ref);
+      plot_element_error_p(f_array, e, e_ref, y_prev, y_prev_ref, subdivision);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
       plot_element_error_hp(f_array, e, e_ref_left, e_ref_right, 
-                            y_prev, y_prev_ref);
+                            y_prev, y_prev_ref, subdivision);
     }
   }
 
   for(int c=0; c<n_eq; c++) {
     fclose(f_array[c]);
     printf("Error function written to %s.\n", final_filename[c]);
+  }
+}
+
+// Plots the error wrt. the exact solution (if available)
+void Mesh::plot_error_exact(const char *filename,  
+		            double* y_prev, exact_sol_type exact_sol, int subdivision)
+{
+  int n_eq = this->get_n_eq();
+
+  FILE *f_array[MAX_EQN_NUM];
+  char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
+  for(int c=0; c<n_eq; c++) {
+    if(n_eq == 1)
+        sprintf(final_filename[c], "%s", filename);
+    else
+        sprintf(final_filename[c], "%s_%d", filename, c);
+    f_array[c] = fopen(final_filename[c], "wb");
+    if(f_array[c] == NULL) error("problem opening file in plot_error_exact().");
+  }
+
+  // traversal of 'this'
+  Element *e;
+  Iterator *I = new Iterator(this);
+  while ((e = I->next_active_element()) != NULL) {
+    plot_element_error_exact(f_array, e, y_prev, exact_sol, subdivision);
+  }
+
+  for(int c=0; c<n_eq; c++) {
+    fclose(f_array[c]);
+    printf("Exact solution error written to %s.\n", final_filename[c]);
   }
 }
 

@@ -20,5 +20,7 @@
 #include "discrete.h"
 #include "linearizer.h"
 #include "transforms.h"
+#include "adapt.h"
+#include "solver_umfpack.h"
 
 #endif

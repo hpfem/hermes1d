@@ -39,6 +39,13 @@ double dfdy(double y, double x) {
   return -2*y;
 }
 
+// Exact solution
+const int EXACT_SOL_PROVIDED = 1;
+double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
+  u[0] = 1./(x+1);
+  dudx[0] = -1/((x+1)*(x+1));
+}
+
 // ********************************************************************
 
 // Bilinear form for the Jacobi matrix 
@@ -308,9 +315,16 @@ int main() {
   const char *mesh_ref_filename = "mesh_ref.gp";
   mesh_ref->plot(mesh_ref_filename);
 
-  // plotting the error
-  const char *err_filename = "error.gp";
-  mesh->plot_error(err_filename, mesh_ref, y_prev, y_prev_ref);
+  // plotting error estimate (difference of coarse and reference
+  // mesh solutions)
+  const char *err_est_filename = "error_est.gp";
+  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
+
+  // plotting error wrt. exact solution (if available)
+  if (EXACT_SOL_PROVIDED) {   
+    const char *err_exact_filename = "error_exact.gp";
+    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
+  }
 
   printf("Done.\n");
   return 1;

@@ -28,6 +28,8 @@ const int MAX_P = 5;                   // this is the maximum polynomial degree 
 const int MAX_COEFFS_NUM = MAX_P + 1;  // this is the maximum polynomial degree allowed in elements
 const int MAX_STRING_LENGTH = 100;     // maximum string length 
 
+typedef double (*exact_sol_type)(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]);
+
 void error(const char *msg);
 
 typedef double scalar;

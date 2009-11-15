@@ -1,12 +1,11 @@
 #include "hermes1d.h"
-#include "solver_umfpack.h"
-#include "adapt.h"
 
 // ********************************************************************
 
 // This example solves the Poisson equation -u'' - f = 0 in
 // an interval (A, B), equipped with Dirichlet boundary
-// conditions on both end points. 
+// conditions on both end points. This example shows how to 
+// measure error wrt. exact solution (if available).
 
 // General input:
 static int N_eq = 1;
@@ -16,7 +15,7 @@ int P_init = 1;                         // initial polynomal degree
 
 // Error tolerance
 double TOL_NEWTON_COARSE = 1e-5;  // tolerance for the Newton's method on coarse mesh
-double TOL_NEWTON_REF = 1e-5;    // tolerance for the Newton's method on reference mesh
+double TOL_NEWTON_REF = 1e-3;     // tolerance for the Newton's method on reference mesh
 
 // Adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
@@ -24,16 +23,19 @@ const double THRESHOLD = 0.7;           // Refined will be all elements whose er
 const double TOL_ERR_REL = 1e-5;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 // Boundary conditions
-double Val_dir_left = 1;                // Dirichlet condition left
-double Val_dir_right = 1;               // Dirichlet condition right
-
-// Tolerance for the Newton's method
-double TOL = 1e-5;
+double Val_dir_left = 0;                // Dirichlet condition left
+double Val_dir_right = 0;               // Dirichlet condition right
 
 // Function f(x)
 double f(double x) {
   return sin(x);
-  //return 1;
+}
+
+// Exact solution
+const int EXACT_SOL_PROVIDED = 1;
+double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
+  u[0] = sin(x);
+  dudx[0] = cos(x);
 }
 
 // ********************************************************************
@@ -251,6 +253,8 @@ int main() {
     // Calculate the L2 norm of the reference solution
     double ref_sol_L2_norm = calc_solution_L2_norm(mesh_ref, y_prev_ref);
 
+
+
     // Decide whether the relative error is sufficiently small
     double err_rel = err_total/ref_sol_L2_norm;
     printf("Estimated relative error = %g %%\n", 100.*err_rel);
@@ -306,9 +310,17 @@ int main() {
   const char *mesh_ref_filename = "mesh_ref.gp";
   mesh_ref->plot(mesh_ref_filename);
 
-  // plotting the error
-  const char *err_filename = "error.gp";
-  mesh->plot_error(err_filename, mesh_ref, y_prev, y_prev_ref);
+  // plotting the error estimate (difference between 
+  // coarse and reference mesh solutions)
+  const char *err_est_filename = "error_est.gp";
+  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
+
+  // plotting error wrt. exact solution (if available)
+  if (EXACT_SOL_PROVIDED) {   
+    const char *err_exact_filename = "error_exact.gp";
+    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
+  }
+
 
   printf("Done.\n");
   return 1;
