@@ -11,6 +11,17 @@ void error(const char *msg)
   exit(0);
 };
 
+void error(const char *msg, const char *msg1)
+{
+  printf("Error: %s %s\n", msg, msg1);
+  exit(0);
+};
+
+void info(const char *msg, const char *msg1)
+{
+  printf("Info: %s %s\n", msg, msg1);
+};
+
 void warning(const char *msg)
 {
   printf("Warning: %s\n", msg);
