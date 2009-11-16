@@ -122,6 +122,14 @@ int main() {
   DiscreteProblem *dp = NULL;       // discrete problem (coarse mesh)
   DiscreteProblem *dp_ref = NULL;   // discrete problem (reference mesh)
 
+  // convergence graph wrt. the number of degrees of freedom
+  GnuplotGraph graph;
+  graph.set_log_y();
+  graph.set_captions("Error Convergence for the Inner Layer Problem", "Degrees of Freedom", "Error [%]");
+  graph.add_row("exact error", "k", "-", "o");
+  graph.add_row("error estimate", "k", "--");
+
+
   // Create coarse mesh, set Dirichlet BC, enumerate basis functions
   mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, Val_dir_left);
@@ -310,7 +318,12 @@ int main() {
       // Calculate an estimate of the global relative error
       double err_exact_L2_rel = err_exact_L2_total/exact_sol_L2_norm;
       printf("Relative error (exact) = %g %%\n", 100.*err_exact_L2_rel);
+      graph.add_values(0, N_dof, 100 * err_exact_L2_rel);
     }
+
+    // add entry to DOF convergence graph
+    graph.add_values(1, N_dof, 100 * err_est_L2_rel);
+    graph.save("conv_dof.gp");
 
     // Decide whether the relative error is sufficiently small
     if(err_est_L2_rel*100 < TOL_ERR_REL) break;

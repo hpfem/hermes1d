@@ -22,5 +22,6 @@
 #include "transforms.h"
 #include "adapt.h"
 #include "solver_umfpack.h"
+#include "graph.h"
 
 #endif
