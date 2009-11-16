@@ -472,68 +472,93 @@ Element* Mesh::last_active_element()
   return e;
 }
 
-int Element::create_cand_list(int3 *cand_list) 
+int Element::create_cand_list(int p_ref_left, int p_ref_right, int3 *cand_list) 
 {
-  int counter = 0;
-  // p->p+1
-  cand_list[counter][0] = 0;
-  cand_list[counter][1] = this->p + 1;
-  cand_list[counter][2] = -1;
-  counter++;
-  // p->p+2
-  cand_list[counter][0] = 0;
-  cand_list[counter][1] = this->p + 2;
-  cand_list[counter][2] = -1;
-  counter++;
-  // p -> (p/2, p/2) 
-  int base_p = this->p / 2; 
-  if (base_p < 1) base_p = 1;
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p;
-  cand_list[counter][2] = base_p;
-  counter++;
-  // p -> (p/2+1, p/2) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p+1;
-  cand_list[counter][2] = base_p;
-  counter++;
-  // p -> (p/2, p/2+1) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p;
-  cand_list[counter][2] = base_p+1;
-  counter++;
-  // p -> (p/2+1, p/2+1) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p+1;
-  cand_list[counter][2] = base_p+1;
-  counter++;
-  // p -> (p/2+2, p/2) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p+2;
-  cand_list[counter][2] = base_p;
-  counter++;
-  // p -> (p/2, p/2+2) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p;
-  cand_list[counter][2] = base_p+2;
-  counter++;
-  // p -> (p/2+1, p/2+2) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p+1;
-  cand_list[counter][2] = base_p+2;
-  counter++;
-  // p -> (p/2+2, p/2+1) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p+2;
-  cand_list[counter][2] = base_p+1;
-  counter++;
-  // p -> (p/2+2, p/2+2) 
-  cand_list[counter][0] = 1;
-  cand_list[counter][1] = base_p+2;
-  cand_list[counter][2] = base_p+2;
-  counter++;
+    int counter = 0;
+    // p->p+1
+    if (this->p + 1 <= max(p_ref_left, p_ref_right)) {
+      cand_list[counter][0] = 0;
+      cand_list[counter][1] = this->p + 1;
+      cand_list[counter][2] = -1;
+      counter++;
+    }
+    // p->p+2
+    if (this->p + 2 <= max(p_ref_left, p_ref_right)) {
+      cand_list[counter][0] = 0;
+      cand_list[counter][1] = this->p + 2;
+      cand_list[counter][2] = -1;
+      counter++;
+    }
+    // so that the if statements below are simplified:
+    if (p_ref_left == -1) p_ref_left = 100000;
+    if (p_ref_right == -1) p_ref_right = 100000;
+    // p -> (p/2, p/2) 
+    int base_p = this->p / 2; 
+    if (base_p < 1) base_p = 1;
+    if (base_p <= p_ref_left && base_p <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p;
+        cand_list[counter][2] = base_p;
+        counter++;
+    }
+    // p -> (p/2+1, p/2) 
+    if (base_p + 1 <= p_ref_left && base_p <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p+1;
+        cand_list[counter][2] = base_p;
+        counter++;
+    }
+    // p -> (p/2, p/2+1) 
+    if (base_p <= p_ref_left && base_p + 1 <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p;
+        cand_list[counter][2] = base_p+1;
+        counter++;
+    }
+    // p -> (p/2+1, p/2+1) 
+    if (base_p + 1 <= p_ref_left && base_p + 1 <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p+1;
+        cand_list[counter][2] = base_p+1;
+        counter++;
+    }
+    // p -> (p/2+2, p/2) 
+    if (base_p + 2 <= p_ref_left && base_p <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p+2;
+        cand_list[counter][2] = base_p;
+        counter++;
+    }
+    // p -> (p/2, p/2+2) 
+    if (base_p <= p_ref_left && base_p + 2 <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p;
+        cand_list[counter][2] = base_p+2;
+        counter++;
+    }
+    // p -> (p/2+1, p/2+2) 
+    if (base_p + 1 <= p_ref_left && base_p + 2 <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p+1;
+        cand_list[counter][2] = base_p+2;
+        counter++;
+    }
+    // p -> (p/2+2, p/2+1) 
+    if (base_p + 2 <= p_ref_left && base_p + 1 <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p+2;
+        cand_list[counter][2] = base_p+1;
+        counter++;
+    }
+    // p -> (p/2+2, p/2+2) 
+    if (base_p + 2 <= p_ref_left && base_p + 2 <= p_ref_right) {
+        cand_list[counter][0] = 1;
+        cand_list[counter][1] = base_p+2;
+        cand_list[counter][2] = base_p+2;
+        counter++;
+    }
 
-  return counter;
+    return counter;
 }
 
 void Element::print_cand_list(int num_cand, int3 *cand_list) 
@@ -901,11 +926,11 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
       int3 cand_list[MAX_CAND_NUM];    // Every refinement candidates consists of three
                                       // numbers: 1/0 whether it is a p-candidate or not,
                                       // and then either one or two polynomial degrees
-      int num_cand = e->create_cand_list(cand_list);
       // debug:
       //e->print_cand_list(num_cand, cand_list);
       if (e->level == e_ref->level) { // element 'e' was not refined in space
                                       // for reference solution
+        int num_cand = e->create_cand_list(e_ref->p, -1, cand_list);
         choice = select_hp_refinement_ref_p(num_cand, cand_list, e, e_ref, y_prev_ref, 
                                             this->bc_left_dir_values,
 	  		                    this->bc_right_dir_values);
@@ -913,6 +938,7 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
       else { // element 'e' was refined in space for reference solution
         Element* e_ref_left = e_ref;
         Element* e_ref_right = I_ref->next_active_element();
+        int num_cand = e->create_cand_list(e_ref_left->p, e_ref_right->p, cand_list);
         choice = select_hp_refinement_ref_hp(num_cand, cand_list, e, e_ref_left, 
                                              e_ref_right, y_prev_ref, 
                                              this->bc_left_dir_values,

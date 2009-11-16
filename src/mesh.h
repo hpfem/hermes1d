@@ -57,7 +57,7 @@ public:
 			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM], 
                             double *y_prev, double *bc_left_dir_values,
                             double *bc_right_dir_values);
-    int create_cand_list(int3 *cand_list);
+    int create_cand_list(int p_ref_left, int p_ref_right, int3 *cand_list);
     void print_cand_list(int num_cand, int3 *cand_list);
     void refine(int3 cand);
     unsigned is_active();

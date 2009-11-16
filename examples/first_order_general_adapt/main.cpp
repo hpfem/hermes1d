@@ -314,33 +314,8 @@ int main() {
     // Decide whether the relative error is sufficiently small
     if(err_est_rel < TOL_ERR_REL) break;
 
-    // Sort elements according to their error in decreasing order
-    int id_array[MAX_ELEM_NUM];
-    for(int i=0; i<mesh->get_n_active_elem(); i++) id_array[i] = i;
-    sort_element_errors(mesh->get_n_active_elem(), 
-                        err_est_squared_array, id_array);
-
-    // Print sorted list of elements along with the errors
-    printf("Elements sorted according to their error::\n");
-    for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      printf("Elem[%d], error = %g\n", id_array[i], sqrt(err_est_squared_array[i]));
-    }
-
-    // Decide which elements will be refined
-    double max_elem_error = sqrt(err_est_squared_array[0]);
-    for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      if(sqrt(err_est_squared_array[i]) < THRESHOLD*max_elem_error) id_array[i] = -1; 
-    }
-    
-    // Print elements to be refined
-    printf("Elements to be refined:\n");
-    for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
-                                   sqrt(err_est_squared_array[i]));
-    }
- 
     // Refine elements in the id_array list whose id_array >= 0
-    mesh->adapt(mesh_ref, y_prev, y_prev_ref, id_array, err_est_squared_array);
+    mesh->adapt(THRESHOLD, mesh_ref, y_prev, y_prev_ref, err_est_squared_array);
 
     adapt_iterations++;
   };
