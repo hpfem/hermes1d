@@ -398,6 +398,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   if (err_total < 1e-10) {
       printf("candidate (1 %d %d)\n", p_left, p_right);
       warning("in check_refin_coarse_hp_fine_hp: bad refinement candidate (err_total=0)");
+      return -1e6;
   }
   err_total = sqrt(err_total);
 
@@ -563,6 +564,7 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   if (err_total < 1e-10) {
       printf("candidate (1 %d %d)\n", p_left, p_right);
       warning("in check_refin_coarse_hp_fine_p: bad refinement candidate (err_total=0)");
+      return -1e6;
   }
   err_total = sqrt(err_total);
 
@@ -734,6 +736,7 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   if (err_total < 1e-10) {
       printf("candidate (0 %d -1)\n", p);
       warning("in check_refin_coarse_p_fine_hp: bad refinement candidate (err_total=0)");
+      return -1e6;
   }
   err_total = sqrt(err_total);
 
@@ -827,6 +830,7 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   if (err_total < 1e-10) {
       printf("candidate (0 %d -1)\n", p);
       warning("in check_refin_coarse_p_fine_p: bad refinement candidate (err_total=0)");
+      return -1e6;
   }
   err_total = sqrt(err_total);
 

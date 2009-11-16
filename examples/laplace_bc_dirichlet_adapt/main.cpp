@@ -282,7 +282,7 @@ int main() {
       y_prev_ref[i] += res_ref[i];
       printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
     }
-    if (adapt_iterations == 2) break;
+    //if (adapt_iterations == 5) break;
 
     // Estimate element errors (squared)
     double err_est_L2_squared_array[MAX_ELEM_NUM]; 
