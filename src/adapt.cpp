@@ -294,6 +294,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
         proj_coeffs_left[c][m] += 
           phys_u_ref_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
       }
+      //printf("proj_coeffs_left[%d][%d] = %g\n", c, m, proj_coeffs_left[c][m]);
     }
   }
 
@@ -342,8 +343,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_right; j++) {
-      leg_pol_values_right[m][j] = legendre(m, e_ref_right->x1, 
-					    e_ref_right->x2, phys_x_right[j]);
+      leg_pol_values_right[m][j] = legendre(m, e_ref_right->x1, e_ref_right->x2, phys_x_right[j]);
     }
   }
 
@@ -360,6 +360,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
         proj_coeffs_right[c][m] += 
           phys_u_ref_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
       }
+      //printf("proj_coeffs_right[%d][%d] = %g\n", c, m, proj_coeffs_right[c][m]);
     }
   }
 
@@ -387,18 +388,22 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     }
   }
 
+  printf("err_squared_left = %f\n", err_squared_left[0]);
+  printf("err_squared_right = %f\n", err_squared_right[0]);
   // summing errors on 'e_ref_left' and 'e_ref_right'
   double err_total = 0;
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
+  if (err_total < 1e-10)
+      error("Internal error in check_refin_coarse_hp_fine_hp: bad refinement candidate (err_total=0)");
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 
   // refinement candidate
   // NOTE: this may need some experimantation
   int dof_orig = e->p + 1;
-  int dof_new = p_left + p_right + 1; 
+  int dof_new = p_left + p_right + 2; 
   int dof_added = dof_new - dof_orig; 
   double error_scaled = -log(err_total) / dof_added; 
 
@@ -553,6 +558,8 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
+  if (err_total < 1e-10)
+      error("Internal error in check_refin_coarse_hp_fine_p: bad refinement candidate (err_total=0)");
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 
@@ -720,6 +727,8 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
+  if (err_total < 1e-10)
+      error("Internal error in check_refin_coarse_p_fine_hp: bad refinement candidate (err_total=0)");
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 
@@ -809,6 +818,8 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += err_squared[c];
   }
+  if (err_total < 1e-10)
+      error("Internal error in check_refin_coarse_p_fine_p: bad refinement candidate (err_total=0)");
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 
