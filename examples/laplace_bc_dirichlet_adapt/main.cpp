@@ -20,7 +20,7 @@ double TOL_NEWTON_REF = 1e-3;           // Reference mesh
 // Adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1.0;         // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1e-3;         // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 // Boundary conditions
 double Val_dir_left = 0;                // Dirichlet condition left
@@ -202,7 +202,7 @@ int main() {
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) {
       y_prev[i] += res[i];
-      printf("y_prev[%d] = %g\n", i, y_prev[i]);
+      //printf("y_prev[%d] = %g\n", i, y_prev[i]);
     }
 
     // Create reference mesh
@@ -288,9 +288,8 @@ int main() {
     // Update y_prev by the increment stored in res
     for(int i=0; i<N_dof_ref; i++) {
       y_prev_ref[i] += res_ref[i];
-      printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
+      //printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
     }
-    //if (adapt_iterations == 5) break;
 
     // Estimate element errors (squared)
     double err_est_L2_squared_array[MAX_ELEM_NUM]; 

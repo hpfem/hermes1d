@@ -388,8 +388,10 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     }
   }
 
+  /*
   printf("err_squared_left = %f\n", err_squared_left[0]);
   printf("err_squared_right = %f\n", err_squared_right[0]);
+  */
   // summing errors on 'e_ref_left' and 'e_ref_right'
   double err_total = 0;
   for (int c=0; c<n_eq; c++) { // loop over solution components

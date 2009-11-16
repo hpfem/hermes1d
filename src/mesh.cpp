@@ -882,17 +882,19 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
   }
 
   // Print elements to be refined
+  /*
   printf("Elements to be refined:\n");
   for (int i=0; i<this->get_n_active_elem(); i++) {
     if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
                                  sqrt(err_squared_array[i]));
   }
+  */
 
   int adapt_list[MAX_ELEM_NUM];
   int num_to_adapt = 0;
 
   // Create list of elements to be refined, in increasing order
-  for (int i=0; i<this->get_n_active_elem(); i++) printf("id_array[%d] = %d\n", i, id_array[i]);
+  //for (int i=0; i<this->get_n_active_elem(); i++) printf("id_array[%d] = %d\n", i, id_array[i]);
   for (int i=0; i<this->get_n_active_elem(); i++) {
     if (id_array[i] >= 0) {
       adapt_list[num_to_adapt] = id_array[i];
