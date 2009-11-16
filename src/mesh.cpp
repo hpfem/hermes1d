@@ -472,91 +472,85 @@ Element* Mesh::last_active_element()
   return e;
 }
 
+/*
+   p_ref_left and p_ref_right are the polynomial orders of the reference
+   solution (left and right refinement). If p_ref_right is -1, then the
+   reference solution is only "p" refined.
+   */
 int Element::create_cand_list(int p_ref_left, int p_ref_right, int3 *cand_list) 
 {
+    int ref_solution_p_refined = (p_ref_right == -1);
+    int p_ref = p_ref_left; // use only if ref_solution_p_refined == 1
     int counter = 0;
+    int candidate_ok;
+    int new_p;
+    // By default, we take each candidate (if the new_p is too high, we reject
+    // it)
+
     // p->p+1
-    if (this->p + 1 <= max(p_ref_left, p_ref_right)) {
-      cand_list[counter][0] = 0;
-      cand_list[counter][1] = this->p + 1;
-      cand_list[counter][2] = -1;
-      counter++;
+    new_p = this->p + 1;
+    candidate_ok = 1;
+    if (ref_solution_p_refined) {
+        if (new_p >= p_ref)
+            candidate_ok = 0;
+    } else {
+        if (new_p > max(p_ref_left, p_ref_right))
+            candidate_ok = 0;
     }
+    if (candidate_ok) {
+          cand_list[counter][0] = 0;
+          cand_list[counter][1] = new_p;
+          cand_list[counter][2] = -1;
+          counter++;
+        }
+
     // p->p+2
-    if (this->p + 2 <= max(p_ref_left, p_ref_right)) {
+    new_p = this->p + 2;
+    candidate_ok = 1;
+    if (ref_solution_p_refined) {
+        if (new_p >= p_ref)
+            candidate_ok = 0;
+    } else {
+        if (new_p > max(p_ref_left, p_ref_right))
+            candidate_ok = 0;
+    }
+    if (candidate_ok) {
       cand_list[counter][0] = 0;
       cand_list[counter][1] = this->p + 2;
       cand_list[counter][2] = -1;
       counter++;
     }
-    // so that the if statements below are simplified:
-    if (p_ref_left == -1) p_ref_left = 100000;
-    if (p_ref_right == -1) p_ref_right = 100000;
-    // p -> (p/2, p/2) 
+
+    int new_p_left, new_p_right;
     int base_p = this->p / 2; 
     if (base_p < 1) base_p = 1;
-    if (base_p <= p_ref_left && base_p <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p;
-        cand_list[counter][2] = base_p;
-        counter++;
+#define handle_candidate(new_p_left, new_p_right) \
+    candidate_ok = 1; \
+    if (ref_solution_p_refined) { \
+        if (new_p_left >= p_ref && new_p_right >= p_ref) \
+            candidate_ok = 0; \
+    } else { \
+        if (new_p_left == p_ref_left && new_p_right == p_ref_right) \
+            candidate_ok = 0; \
+        if (new_p_left > p_ref_left || new_p_right > p_ref_right) \
+            candidate_ok = 0; \
+    } \
+    if (candidate_ok) { \
+        cand_list[counter][0] = 1; \
+        cand_list[counter][1] = new_p_left; \
+        cand_list[counter][2] = new_p_right; \
+        counter++; \
     }
-    // p -> (p/2+1, p/2) 
-    if (base_p + 1 <= p_ref_left && base_p <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p+1;
-        cand_list[counter][2] = base_p;
-        counter++;
-    }
-    // p -> (p/2, p/2+1) 
-    if (base_p <= p_ref_left && base_p + 1 <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p;
-        cand_list[counter][2] = base_p+1;
-        counter++;
-    }
-    // p -> (p/2+1, p/2+1) 
-    if (base_p + 1 <= p_ref_left && base_p + 1 <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p+1;
-        cand_list[counter][2] = base_p+1;
-        counter++;
-    }
-    // p -> (p/2+2, p/2) 
-    if (base_p + 2 <= p_ref_left && base_p <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p+2;
-        cand_list[counter][2] = base_p;
-        counter++;
-    }
-    // p -> (p/2, p/2+2) 
-    if (base_p <= p_ref_left && base_p + 2 <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p;
-        cand_list[counter][2] = base_p+2;
-        counter++;
-    }
-    // p -> (p/2+1, p/2+2) 
-    if (base_p + 1 <= p_ref_left && base_p + 2 <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p+1;
-        cand_list[counter][2] = base_p+2;
-        counter++;
-    }
-    // p -> (p/2+2, p/2+1) 
-    if (base_p + 2 <= p_ref_left && base_p + 1 <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p+2;
-        cand_list[counter][2] = base_p+1;
-        counter++;
-    }
-    // p -> (p/2+2, p/2+2) 
-    if (base_p + 2 <= p_ref_left && base_p + 2 <= p_ref_right) {
-        cand_list[counter][0] = 1;
-        cand_list[counter][1] = base_p+2;
-        cand_list[counter][2] = base_p+2;
-        counter++;
-    }
+
+    handle_candidate(base_p, base_p); // p -> (p/2, p/2) 
+    handle_candidate(base_p + 1, base_p); // p -> (p/2+1, p/2) 
+    handle_candidate(base_p, base_p + 1); // p -> (p/2, p/2+1) 
+    handle_candidate(base_p + 1, base_p + 1); // p -> (p/2+1, p/2+1) 
+    handle_candidate(base_p + 2, base_p); // p -> (p/2+2, p/2) 
+    handle_candidate(base_p, base_p + 2); // p -> (p/2, p/2+2) 
+    handle_candidate(base_p + 1, base_p + 2); // p -> (p/2+1, p/2+2) 
+    handle_candidate(base_p + 2, base_p + 1); // p -> (p/2+2, p/2+1) 
+    handle_candidate(base_p + 2, base_p + 2); // p -> (p/2+2, p/2+2) 
 
     return counter;
 }
