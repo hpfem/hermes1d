@@ -99,4 +99,21 @@ double calc_exact_sol_L2_norm(exact_sol_type exact_sol, int n_eq,
                                    double A, double B, int subdivision, 
                                    int order);
 
+
+
+// Selects best hp-refinement from the given list (assumes that reference refinement
+// on that element was p-refinement). Each refinement candidate is a triple of
+// integers. First one means p-refinement (0) or hp-refinement (1). Second and/or
+// third number are the new proposed polynomial degrees.
+int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Element *e_ref, 
+                               double *y_prev_ref, double *bc_left_dir_values,
+			       double *bc_right_dir_values); 
+
+// Selects best hp-refinement from the given list (assumes that reference refinement
+// on that element was hp-refinement)
+int select_hp_refinement_ref_hp(int num_cand, int3 *cand_list, Element *e, Element *e_ref_left, 
+                                Element *e_ref_right, double *y_prev_ref, 
+                                double *bc_left_dir_values, double *bc_right_dir_values); 
+
+
 #endif

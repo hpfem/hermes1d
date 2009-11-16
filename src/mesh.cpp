@@ -5,6 +5,7 @@
 
 #include "mesh.h"
 #include "iterator.h"
+#include "adapt.h"
 
 Element::Element() 
 {
@@ -842,23 +843,47 @@ void Mesh::plot_error_exact(const char *filename,
 }
 
 // Refine all elements in the id_array list whose id_array >= 0
-void Mesh::adapt(Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
-                 int *id_array, double *err_squared_array) 
+void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
+                 double *err_squared_array) 
 {
+  // Find element with largest error
+  double max_elem_error = 0;
+  for(int i=0; i<this->get_n_active_elem(); i++) {
+    double elem_error = sqrt(err_squared_array[i]);
+    if (elem_error > max_elem_error) {
+      max_elem_error = elem_error;
+    }
+  }
+
+  // Create auxiliary array of element indices
+  int id_array[MAX_ELEM_NUM];
+  for(int i=0; i<this->get_n_active_elem(); i++) {
+   if(sqrt(err_squared_array[i]) < threshold*max_elem_error) id_array[i] = -1; 
+   else id_array[i] = i;
+  }
+
+  // Print elements to be refined
+  printf("Elements to be refined:\n");
+  for (int i=0; i<this->get_n_active_elem(); i++) {
+    if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
+                                 sqrt(err_squared_array[i]));
+  }
+
   int adapt_list[MAX_ELEM_NUM];
   int num_to_adapt = 0;
 
   // Create list of elements to be refined, in increasing order
+  for (int i=0; i<this->get_n_active_elem(); i++) printf("id_array[%d] = %d\n", i, id_array[i]);
   for (int i=0; i<this->get_n_active_elem(); i++) {
     if (id_array[i] >= 0) {
-      adapt_list[num_to_adapt] = i;
+      adapt_list[num_to_adapt] = id_array[i];
       num_to_adapt++;
     }
   }
  
   // Debug: Printing list of elements to be refined
-  //printf("refine_elements(): Elements to be refined:\n");
-  //for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
+  printf("refine_elements(): Elements to be refined:\n");
+  for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
 
   Iterator *I = new Iterator(this);
   Iterator *I_ref = new Iterator(mesh_ref);
@@ -866,34 +891,48 @@ void Mesh::adapt(Mesh *mesh_ref, double *y_prev, double *y_prev_ref,
   // Simultaneous traversal of 'this' and 'mesh_ref'.
   // For each element, create a list of refinement 
   // candidates and have it checked. 
-  Element *e;
+  Element *e = I->next_active_element();
+  Element *e_ref = I_ref->next_active_element();
   int counter = 0;
   while (counter != num_to_adapt) {
-    e = I->next_active_element();
-    Element *e_ref = I_ref->next_active_element();
     if (e->id == adapt_list[counter]) {
       counter++;
       int choice = 0;
-      int3 candlist[MAX_CAND_NUM];    // Every refinement candidates consists of three
+      int3 cand_list[MAX_CAND_NUM];    // Every refinement candidates consists of three
                                       // numbers: 1/0 whether it is a p-candidate or not,
                                       // and then either one or two polynomial degrees
-      int num_cand = e->create_cand_list(candlist);
-      e->print_cand_list(num_cand, candlist);
+      int num_cand = e->create_cand_list(cand_list);
+      // debug:
+      //e->print_cand_list(num_cand, cand_list);
       if (e->level == e_ref->level) { // element 'e' was not refined in space
                                       // for reference solution
-        //choice = select_hp_refinement_ref_p(num_cand, candlist, e, e_ref, y_prev, y_prev_ref, 
-        //                                    this->bc_left_dir_values,
-	//  		                    this->bc_right_dir_values);
+        choice = select_hp_refinement_ref_p(num_cand, cand_list, e, e_ref, y_prev_ref, 
+                                            this->bc_left_dir_values,
+	  		                    this->bc_right_dir_values);
       }
       else { // element 'e' was refined in space for reference solution
         Element* e_ref_left = e_ref;
         Element* e_ref_right = I_ref->next_active_element();
-        //choice = select_hp_refinement_ref_hp(num_cand, candlist, e, e_ref_left, e_ref_right, y_prev, y_prev_ref, 
-        //                                   this->bc_left_dir_values,
-	//		                   this->bc_right_dir_values);
+        choice = select_hp_refinement_ref_hp(num_cand, cand_list, e, e_ref_left, 
+                                             e_ref_right, y_prev_ref, 
+                                             this->bc_left_dir_values,
+			                     this->bc_right_dir_values);
       }
+      Element *e_last = e;
+      e = I->next_active_element();
+      e_ref = I_ref->next_active_element();
       // perform the refinement
-      e->refine(candlist[choice]);
+      printf("Refining element (%g, %g), cand = (%d %d %d)\n", e_last->x1, e_last->x2, 
+             cand_list[choice][0], cand_list[choice][1], cand_list[choice][2]);
+      e_last->refine(cand_list[choice]);
+      if(cand_list[choice][0] == 1) this->n_active_elem++; 
+    }
+    else {
+      e = I->next_active_element();
+      e_ref = I_ref->next_active_element();
+      if (e->level != e_ref->level) { 
+        e_ref = I_ref->next_active_element();
+      }    
     }
   }
 }

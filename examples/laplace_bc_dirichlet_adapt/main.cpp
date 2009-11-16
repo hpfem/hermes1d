@@ -2,25 +2,25 @@
 
 // ********************************************************************
 
-// This example solves the Poisson equation -u'' - f = 0 in
-// an interval (A, B), equipped with Dirichlet boundary
-// conditions on both end points. This example shows how to 
-// measure error wrt. exact solution (if available).
+// This example solves adaptively the Poisson equation -u'' - f = 0 
+// in an interval (A, B), equipped with Dirichlet boundary
+// conditions on both end points. Among others it shows how 
+// one can measure error wrt. exact solution (if available).
 
 // General input:
 static int N_eq = 1;
-int N_elem = 2;                         // number of elements
-double A = 0, B = M_PI;                 // domain end points
-int P_init = 1;                         // initial polynomal degree
+int N_elem = 3;                         // Number of elements
+double A = 0, B = 2*M_PI;               // Domain end points
+int P_init = 1;                         // Initial polynomal degree
 
-// Error tolerance
-double TOL_NEWTON_COARSE = 1e-5;  // tolerance for the Newton's method on coarse mesh
-double TOL_NEWTON_REF = 1e-3;     // tolerance for the Newton's method on reference mesh
+// Stopping criteria for Newton
+double TOL_NEWTON_COARSE = 1e-5;        // Coarse mesh
+double TOL_NEWTON_REF = 1e-3;           // Reference mesh
 
 // Adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-5;        // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1.0;         // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 // Boundary conditions
 double Val_dir_left = 0;                // Dirichlet condition left
@@ -36,6 +36,38 @@ const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
   u[0] = sin(x);
   dudx[0] = cos(x);
+}
+
+// ********************************************************************
+
+void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref) 
+{
+  // Plot the coarse mesh solution
+  Linearizer l(mesh);
+  const char *out_filename = "solution.gp";
+  l.plot_solution(out_filename, y_prev);
+
+  // Plot the reference solution
+  Linearizer lxx(mesh_ref);
+  const char *out_filename2 = "solution_ref.gp";
+  lxx.plot_solution(out_filename2, y_prev_ref);
+
+  // Plot the coarse and reference mesh
+  const char *mesh_filename = "mesh.gp";
+  mesh->plot(mesh_filename);
+  const char *mesh_ref_filename = "mesh_ref.gp";
+  mesh_ref->plot(mesh_ref_filename);
+
+  // Plot the error estimate (difference between 
+  // coarse and reference mesh solutions)
+  const char *err_est_filename = "error_est.gp";
+  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
+
+  // Plot error wrt. exact solution (if available)
+  if (EXACT_SOL_PROVIDED) {   
+    const char *err_exact_filename = "error_exact.gp";
+    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
+  }
 }
 
 // ********************************************************************
@@ -160,7 +192,10 @@ int main() {
       printf("Finished coarse mesh Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
-    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+    for(int i=0; i<N_dof; i++) {
+      printf("y_prev[%d] = %g\n", i, y_prev[i]);
+      y_prev[i] += res[i];
+    }
 
     // Create reference mesh
     printf("Creating reference mesh.\n");
@@ -243,10 +278,13 @@ int main() {
       printf("Finished fine mesh Newton iteration: %d\n", newton_iterations_ref);
     }
     // Update y_prev by the increment stored in res
-    for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
+    for(int i=0; i<N_dof_ref; i++) {
+      y_prev_ref[i] += res_ref[i];
+      printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
+    }
 
     // Estimate element errors (squared)
-    double err_est_L2_squared_array[MAX_ELEM_NUM]; //FIXME - change this to dynamic allocation
+    double err_est_L2_squared_array[MAX_ELEM_NUM]; 
     double err_est_L2_total = calc_elem_est_L2_errors_squared(mesh, mesh_ref, y_prev, 
                               y_prev_ref, err_est_L2_squared_array);
 
@@ -274,68 +312,18 @@ int main() {
     }
 
     // Decide whether the relative error is sufficiently small
-    if(err_est_L2_rel < TOL_ERR_REL) break;
-
-    // Sort elements according to their error in decreasing order
-    int id_array[MAX_ELEM_NUM];
-    for(int i=0; i<mesh->get_n_active_elem(); i++) id_array[i] = i;
-    sort_element_errors(mesh->get_n_active_elem(), 
-                        err_est_L2_squared_array, id_array);
-
-    // Print sorted list of elements along with the errors
-    printf("Elements sorted according to their error::\n");
-    for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      printf("Elem[%d], error = %g\n", id_array[i], sqrt(err_est_L2_squared_array[i]));
-    }
-
-    // Decide which elements will be refined
-    double max_elem_error = sqrt(err_est_L2_squared_array[0]);
-    for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      if(sqrt(err_est_L2_squared_array[i]) < THRESHOLD*max_elem_error) id_array[i] = -1; 
-    }
-    
-    // Print elements to be refined
-    printf("Elements to be refined:\n");
-    for (int i=0; i<mesh->get_n_active_elem(); i++) {
-      if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
-                                   sqrt(err_est_L2_squared_array[i]));
-    }
+    if(err_est_L2_rel*100 < TOL_ERR_REL) break;
+  
+    // Refine elements in the id_array list whose id_array >= 0
+    mesh->adapt(THRESHOLD, mesh_ref, y_prev, y_prev_ref, err_est_L2_squared_array);
 
     if (adapt_iterations == 1) break;
- 
-    // Refine elements in the id_array list whose id_array >= 0
-    mesh->adapt(mesh_ref, y_prev, y_prev_ref, id_array, err_est_L2_squared_array);
 
     adapt_iterations++;
   };
 
-  // Plot the coarse mesh solution
-  Linearizer l(mesh);
-  const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev);
-
-  // Plot the reference solution
-  Linearizer lxx(mesh_ref);
-  const char *out_filename2 = "solution_ref.gp";
-  lxx.plot_solution(out_filename2, y_prev_ref);
-
-  // Plot the coarse and reference mesh
-  const char *mesh_filename = "mesh.gp";
-  mesh->plot(mesh_filename);
-  const char *mesh_ref_filename = "mesh_ref.gp";
-  mesh_ref->plot(mesh_ref_filename);
-
-  // Plot the error estimate (difference between 
-  // coarse and reference mesh solutions)
-  const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
-
-  // Plot error wrt. exact solution (if available)
-  if (EXACT_SOL_PROVIDED) {   
-    const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
-  }
-
+  // Plot meshes, results, and errors
+  plotting(mesh, mesh_ref, y_prev, y_prev_ref);
 
   printf("Done.\n");
   return 1;

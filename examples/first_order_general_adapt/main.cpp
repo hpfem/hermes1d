@@ -15,14 +15,14 @@ const double A = 0, B = 10;             // Domain end points
 const double YA = 1;                    // Equation parameter
 const int P_init = 1;                   // Initial polynomal degree
 
-// Tolerances for Newton methods
+// Stopping criteria for Newton
 const double TOL_NEWTON_COARSE = 1e-5;  // Coarse mesh
 const double TOL_NEWTON_REF = 1e-3;     // Reference mesh
 
 // Adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-5;        // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1.0;         // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
  
 // Right-hand side function f(y, x)
@@ -42,6 +42,38 @@ const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
   u[0] = 1./(x+1);
   dudx[0] = -1/((x+1)*(x+1));
+}
+
+// ********************************************************************
+
+void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref) 
+{
+  // Plot the coarse mesh solution
+  Linearizer l(mesh);
+  const char *out_filename = "solution.gp";
+  l.plot_solution(out_filename, y_prev);
+
+  // Plot the reference solution
+  Linearizer lxx(mesh_ref);
+  const char *out_filename2 = "solution_ref.gp";
+  lxx.plot_solution(out_filename2, y_prev_ref);
+
+  // Plot the coarse and reference mesh
+  const char *mesh_filename = "mesh.gp";
+  mesh->plot(mesh_filename);
+  const char *mesh_ref_filename = "mesh_ref.gp";
+  mesh_ref->plot(mesh_ref_filename);
+
+  // Plot the error estimate (difference between 
+  // coarse and reference mesh solutions)
+  const char *err_est_filename = "error_est.gp";
+  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
+
+  // Plot error wrt. exact solution (if available)
+  if (EXACT_SOL_PROVIDED) {   
+    const char *err_exact_filename = "error_exact.gp";
+    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
+  }
 }
 
 // ********************************************************************
@@ -306,8 +338,6 @@ int main() {
       if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
                                    sqrt(err_est_squared_array[i]));
     }
-
-    if (adapt_iterations == 3) break;
  
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(mesh_ref, y_prev, y_prev_ref, id_array, err_est_squared_array);
@@ -315,32 +345,8 @@ int main() {
     adapt_iterations++;
   };
 
-  // Plot the coarse mesh solution
-  Linearizer l(mesh);
-  const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev);
-
-  // Plot the reference solution
-  Linearizer lxx(mesh_ref);
-  const char *out_filename2 = "solution_ref.gp";
-  lxx.plot_solution(out_filename2, y_prev_ref);
-
-  // Plot the coarse and reference mesh
-  const char *mesh_filename = "mesh.gp";
-  mesh->plot(mesh_filename);
-  const char *mesh_ref_filename = "mesh_ref.gp";
-  mesh_ref->plot(mesh_ref_filename);
-
-  // Plot error estimate (difference of coarse and reference
-  // mesh solutions)
-  const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
-
-  // Plot error wrt. exact solution (if available)
-  if (EXACT_SOL_PROVIDED) {   
-    const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
-  }
+  // Plot meshes, results, and errors
+  plotting(mesh, mesh_ref, y_prev, y_prev_ref);
 
   printf("Done.\n");
   return 1;
