@@ -395,8 +395,10 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
-  if (err_total < 1e-10)
-      error("Internal error in check_refin_coarse_hp_fine_hp: bad refinement candidate (err_total=0)");
+  if (err_total < 1e-10) {
+      printf("candidate (1 %d %d)\n", p_left, p_right);
+      warning("in check_refin_coarse_hp_fine_hp: bad refinement candidate (err_total=0)");
+  }
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 
@@ -558,8 +560,10 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
-  if (err_total < 1e-10)
-      error("Internal error in check_refin_coarse_hp_fine_p: bad refinement candidate (err_total=0)");
+  if (err_total < 1e-10) {
+      printf("candidate (1 %d %d)\n", p_left, p_right);
+      warning("in check_refin_coarse_hp_fine_p: bad refinement candidate (err_total=0)");
+  }
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 
@@ -727,8 +731,10 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
-  if (err_total < 1e-10)
-      error("Internal error in check_refin_coarse_p_fine_hp: bad refinement candidate (err_total=0)");
+  if (err_total < 1e-10) {
+      printf("candidate (0 %d -1)\n", p);
+      warning("in check_refin_coarse_p_fine_hp: bad refinement candidate (err_total=0)");
+  }
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 
@@ -818,8 +824,10 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += err_squared[c];
   }
-  if (err_total < 1e-10)
-      error("Internal error in check_refin_coarse_p_fine_p: bad refinement candidate (err_total=0)");
+  if (err_total < 1e-10) {
+      printf("candidate (0 %d -1)\n", p);
+      warning("in check_refin_coarse_p_fine_p: bad refinement candidate (err_total=0)");
+  }
   err_total = sqrt(err_total);
 
   // penalizing the error by the number of DOF induced by this 

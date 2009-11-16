@@ -11,6 +11,11 @@ void error(const char *msg)
   exit(0);
 };
 
+void warning(const char *msg)
+{
+  printf("Warning: %s\n", msg);
+};
+
 void intro() {
   printf("\n-------------------------------------------\n");
   printf("   This is Hermes1D - a free ODE solver\n");

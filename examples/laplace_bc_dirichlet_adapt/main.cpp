@@ -193,8 +193,8 @@ int main() {
     }
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) {
-      printf("y_prev[%d] = %g\n", i, y_prev[i]);
       y_prev[i] += res[i];
+      printf("y_prev[%d] = %g\n", i, y_prev[i]);
     }
 
     // Create reference mesh
@@ -282,6 +282,7 @@ int main() {
       y_prev_ref[i] += res_ref[i];
       printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
     }
+    if (adapt_iterations == 3) break;
 
     // Estimate element errors (squared)
     double err_est_L2_squared_array[MAX_ELEM_NUM]; 
@@ -317,7 +318,6 @@ int main() {
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(THRESHOLD, mesh_ref, y_prev, y_prev_ref, err_est_L2_squared_array);
 
-    if (adapt_iterations == 1) break;
 
     adapt_iterations++;
   };
