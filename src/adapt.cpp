@@ -342,18 +342,22 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   double phys_x_right[MAX_PTS_NUM];          // quad points
   double phys_weights_right[MAX_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
-                                 order_right, phys_x_right, phys_weights_right, &pts_num_right); 
+                                 order_right, phys_x_right, 
+                                 phys_weights_right, &pts_num_right); 
 
   // get fine mesh solution values and derivatives on 'e_ref_right'
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_right->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
-                  y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_right->get_solution(phys_x_right, pts_num_right, 
+                            phys_u_ref_right, phys_dudx_ref_right, 
+                            y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in 'e_ref_right'
   double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_right; j++) {
-      leg_pol_values_right[m][j] = legendre(m, e_ref_right->x1, e_ref_right->x2, phys_x_right[j]);
+      leg_pol_values_right[m][j] = legendre(m, e_ref_right->x1, 
+                            e_ref_right->x2, phys_x_right[j]);
     }
   }
 
@@ -439,8 +443,10 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     }
     double plot_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
            plot_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref_left->get_solution(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
-                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    e_ref_left->get_solution(plot_x_left, plot_pts_num, 
+                             plot_u_ref_left, plot_dudx_ref_left, 
+                             y_prev_ref, bc_left_dir_values, 
+                             bc_right_dir_values); 
     // values of reference solution at plotting points right
     double plot_x_right[MAX_PTS_NUM];
     double h_right = (e_ref_right->x2 - e_ref_right->x1)/(plot_pts_num-1);
@@ -469,8 +475,8 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     double plot_leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values_left[m][j] = legendre(m, e->x1, 
-	  				   e->x2, plot_x_left[j]);
+        plot_leg_pol_values_left[m][j] = legendre(m, e_ref_left->x1, 
+                            e_ref_left->x2, plot_x_left[j]);
       }
     }
     // values of projection at plotting points left
@@ -488,8 +494,8 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     double plot_leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values_right[m][j] = legendre(m, e->x1, 
-  					   e->x2, plot_x_right[j]);
+        plot_leg_pol_values_right[m][j] = legendre(m, e_ref_right->x1, 
+                            e_ref_right->x2, plot_x_right[j]);
       }
     }
     // values of projection at plotting points right
