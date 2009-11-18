@@ -322,21 +322,24 @@ int main() {
 
     // add entry to DOF convergence graph
     graph.add_values(1, N_dof, 100 * err_est_L2_rel);
-    graph.save("conv_dof.gp");
 
     // Decide whether the relative error is sufficiently small
     if(err_est_L2_rel*100 < TOL_ERR_REL) break;
+
+    if (adapt_iterations == 3) break;
   
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(THRESHOLD, mesh_ref, y_prev, y_prev_ref, err_est_L2_squared_array);
     N_dof = mesh->assign_dofs();
-
 
     adapt_iterations++;
   };
 
   // Plot meshes, results, and errors
   plotting(mesh, mesh_ref, y_prev, y_prev_ref);
+
+  // Save convergence graph
+  graph.save("conv_dof.gp");
 
   printf("Done.\n");
   return 1;

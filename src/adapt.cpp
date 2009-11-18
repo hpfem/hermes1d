@@ -6,6 +6,9 @@
 #include "transforms.h"
 #include "common.h"
 
+// to debug automatic adaptivity
+int PLOT_CANDIDATE_PROJECTIONS = 1;
+
 // returns values of normalized Legendre polynomials on (a, b)
 double legendre(int i, double a, double b, double x) {  // x \in (a, b)
   double norm_const = sqrt(2/(b-a));
@@ -103,17 +106,21 @@ double calc_elem_est_L2_error_squared_hp(Element *e,
   double phys_x_left[MAX_PTS_NUM];          // quad points
   double phys_weights_left[MAX_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
-                                 order_left, phys_x_left, phys_weights_left, &pts_num_left); 
+                                 order_left, phys_x_left, 
+                                 phys_weights_left, &pts_num_left); 
 
   // get coarse mesh solution values and derivatives on 'e_ref_left'
-  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
   e->get_solution(phys_x_left, pts_num_left, phys_u_left, phys_dudx_left, y_prev, 
                   bc_left_dir_values, bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives on 'e_ref_left'
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
-                  bc_left_dir_values, bc_right_dir_values); 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_left->get_solution(phys_x_left, pts_num_left, 
+                           phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
+                           bc_left_dir_values, bc_right_dir_values); 
 
   // integrate over 'e_ref_left'
   double norm_squared_left[MAX_EQN_NUM];
@@ -132,7 +139,8 @@ double calc_elem_est_L2_error_squared_hp(Element *e,
   double phys_x_right[MAX_PTS_NUM];          // quad points
   double phys_weights_right[MAX_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
-                                 order_right, phys_x_right, phys_weights_right, &pts_num_right); 
+                                 order_right, phys_x_right, 
+                                 phys_weights_right, &pts_num_right); 
 
   // get coarse mesh solution values and derivatives on 'e_ref_right'
   double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], 
@@ -146,7 +154,8 @@ double calc_elem_est_L2_error_squared_hp(Element *e,
          phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
   e_ref_right->get_solution(phys_x_right, pts_num_right, 
                             phys_u_ref_right, phys_dudx_ref_right, 
-                            y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+                            y_prev_ref, bc_left_dir_values, 
+                            bc_right_dir_values); 
 
   // integrate over 'e_ref_right'
   double norm_squared_right[MAX_EQN_NUM];
@@ -192,6 +201,7 @@ double calc_elem_est_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref,
                                           mesh->bc_left_dir_values,
 			                  mesh->bc_right_dir_values);
     }
+    printf("  Elem (%g, %g): err_est = %g\n", e->x1, e->x2, sqrt(err_squared));
     err_squared_array[e->id] = err_squared;
     err_total_squared += err_squared;
   }
@@ -412,6 +422,104 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   int dof_added = dof_new - dof_orig; 
   double error_scaled = -log(err_total) / dof_added; 
 
+  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+
+  // **************************************************************************
+  // Debug - visualizing the reference solution and projection on the candidate
+  // It might be a good idea to move this into a separate function later
+  if (PLOT_CANDIDATE_PROJECTIONS) {
+    static int visit = 0;
+    visit++;
+    int plot_pts_num = 51;
+    // values of reference solution at plotting points left
+    double plot_x_left[MAX_PTS_NUM];
+    double h_left = (e_ref_left->x2 - e_ref_left->x1)/(plot_pts_num-1);
+    for (int i=0; i < plot_pts_num; i++) {
+      plot_x_left[i] = e_ref_left->x1 + i*h_left;
+    }
+    double plot_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    e_ref_left->get_solution(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
+                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    // values of reference solution at plotting points right
+    double plot_x_right[MAX_PTS_NUM];
+    double h_right = (e_ref_right->x2 - e_ref_right->x1)/(plot_pts_num-1);
+    for (int i=0; i < plot_pts_num; i++) {
+      plot_x_right[i] = e_ref_right->x1 + i*h_right;
+    }
+    double plot_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    e_ref_right->get_solution(plot_x_right, plot_pts_num, 
+                              plot_u_ref_right, plot_dudx_ref_right, 
+                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    // plotting the reference solution in the left and right halves
+    char filename_refsol[255];
+    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
+    FILE *f_refsol = fopen(filename_refsol, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+      fprintf(f_refsol, "%g %g\n", plot_x_left[j], plot_u_ref_left[0][j]);
+    }
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+      fprintf(f_refsol, "%g %g\n", plot_x_right[j], plot_u_ref_right[0][j]);
+    }
+    printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
+    fclose(f_refsol);
+    // values of Legendre polynomials at plotting points left
+    double plot_leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+    for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
+      for(int j=0; j<plot_pts_num; j++) {  
+        plot_leg_pol_values_left[m][j] = legendre(m, e->x1, 
+	  				   e->x2, plot_x_left[j]);
+      }
+    }
+    // values of projection at plotting points left
+    double plot_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    for (int c=0; c<n_eq; c++) { // loop over solution components
+      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+        plot_u_left[c][j] = 0;
+        for (int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
+          plot_u_left[c][j] += 
+            plot_leg_pol_values_left[m][j] * proj_coeffs_left[c][m];
+        }
+      }
+    }
+    // values of Legendre polynomials at plotting points right
+    double plot_leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+    for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
+      for(int j=0; j<plot_pts_num; j++) {  
+        plot_leg_pol_values_right[m][j] = legendre(m, e->x1, 
+  					   e->x2, plot_x_right[j]);
+      }
+    }
+    // values of projection at plotting points right
+    double plot_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    for (int c=0; c<n_eq; c++) { // loop over solution components
+      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+        plot_u_right[c][j] = 0;
+        for (int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
+          plot_u_right[c][j] += 
+            plot_leg_pol_values_right[m][j] * proj_coeffs_right[c][m];
+        }
+      }
+    }
+    // plotting the projection on the left and right halves
+    char filename_cand[255];
+    sprintf(filename_cand, "cand_%g_%g_cand_%d_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
+    FILE *f_cand = fopen(filename_cand, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+      fprintf(f_cand, "%g %g\n", plot_x_left[j], plot_u_left[0][j]);
+    }
+    fprintf(f_cand, "\n");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+      fprintf(f_cand, "%g %g\n", plot_x_right[j], plot_u_right[0][j]);
+    }
+    printf("Cand (%g, %g) written to file %s\n", e->x1, e->x2, filename_cand);
+    fclose(f_cand);
+  }
+  // **************************************************************************
+
   return error_scaled; 
 }
 
@@ -439,9 +547,11 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
                                  order_left, phys_x_left, phys_weights_left, &pts_num_left); 
 
   // get fine mesh solution values and derivatives on the left half
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
-                  bc_left_dir_values, bc_right_dir_values); 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, 
+                      phys_dudx_ref_left, y_prev_ref, 
+                      bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in the left half
   double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
@@ -502,10 +612,12 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   double phys_x_right[MAX_PTS_NUM];          // quad points
   double phys_weights_right[MAX_PTS_NUM];    // quad weights
   create_phys_element_quadrature((e->x1 + e->x2)/2., e->x2, 
-                                 order_right, phys_x_right, phys_weights_right, &pts_num_right); 
+                                 order_right, phys_x_right, 
+                                 phys_weights_right, &pts_num_right); 
 
   // get fine mesh solution values and derivatives on the right half
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
   e_ref->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
                   y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
@@ -578,6 +690,104 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   int dof_added = dof_new - dof_orig; 
   double error_scaled = -log(err_total) / dof_added; 
 
+  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+
+  // **************************************************************************
+  // Debug - visualizing the reference solution and projection on the candidate
+  // It might be a good idea to move this into a separate function later
+  if (PLOT_CANDIDATE_PROJECTIONS) {
+    static int visit = 0;
+    visit++;
+    int plot_pts_num = 51;
+    // values of reference solution at plotting points left
+    double plot_x_left[MAX_PTS_NUM];
+    double h_left = ((e->x2 - e->x1)/2)/(plot_pts_num-1);
+    for (int i=0; i < plot_pts_num; i++) {
+      plot_x_left[i] = e->x1 + i*h_left;
+    }
+    double plot_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    e_ref->get_solution(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
+                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    // values of reference solution at plotting points right
+    double plot_x_right[MAX_PTS_NUM];
+    double h_right = ((e->x2 - e->x1)/2)/(plot_pts_num-1);
+    for (int i=0; i < plot_pts_num; i++) {
+      plot_x_right[i] = (e->x1 + e->x2)/2 + i*h_right;
+    }
+    double plot_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    e_ref->get_solution(plot_x_right, plot_pts_num, 
+                              plot_u_ref_right, plot_dudx_ref_right, 
+                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    // plotting the reference solution in the left and right halves
+    char filename_refsol[255];
+    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, p_left, p_right, e_ref->p, visit);
+    FILE *f_refsol = fopen(filename_refsol, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+      fprintf(f_refsol, "%g %g\n", plot_x_left[j], plot_u_ref_left[0][j]);
+    }
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+      fprintf(f_refsol, "%g %g\n", plot_x_right[j], plot_u_ref_right[0][j]);
+    }
+    printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
+    fclose(f_refsol);
+    // values of Legendre polynomials at plotting points left
+    double plot_leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+    for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
+      for(int j=0; j<plot_pts_num; j++) {
+        plot_leg_pol_values_left[m][j] = legendre(m, e->x1, (e->x1 + e->x2)/2,  
+					      plot_x_left[j]);
+      }
+    }
+    // values of projection at plotting points left
+    double plot_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    for (int c=0; c<n_eq; c++) { // loop over solution components
+      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+        plot_u_left[c][j] = 0;
+        for (int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
+          plot_u_left[c][j] += 
+            plot_leg_pol_values_left[m][j] * proj_coeffs_left[c][m];
+        }
+      }
+    }
+    // values of Legendre polynomials at plotting points right
+    double plot_leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+    for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
+      for(int j=0; j<plot_pts_num; j++) {  
+        plot_leg_pol_values_left[m][j] = legendre(m, (e->x1 + e->x2)/2, e->x2, 
+					      plot_x_right[j]);
+      }
+    }
+    // values of projection at plotting points right
+    double plot_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    for (int c=0; c<n_eq; c++) { // loop over solution components
+      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+        plot_u_right[c][j] = 0;
+        for (int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
+          plot_u_right[c][j] += 
+            plot_leg_pol_values_right[m][j] * proj_coeffs_right[c][m];
+        }
+      }
+    }
+    // plotting the projection on the left and right halves
+    char filename_cand[255];
+    sprintf(filename_cand, "cand_%g_%g_cand_%d_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, p_left, p_right, e_ref->p, visit);
+    FILE *f_cand = fopen(filename_cand, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+      fprintf(f_cand, "%g %g\n", plot_x_left[j], plot_u_left[0][j]);
+    }
+    fprintf(f_cand, "\n");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+      fprintf(f_cand, "%g %g\n", plot_x_right[j], plot_u_right[0][j]);
+    }
+    printf("Cand (%g, %g) written to file %s\n", e->x1, e->x2, filename_cand);
+    fclose(f_cand);
+  }
+  // **************************************************************************
+
   return error_scaled;
 }
 
@@ -589,8 +799,6 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
                                     double bc_left_dir_values[MAX_EQN_NUM],
 		                    double bc_right_dir_values[MAX_EQN_NUM])
 {
-  printf("XXX Elem (%g, %g):\n", e->x1, e->x2);
-
   int n_eq = e->dof_size;
 
   // First in 'e_ref_left': 
@@ -674,11 +882,15 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
     }
   }
 
+  // debug
+  //printf("p_fine_hp: e = (%g, %g)\n", e->x1, e->x2);
+
   // add the two parts of projection coefficients
   double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
     for(int c=0; c<n_eq; c++) { // loop over solution components
       proj_coeffs[c][m] = proj_coeffs_left[c][m] + proj_coeffs_right[c][m];
+      //printf("  proj_coeffs[%d][%d] = %g\n", c, m, proj_coeffs[c][m]);
     }
   }
 
@@ -749,6 +961,104 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   int dof_new = p + 1; 
   int dof_added = dof_new - dof_orig; 
   double error_scaled = -log(err_total) / dof_added; 
+
+  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+
+  // **************************************************************************
+  // Debug - visualizing the reference solution and projection on the candidate
+  // It might be a good idea to move this into a separate function later
+  if (PLOT_CANDIDATE_PROJECTIONS) {
+    static int visit = 0;
+    visit++;
+    int plot_pts_num = 51;
+    // values of reference solution at plotting points left
+    double plot_x_left[MAX_PTS_NUM];
+    double h_left = (e_ref_left->x2 - e_ref_left->x1)/(plot_pts_num-1);
+    for (int i=0; i < plot_pts_num; i++) {
+      plot_x_left[i] = e_ref_left->x1 + i*h_left;
+    }
+    double plot_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    e_ref_left->get_solution(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
+                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    // values of reference solution at plotting points right
+    double plot_x_right[MAX_PTS_NUM];
+    double h_right = (e_ref_right->x2 - e_ref_right->x1)/(plot_pts_num-1);
+    for (int i=0; i < plot_pts_num; i++) {
+      plot_x_right[i] = e_ref_right->x1 + i*h_right;
+    }
+    double plot_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    e_ref_right->get_solution(plot_x_right, plot_pts_num, 
+                              plot_u_ref_right, plot_dudx_ref_right, 
+                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    // plotting the reference solution in the left and right halves
+    char filename_refsol[255];
+    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, p, e_ref_left->p, e_ref_right->p, visit);
+    FILE *f_refsol = fopen(filename_refsol, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+      fprintf(f_refsol, "%g %g\n", plot_x_left[j], plot_u_ref_left[0][j]);
+    }
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+      fprintf(f_refsol, "%g %g\n", plot_x_right[j], plot_u_ref_right[0][j]);
+    }
+    printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
+    fclose(f_refsol);
+    // values of Legendre polynomials at plotting points left
+    double plot_leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+    for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+      for(int j=0; j<plot_pts_num; j++) {  
+        plot_leg_pol_values_left[m][j] = legendre(m, e->x1, 
+	  				   e->x2, plot_x_left[j]);
+      }
+    }
+    // values of projection at plotting points left
+    double plot_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    for (int c=0; c<n_eq; c++) { // loop over solution components
+      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+        plot_u_left[c][j] = 0;
+        for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
+          plot_u_left[c][j] += 
+            plot_leg_pol_values_left[m][j] * proj_coeffs[c][m];
+        }
+      }
+    }
+    // values of Legendre polynomials at plotting points right
+    double plot_leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+    for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+      for(int j=0; j<plot_pts_num; j++) {  
+        plot_leg_pol_values_right[m][j] = legendre(m, e->x1, 
+  					   e->x2, plot_x_right[j]);
+      }
+    }
+    // values of projection at plotting points right
+    double plot_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    for (int c=0; c<n_eq; c++) { // loop over solution components
+      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+        plot_u_right[c][j] = 0;
+        for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
+          plot_u_right[c][j] += 
+            plot_leg_pol_values_right[m][j] * proj_coeffs[c][m];
+        }
+      }
+    }
+    // plotting the projection on the left and right halves
+    char filename_cand[255];
+    sprintf(filename_cand, "cand_%g_%g_cand_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, p, e_ref_left->p, e_ref_right->p, visit);
+    FILE *f_cand = fopen(filename_cand, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+      fprintf(f_cand, "%g %g\n", plot_x_left[j], plot_u_left[0][j]);
+    }
+    fprintf(f_cand, "\n");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
+      fprintf(f_cand, "%g %g\n", plot_x_right[j], plot_u_right[0][j]);
+    }
+    printf("Cand (%g, %g) written to file %s\n", e->x1, e->x2, filename_cand);
+    fclose(f_cand);
+  }
+  // **************************************************************************
 
   return error_scaled; 
 }
@@ -843,6 +1153,67 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   int dof_new = p + 1; 
   int dof_added = dof_new - dof_orig; 
   double error_scaled = -log(err_total) / dof_added; 
+
+  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+
+  // **************************************************************************
+  // Debug - visualizing the reference solution and projection on the candidate
+  // It might be a good idea to move this into a separate function later
+  if (PLOT_CANDIDATE_PROJECTIONS) {
+    static int visit = 0;
+    visit++;
+    int plot_pts_num = 51;
+    // values of reference solution at plotting points
+    double plot_x[MAX_PTS_NUM];
+    double h = (e->x2 - e->x1)/(plot_pts_num-1);
+    for (int i=0; i < plot_pts_num; i++) {
+      plot_x[i] = e->x1 + i*h;
+    }
+    double plot_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
+           plot_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
+    e_ref->get_solution(plot_x, plot_pts_num, plot_u_ref, plot_dudx_ref, 
+                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    // plotting the reference solution
+    char filename_refsol[255];
+    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, p, e_ref->p, visit);
+    FILE *f_refsol = fopen(filename_refsol, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting points
+      fprintf(f_refsol, "%g %g\n", plot_x[j], plot_u_ref[0][j]);
+    }
+    printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
+    fclose(f_refsol);
+    // values of Legendre polynomials at plotting points
+    double plot_leg_pol_values[MAX_P+1][MAX_PTS_NUM];
+    for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+      for(int j=0; j<plot_pts_num; j++) {  
+        plot_leg_pol_values[m][j] = legendre(m, e->x1, 
+	  				   e->x2, plot_x[j]);
+      }
+    }
+    // values of projection at plotting points
+    double plot_u[MAX_EQN_NUM][MAX_PTS_NUM];
+    for (int c=0; c<n_eq; c++) { // loop over solution components
+      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points
+        plot_u[c][j] = 0;
+        for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
+          plot_u[c][j] += 
+            plot_leg_pol_values[m][j] * proj_coeffs[c][m];
+        }
+      }
+    }
+    // plotting the projection
+    char filename_cand[255];
+    sprintf(filename_cand, "cand_%g_%g_cand_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, p, e_ref->p, visit);
+    FILE *f_cand = fopen(filename_cand, "wb");
+    for (int j=0; j<plot_pts_num; j++) { // loop over plotting
+      fprintf(f_cand, "%g %g\n", plot_x[j], plot_u[0][j]);
+    }
+    printf("Cand (%g, %g) written to file %s\n", e->x1, e->x2, filename_cand);
+    fclose(f_cand);
+  }
+  // **************************************************************************
 
   return error_scaled; 
 }
@@ -967,7 +1338,7 @@ int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Elemen
                                           bc_left_dir_values,
 					  bc_right_dir_values);
     }
-    printf("Elem (%g, %g): cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
+    printf("  Elem (%g, %g): cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
            cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
     if (crit > crit_max) {
       crit_max = crit;
@@ -977,7 +1348,7 @@ int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Elemen
 
   if (choice == -1) error("Candidate not found in select_hp_refinement_ref_p().");
 
-  printf("Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
   return choice;
 }
 
@@ -1007,7 +1378,7 @@ int select_hp_refinement_ref_hp(int num_cand, int3 *cand_list, Element *e, Eleme
 					      bc_right_dir_values);
     }
 
-    printf("Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
+    printf("  Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
            cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
 
     if (crit > crit_max) {
@@ -1018,7 +1389,7 @@ int select_hp_refinement_ref_hp(int num_cand, int3 *cand_list, Element *e, Eleme
 
   if (choice == -1) error("Candidate not found in select_hp_refinement_ref_hp().");
 
-  printf("Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
   return choice;
 }
 

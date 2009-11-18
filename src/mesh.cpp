@@ -903,7 +903,7 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
   }
  
   // Debug: Printing list of elements to be refined
-  printf("refine_elements(): Elements to be refined:\n");
+  printf("Elements to be refined:\n");
   for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
 
   Iterator *I = new Iterator(this);

@@ -24,7 +24,7 @@ void create_phys_element_quadrature(double a, double b,
   *pts_num = g_quad_1d_std.get_num_points(order);
   for (int i=0;i<*pts_num;i++) {
     //change points and weights from (-1, 1) to (a, b)
-    x_phys[i] = (b-a)/2.*ref_tab[i][0]+(b+a)/2.; 
+    x_phys[i] = (b-a)/2.*ref_tab[i][0] + (b+a)/2.; 
     w_phys[i] = ref_tab[i][1]*(b-a)/2.;
   }
 };

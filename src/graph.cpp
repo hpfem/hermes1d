@@ -248,6 +248,6 @@ void GnuplotGraph::save(const char* filename)
   }  
 
   fprintf(f, "set terminal x11\n");
-  info("Graph saved. Process the file '%s' with gnuplot.", filename);
+  printf("Graph saved. Process the file '%s' with gnuplot.\n", filename);
   fclose(f);
 }
