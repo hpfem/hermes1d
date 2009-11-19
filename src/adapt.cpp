@@ -18,7 +18,13 @@ double legendre(int i, double a, double b, double x) {  // x \in (a, b)
   return norm_const*legendre_fn_tab_1d[i](inverse_map(a, b, x));
 }
 
-double calc_elem_norm_squared(int norm_h1, Element *e, double *y_prev, 
+// returns derivatives of normalized Legendre polynomials on (a, b)
+double legendre_der(int i, double a, double b, double x) {  // x \in (a, b)
+  double norm_const = sqrt(2/(b-a));
+  return norm_const*legendre_der_tab_1d[i](inverse_map(a, b, x));
+}
+
+double calc_elem_norm_squared(int norm, Element *e, double *y_prev, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
 {
@@ -48,7 +54,12 @@ double calc_elem_norm_squared(int norm_h1, Element *e, double *y_prev,
     norm_squared[c] = 0;
     for (int i=0; i<pts_num; i++) {
       double val = phys_val[c][i];
-      norm_squared[c] += val * val * phys_weights[i];
+      if (norm == 1) {
+        double der;
+        der = phys_der[c][i];
+        norm_squared[c] += (val*val + der*der) * phys_weights[i];
+      }
+      else norm_squared[c] += val*val * phys_weights[i];
     }
   }
 
@@ -58,7 +69,7 @@ double calc_elem_norm_squared(int norm_h1, Element *e, double *y_prev,
   return elem_norm_squared;
 }
 
-double calc_elem_est_error_squared_p(int norm_h1, Element *e, Element *e_ref, 
+double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref, 
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
@@ -86,8 +97,12 @@ double calc_elem_est_error_squared_p(int norm_h1, Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) {
     norm_squared[c] = 0;
     for (int i=0; i<pts_num; i++) {
-      double diff = phys_u_ref[c][i] - phys_u[c][i];
-      norm_squared[c] += diff*diff*phys_weights[i];
+      double diff_val = phys_u_ref[c][i] - phys_u[c][i];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref[c][i] - phys_dudx[c][i];
+        norm_squared[c] += (diff_val*diff_val + diff_der*diff_der)*phys_weights[i];
+      }
+      else norm_squared[c] += diff_val*diff_val*phys_weights[i];
     }
   }
 
@@ -97,7 +112,7 @@ double calc_elem_est_error_squared_p(int norm_h1, Element *e, Element *e_ref,
   return err_squared;
 }
 
-double calc_elem_est_error_squared_hp(int norm_h1, Element *e, 
+double calc_elem_est_error_squared_hp(int norm, Element *e, 
 				   Element *e_ref_left, Element *e_ref_right,
                                    double *y_prev, double *y_prev_ref, 
                                    double bc_left_dir_values[MAX_EQN_NUM],
@@ -131,8 +146,13 @@ double calc_elem_est_error_squared_hp(int norm_h1, Element *e,
   for (int c=0; c<n_eq; c++) {
     norm_squared_left[c] = 0;
     for (int i=0; i<pts_num_left; i++) {
-      double diff = phys_u_ref_left[c][i] - phys_u_left[c][i];
-      norm_squared_left[c] += diff*diff*phys_weights_left[i];
+      double diff_val = phys_u_ref_left[c][i] - phys_u_left[c][i];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref_left[c][i] - phys_dudx_left[c][i];
+        norm_squared_left[c] += (diff_val*diff_val + diff_der*diff_der)
+                                 * phys_weights_left[i];
+      }
+      else norm_squared_left[c] += diff_val*diff_val*phys_weights_left[i];
     }
   }
 
@@ -165,8 +185,13 @@ double calc_elem_est_error_squared_hp(int norm_h1, Element *e,
   for (int c=0; c<n_eq; c++) {
     norm_squared_right[c] = 0;
     for (int i=0; i<pts_num_right; i++) {
-      double diff = phys_u_ref_right[c][i] - phys_u_right[c][i];
-      norm_squared_right[c] += diff*diff*phys_weights_right[i];
+      double diff_val = phys_u_ref_right[c][i] - phys_u_right[c][i];
+      if (norm == 1) {
+        double diff_der = phys_u_ref_right[c][i] - phys_u_right[c][i];
+        norm_squared_right[c] += (diff_val*diff_val + diff_der*diff_der)
+                                  * phys_weights_right[i];
+      }
+      else norm_squared_right[c] += diff_val*diff_val*phys_weights_right[i];
     }
   }
 
@@ -177,7 +202,7 @@ double calc_elem_est_error_squared_hp(int norm_h1, Element *e,
   return err_squared;
 }
 
-double calc_elem_est_errors_squared(int norm_h1, Mesh* mesh, Mesh* mesh_ref, 
+double calc_elem_est_errors_squared(int norm, Mesh* mesh, Mesh* mesh_ref, 
 				    double* y_prev, double* y_prev_ref, 
 				    double *err_squared_array)
 {
@@ -192,14 +217,14 @@ double calc_elem_est_errors_squared(int norm_h1, Mesh* mesh, Mesh* mesh_ref,
     double err_squared;
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      err_squared = calc_elem_est_error_squared_p(norm_h1, e, e_ref, y_prev, y_prev_ref, 
+      err_squared = calc_elem_est_error_squared_p(norm, e, e_ref, y_prev, y_prev_ref, 
                                          mesh->bc_left_dir_values,
 			                 mesh->bc_right_dir_values);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
-      err_squared = calc_elem_est_error_squared_hp(norm_h1, e, e_ref_left, e_ref_right, 
+      err_squared = calc_elem_est_error_squared_hp(norm, e, e_ref_left, e_ref_right, 
                                           y_prev, y_prev_ref, 
                                           mesh->bc_left_dir_values,
 			                  mesh->bc_right_dir_values);
@@ -211,7 +236,7 @@ double calc_elem_est_errors_squared(int norm_h1, Mesh* mesh, Mesh* mesh_ref,
   return sqrt(err_total_squared);
 }
 
-double calc_approx_sol_norm(int norm_h1, Mesh* mesh, double* y_prev)
+double calc_approx_sol_norm(int norm, Mesh* mesh, double* y_prev)
 {
   double norm_squared = 0;
   Iterator *I = new Iterator(mesh);
@@ -220,7 +245,7 @@ double calc_approx_sol_norm(int norm_h1, Mesh* mesh, double* y_prev)
   // in every element 
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
-    norm_squared += calc_elem_norm_squared(norm_h1, e, y_prev,
+    norm_squared += calc_elem_norm_squared(norm, e, y_prev,
                                            mesh->bc_left_dir_values,
 			                   mesh->bc_right_dir_values);
   }
@@ -260,7 +285,8 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on 'e_ref_left'
 // and degree 'p_right' on 'e_ref_right'
-double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
+double check_refin_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left, 
+                                     Element *e_ref_right, 
                                      double *y_prev_ref, int p_left, int p_right, 
                                      double bc_left_dir_values[MAX_EQN_NUM],
 		                     double bc_right_dir_values[MAX_EQN_NUM])
@@ -277,7 +303,8 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   double phys_x_left[MAX_PTS_NUM];          // quad points
   double phys_weights_left[MAX_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
-                                 order_left, phys_x_left, phys_weights_left, &pts_num_left); 
+                                 order_left, phys_x_left, phys_weights_left, 
+                                 &pts_num_left); 
 
   // get fine mesh solution values and derivatives on 'e_ref_left'
   double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
@@ -287,10 +314,15 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
                            bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in 'e_ref_left'
-  double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
-      leg_pol_values_left[m][j] = legendre(m, e_ref_left->x1, e_ref_left->x2, phys_x_left[j]);
+      leg_pol_val_left[m][j] = legendre(m, e_ref_left->x1, e_ref_left->x2, 
+                                  phys_x_left[j]);
+      if (norm == 1) leg_pol_der_left[m][j] = legendre_der(m, 
+                                  e_ref_left->x1, e_ref_left->x2, 
+                                  phys_x_left[j]);
     }
   }
 
@@ -305,7 +337,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
       proj_coeffs_left[c][m] = 0;
       for(int j=0; j<pts_num_left; j++) { // loop over integration points
         proj_coeffs_left[c][m] += 
-          phys_u_ref_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
+          phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
       }
       //printf("proj_coeffs_left[%d][%d] = %g\n", c, m, proj_coeffs_left[c][m]);
     }
@@ -314,12 +346,17 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   // evaluate the projection in 'e_ref_left' for every solution component
   // and every integration point
   double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
       phys_u_left[c][j] = 0;
       for (int m=0; m<p_left+1; m++) { // loop over transf. Leg. polynomials
         phys_u_left[c][j] += 
-          leg_pol_values_left[m][j] * proj_coeffs_left[c][m];
+          leg_pol_val_left[m][j] * proj_coeffs_left[c][m];
+        if (norm == 1) {
+          phys_dudx_left[c][j] += 
+            leg_pol_der_left[m][j] * proj_coeffs_left[c][m];
+        }
       }
     }
   }
@@ -330,8 +367,13 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_left[c] = 0;
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
-      double diff = phys_u_ref_left[c][j] - phys_u_left[c][j];
-      err_squared_left[c] += diff * diff * phys_weights_left[j]; 
+      double diff_val = phys_u_ref_left[c][j] - phys_u_left[c][j];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref_left[c][j] - phys_dudx_left[c][j];
+        err_squared_left[c] += (diff_val*diff_val +diff_der*diff_der) 
+                                * phys_weights_left[j]; 
+      }
+      else err_squared_left[c] += diff_val * diff_val * phys_weights_left[j]; 
     }
   }
 
@@ -356,10 +398,13 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in 'e_ref_right'
-  double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_right; j++) {
-      leg_pol_values_right[m][j] = legendre(m, e_ref_right->x1, 
+      leg_pol_val_right[m][j] = legendre(m, e_ref_right->x1, 
+                            e_ref_right->x2, phys_x_right[j]);
+      if (norm == 1) leg_pol_der_right[m][j] = legendre_der(m, e_ref_right->x1, 
                             e_ref_right->x2, phys_x_right[j]);
     }
   }
@@ -375,7 +420,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
       proj_coeffs_right[c][m] = 0;
       for(int j=0; j<pts_num_right; j++) { // loop over integration points
         proj_coeffs_right[c][m] += 
-          phys_u_ref_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
+          phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
       }
       //printf("proj_coeffs_right[%d][%d] = %g\n", c, m, proj_coeffs_right[c][m]);
     }
@@ -384,12 +429,15 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   // evaluate the projection in 'e_ref_right' for every solution component
   // and every integration point
   double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_right; j++) { // loop over integration points
       phys_u_right[c][j] = 0;
       for (int m=0; m<p_right+1; m++) { // loop over transf. Leg. polynomials
         phys_u_right[c][j] += 
-          leg_pol_values_right[m][j] * proj_coeffs_right[c][m];
+          leg_pol_val_right[m][j] * proj_coeffs_right[c][m];
+        if (norm == 1) phys_dudx_right[c][j] += 
+          leg_pol_der_right[m][j] * proj_coeffs_right[c][m];
       }
     }
   }
@@ -400,8 +448,13 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_right[c] = 0;
     for (int j=0; j<pts_num_right; j++) { // loop over integration points
-      double diff = phys_u_ref_right[c][j] - phys_u_right[c][j];
-      err_squared_right[c] += diff * diff * phys_weights_right[j]; 
+      double diff_val = phys_u_ref_right[c][j] - phys_u_right[c][j];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref_right[c][j] - phys_dudx_right[c][j];
+        err_squared_right[c] += (diff_val*diff_val + diff_der*diff_der) 
+                                 * phys_weights_right[j]; 
+      }
+      else err_squared_right[c] += diff_val * diff_val * phys_weights_right[j]; 
     }
   }
 
@@ -475,10 +528,10 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points left
-    double plot_leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values_left[m][j] = legendre(m, e_ref_left->x1, 
+        plot_leg_pol_val_left[m][j] = legendre(m, e_ref_left->x1, 
                             e_ref_left->x2, plot_x_left[j]);
       }
     }
@@ -489,15 +542,15 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
         plot_u_left[c][j] = 0;
         for (int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
           plot_u_left[c][j] += 
-            plot_leg_pol_values_left[m][j] * proj_coeffs_left[c][m];
+            plot_leg_pol_val_left[m][j] * proj_coeffs_left[c][m];
         }
       }
     }
     // values of Legendre polynomials at plotting points right
-    double plot_leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values_right[m][j] = legendre(m, e_ref_right->x1, 
+        plot_leg_pol_val_right[m][j] = legendre(m, e_ref_right->x1, 
                             e_ref_right->x2, plot_x_right[j]);
       }
     }
@@ -508,7 +561,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
         plot_u_right[c][j] = 0;
         for (int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
           plot_u_right[c][j] += 
-            plot_leg_pol_values_right[m][j] * proj_coeffs_right[c][m];
+            plot_leg_pol_val_right[m][j] * proj_coeffs_right[c][m];
         }
       }
     }
@@ -536,7 +589,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
 // The reference solution is projected onto the space of (discontinuous) 
 // polynomials of degree 'p_left' on the left half of 'e' and degree 
 // 'p_right' on the right half of 'e' 
-double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
+double check_refin_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
                                     double *y_prev_ref, int p_left, int p_right,
                                     double bc_left_dir_values[MAX_EQN_NUM],
 		                    double bc_right_dir_values[MAX_EQN_NUM])
@@ -563,10 +616,13 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
                       bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in the left half
-  double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
-      leg_pol_values_left[m][j] = legendre(m, e->x1, (e->x1 + e->x2)/2,  
+      leg_pol_val_left[m][j] = legendre(m, e->x1, (e->x1 + e->x2)/2,  
+					      phys_x_left[j]);
+      if (norm == 1) leg_pol_der_left[m][j] = legendre_der(m, e->x1, (e->x1 + e->x2)/2,  
 					      phys_x_left[j]);
     }
   }
@@ -582,7 +638,7 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
       proj_coeffs_left[c][m] = 0;
       for(int j=0; j<pts_num_left; j++) { // loop over integration points
         proj_coeffs_left[c][m] += 
-          phys_u_ref_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
+          phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
       }
     }
   }
@@ -590,12 +646,15 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   // evaluate the projection on the left half for every solution component
   // and every integration point
   double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
       phys_u_left[c][j] = 0;
       for (int m=0; m<p_left+1; m++) { // loop over transf. Leg. polynomials
         phys_u_left[c][j] += 
-          leg_pol_values_left[m][j] * proj_coeffs_left[c][m];
+          leg_pol_val_left[m][j] * proj_coeffs_left[c][m];
+        if (norm == 1) phys_dudx_left[c][j] += 
+          leg_pol_der_left[m][j] * proj_coeffs_left[c][m];
       }
     }
   }
@@ -606,8 +665,13 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_left[c] = 0;
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
-      double diff = phys_u_ref_left[c][j] - phys_u_left[c][j];
-      err_squared_left[c] += diff * diff * phys_weights_left[j]; 
+      double diff_val = phys_u_ref_left[c][j] - phys_u_left[c][j];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref_left[c][j] - phys_dudx_left[c][j];
+        err_squared_left[c] += (diff_val*diff_val + diff_der*diff_der) 
+                                * phys_weights_left[j]; 
+      }
+      else err_squared_left[c] += diff_val * diff_val * phys_weights_left[j]; 
     }
   }
 
@@ -631,10 +695,14 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
                   y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials on the right half
-  double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j<pts_num_right; j++) {
-      leg_pol_values_right[m][j] = legendre(m, (e->x1 + e->x2)/2, e->x2,  
+  double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
+  for(int m=0; m < p_right + 1; m++) { // loop over transf. Leg. polynomials
+    for(int j=0; j < pts_num_right; j++) {
+      leg_pol_val_right[m][j] = legendre(m, (e->x1 + e->x2)/2, e->x2,  
+					     phys_x_right[j]);
+      if (norm == 1) leg_pol_val_right[m][j] = legendre_der(m, 
+                                             (e->x1 + e->x2)/2, e->x2,  
 					     phys_x_right[j]);
     }
   }
@@ -645,12 +713,12 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   // are just integrals of the fine mesh solution with 
   // the transformed Legendre polynomials
   double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
+  for(int m=0; m < p_right + 1; m++) { // loop over transf. Leg. polynomials
+    for(int c=0; c < n_eq; c++) { // loop over solution components
       proj_coeffs_right[c][m] = 0;
-      for(int j=0; j<pts_num_right; j++) { // loop over integration points
+      for(int j=0; j < pts_num_right; j++) { // loop over integration points
         proj_coeffs_right[c][m] += 
-          phys_u_ref_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
+          phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
       }
     }
   }
@@ -658,12 +726,15 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   // evaluate the projection on the right half for every solution component
   // and every integration point
   double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
-    for (int j=0; j<pts_num_right; j++) { // loop over integration points
+  double phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  for (int c=0; c < n_eq; c++) { // loop over solution components
+    for (int j=0; j < pts_num_right; j++) { // loop over integration points
       phys_u_right[c][j] = 0;
-      for (int m=0; m<p_right+1; m++) { // loop over transf. Leg. polynomials
+      for (int m=0; m < p_right+1; m++) { // loop over transf. Leg. polynomials
         phys_u_right[c][j] += 
-          leg_pol_values_right[m][j] * proj_coeffs_right[c][m];
+          leg_pol_val_right[m][j] * proj_coeffs_right[c][m];
+        if (norm == 1) phys_dudx_right[c][j] += 
+          leg_pol_der_right[m][j] * proj_coeffs_right[c][m];
       }
     }
   }
@@ -674,8 +745,13 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_right[c] = 0;
     for (int j=0; j<pts_num_right; j++) { // loop over integration points
-      double diff = phys_u_ref_right[c][j] - phys_u_right[c][j];
-      err_squared_right[c] += diff * diff * phys_weights_right[j]; 
+      double diff_val = phys_u_ref_right[c][j] - phys_u_right[c][j];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref_right[c][j] - phys_dudx_right[c][j];
+        err_squared_right[c] += (diff_val*diff_val + diff_der*diff_der) 
+                                 * phys_weights_right[j]; 
+      }
+      else err_squared_right[c] += diff_val * diff_val * phys_weights_right[j]; 
     }
   }
 
@@ -743,10 +819,10 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points left
-    double plot_leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {
-        plot_leg_pol_values_left[m][j] = legendre(m, e->x1, (e->x1 + e->x2)/2,  
+        plot_leg_pol_val_left[m][j] = legendre(m, e->x1, (e->x1 + e->x2)/2,  
 					      plot_x_left[j]);
       }
     }
@@ -757,15 +833,15 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
         plot_u_left[c][j] = 0;
         for (int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
           plot_u_left[c][j] += 
-            plot_leg_pol_values_left[m][j] * proj_coeffs_left[c][m];
+            plot_leg_pol_val_left[m][j] * proj_coeffs_left[c][m];
         }
       }
     }
     // values of Legendre polynomials at plotting points right
-    double plot_leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values_left[m][j] = legendre(m, (e->x1 + e->x2)/2, e->x2, 
+        plot_leg_pol_val_left[m][j] = legendre(m, (e->x1 + e->x2)/2, e->x2, 
 					      plot_x_right[j]);
       }
     }
@@ -776,7 +852,7 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
         plot_u_right[c][j] = 0;
         for (int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
           plot_u_right[c][j] += 
-            plot_leg_pol_values_right[m][j] * proj_coeffs_right[c][m];
+            plot_leg_pol_val_right[m][j] * proj_coeffs_right[c][m];
         }
       }
     }
@@ -803,7 +879,8 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // polynomials of degree 'p' on 'e'
-double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
+double check_refin_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left, 
+                                    Element *e_ref_right, 
                                     double *y_prev_ref, int p,
                                     double bc_left_dir_values[MAX_EQN_NUM],
 		                    double bc_right_dir_values[MAX_EQN_NUM])
@@ -829,11 +906,14 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
                            bc_left_dir_values, bc_right_dir_values); 
 
   // get values of (original) Legendre polynomials in 'e_ref_left'
-  double leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
-      leg_pol_values_left[m][j] = legendre(m, e->x1, 
+      leg_pol_val_left[m][j] = legendre(m, e->x1, 
 					   e->x2, phys_x_left[j]);
+      if (norm == 1) leg_pol_der_left[m][j] = legendre_der(m, e->x1, 
+					      e->x2, phys_x_left[j]);
     }
   }
 
@@ -844,7 +924,7 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
       proj_coeffs_left[c][m] = 0;
       for(int j=0; j<pts_num_left; j++) { // loop over integration points
         proj_coeffs_left[c][m] += 
-          phys_u_ref_left[c][j] * leg_pol_values_left[m][j] * phys_weights_left[j];
+          phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
       }
       //printf("proj_coeffs_left[%d][%d] = %g\n", c, m, proj_coeffs_left[c][m]);
     }
@@ -870,11 +950,14 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // get values of (original) Legendre polynomials in 'e_ref_right'
-  double leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int j=0; j<pts_num_right; j++) {
-      leg_pol_values_right[m][j] = legendre(m, e->x1, 
+    for(int j=0; j < pts_num_right; j++) {
+      leg_pol_val_right[m][j] = legendre(m, e->x1, 
 					    e->x2, phys_x_right[j]);
+      if (norm == 1) leg_pol_der_right[m][j] = legendre_der(m, e->x1, 
+					       e->x2, phys_x_right[j]);
     }
   }
 
@@ -885,7 +968,7 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
       proj_coeffs_right[c][m] = 0;
       for(int j=0; j<pts_num_right; j++) { // loop over integration points
         proj_coeffs_right[c][m] += 
-          phys_u_ref_right[c][j] * leg_pol_values_right[m][j] * phys_weights_right[j];
+          phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
       }
       //printf("proj_coeffs_right[%d][%d] = %g\n", c, m, proj_coeffs_right[c][m]);
     }
@@ -906,12 +989,15 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   // evaluate the projection in 'e_ref_left' for every solution component
   // and every integration point
   double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points left
       phys_u_left[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
         phys_u_left[c][j] += 
-          leg_pol_values_left[m][j] * proj_coeffs[c][m];
+          leg_pol_val_left[m][j] * proj_coeffs[c][m];
+        if (norm == 1) phys_dudx_left[c][j] += 
+          leg_pol_der_left[m][j] * proj_coeffs[c][m];
       }
     }
   }
@@ -919,12 +1005,15 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   // evaluate the projection in 'e_ref_right' for every solution component
   // and every integration point
   double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_right; j++) { // loop over integration points right
       phys_u_right[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
         phys_u_right[c][j] += 
-          leg_pol_values_right[m][j] * proj_coeffs[c][m];
+          leg_pol_val_right[m][j] * proj_coeffs[c][m];
+        if (norm == 1) phys_dudx_right[c][j] += 
+          leg_pol_der_right[m][j] * proj_coeffs[c][m];
       }
     }
   }
@@ -935,8 +1024,13 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_left[c] = 0;
     for (int j=0; j<pts_num_left; j++) { // loop over integration points left
-      double diff = phys_u_ref_left[c][j] - phys_u_left[c][j];
-      err_squared_left[c] += diff * diff * phys_weights_left[j]; 
+      double diff_val = phys_u_ref_left[c][j] - phys_u_left[c][j];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref_left[c][j] - phys_dudx_left[c][j];
+        err_squared_left[c] += (diff_val*diff_val + diff_der*diff_der)
+                                * phys_weights_left[j]; 
+      }
+      else err_squared_left[c] += diff_val * diff_val * phys_weights_left[j]; 
     }
   }
 
@@ -946,8 +1040,13 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared_right[c] = 0;
     for (int j=0; j<pts_num_right; j++) { // loop over integration points left
-      double diff = phys_u_ref_right[c][j] - phys_u_right[c][j];
-      err_squared_right[c] += diff * diff * phys_weights_right[j]; 
+      double diff_val = phys_u_ref_right[c][j] - phys_u_right[c][j];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref_right[c][j] - phys_dudx_right[c][j];
+        err_squared_right[c] += (diff_val*diff_val + diff_der*diff_der)
+                                 * phys_weights_right[j]; 
+      }
+      else err_squared_right[c] += diff_val * diff_val * phys_weights_right[j]; 
     }
   }
 
@@ -1015,40 +1114,40 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points left
-    double plot_leg_pol_values_left[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-      for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values_left[m][j] = legendre(m, e->x1, 
+      for(int j=0; j < plot_pts_num; j++) {  
+        plot_leg_pol_val_left[m][j] = legendre(m, e->x1, 
 	  				   e->x2, plot_x_left[j]);
       }
     }
     // values of projection at plotting points left
     double plot_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
-    for (int c=0; c<n_eq; c++) { // loop over solution components
-      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+    for (int c=0; c < n_eq; c++) { // loop over solution components
+      for (int j=0; j < plot_pts_num; j++) { // loop over plotting points left
         plot_u_left[c][j] = 0;
         for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
           plot_u_left[c][j] += 
-            plot_leg_pol_values_left[m][j] * proj_coeffs[c][m];
+            plot_leg_pol_val_left[m][j] * proj_coeffs[c][m];
         }
       }
     }
     // values of Legendre polynomials at plotting points right
-    double plot_leg_pol_values_right[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-      for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values_right[m][j] = legendre(m, e->x1, 
+      for(int j=0; j < plot_pts_num; j++) {  
+        plot_leg_pol_val_right[m][j] = legendre(m, e->x1, 
   					   e->x2, plot_x_right[j]);
       }
     }
     // values of projection at plotting points right
     double plot_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
-    for (int c=0; c<n_eq; c++) { // loop over solution components
-      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
+    for (int c=0; c < n_eq; c++) { // loop over solution components
+      for (int j=0; j < plot_pts_num; j++) { // loop over plotting points left
         plot_u_right[c][j] = 0;
         for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
           plot_u_right[c][j] += 
-            plot_leg_pol_values_right[m][j] * proj_coeffs[c][m];
+            plot_leg_pol_val_right[m][j] * proj_coeffs[c][m];
         }
       }
     }
@@ -1076,10 +1175,10 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
 // 'e_ref' (reference refinement did not split the element in space). 
 // The reference solution is projected onto the space of 
 // polynomials of degree 'p' on 'e'
-double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
-                                 double *y_prev_ref, int p,
-                                 double bc_left_dir_values[MAX_EQN_NUM],
-		                 double bc_right_dir_values[MAX_EQN_NUM])
+double check_refin_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
+                                   double *y_prev_ref, int p,
+                                   double bc_left_dir_values[MAX_EQN_NUM],
+		                   double bc_right_dir_values[MAX_EQN_NUM])
 {
   int n_eq = e->dof_size;
 
@@ -1100,21 +1199,23 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
                       bc_left_dir_values, bc_right_dir_values); 
 
   // get values of (original) Legendre polynomials in 'e'
-  double leg_pol_values[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_der[MAX_P+1][MAX_PTS_NUM];
   for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int j=0; j<pts_num; j++) {  
-      leg_pol_values[m][j] = legendre(m, e->x1, e->x2, phys_x[j]);
+    for(int j=0; j < pts_num; j++) {  
+      leg_pol_val[m][j] = legendre(m, e->x1, e->x2, phys_x[j]);
+      if (norm == 1) leg_pol_der[m][j] = legendre_der(m, e->x1, e->x2, phys_x[j]);
     }
   }
 
   // calculate the projection coefficients 
   double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
+    for(int c=0; c < n_eq; c++) { // loop over solution components
       proj_coeffs[c][m] = 0;
       for(int j=0; j < pts_num; j++) { // loop over integration points
         proj_coeffs[c][m] +=
-          phys_u_ref[c][j] * leg_pol_values[m][j] * phys_weights[j];
+          phys_u_ref[c][j] * leg_pol_val[m][j] * phys_weights[j];
       }
     }
   }
@@ -1122,12 +1223,15 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   // evaluate the projection in 'e' for every solution component
   // and every integration point
   double phys_u[MAX_EQN_NUM][MAX_PTS_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
-    for (int j=0; j<pts_num; j++) { // loop over integration points
+  double phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
+  for (int c=0; c < n_eq; c++) { // loop over solution components
+    for (int j=0; j < pts_num; j++) { // loop over integration points
       phys_u[c][j] = 0;
       for (int m=0; m < p + 1; m++) { // loop over Leg. polynomials
         phys_u[c][j] += 
-          leg_pol_values[m][j] * proj_coeffs[c][m];
+          leg_pol_val[m][j] * proj_coeffs[c][m];
+        if (norm == 1) phys_dudx[c][j] += 
+          leg_pol_der[m][j] * proj_coeffs[c][m];
       }
     }
   }
@@ -1138,8 +1242,13 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_squared[c] = 0;
     for (int j=0; j < pts_num; j++) { // loop over integration points
-      double diff = phys_u_ref[c][j] - phys_u[c][j];
-      err_squared[c] += diff * diff * phys_weights[j]; 
+      double diff_val = phys_u_ref[c][j] - phys_u[c][j];
+      if (norm == 1) {
+        double diff_der = phys_dudx_ref[c][j] - phys_dudx[c][j];
+        err_squared[c] += (diff_val*diff_val + diff_der*diff_der)
+                           * phys_weights[j];
+      }
+      else err_squared[c] += diff_val * diff_val * phys_weights[j]; 
     }
   }
 
@@ -1193,21 +1302,21 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points
-    double plot_leg_pol_values[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val[MAX_P+1][MAX_PTS_NUM];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-      for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_values[m][j] = legendre(m, e->x1, 
+      for(int j=0; j < plot_pts_num; j++) {  
+        plot_leg_pol_val[m][j] = legendre(m, e->x1, 
 	  				   e->x2, plot_x[j]);
       }
     }
     // values of projection at plotting points
     double plot_u[MAX_EQN_NUM][MAX_PTS_NUM];
-    for (int c=0; c<n_eq; c++) { // loop over solution components
-      for (int j=0; j<plot_pts_num; j++) { // loop over plotting points
+    for (int c=0; c < n_eq; c++) { // loop over solution components
+      for (int j=0; j < plot_pts_num; j++) { // loop over plotting points
         plot_u[c][j] = 0;
         for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
           plot_u[c][j] += 
-            plot_leg_pol_values[m][j] * proj_coeffs[c][m];
+            plot_leg_pol_val[m][j] * proj_coeffs[c][m];
         }
       }
     }
@@ -1227,39 +1336,42 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   return error_scaled; 
 }
 
-double calc_exact_sol_norm(int norm_h1, exact_sol_type exact_sol, 
+double calc_exact_sol_norm(int norm, exact_sol_type exact_sol, 
                            int n_eq, 
                            double A, double B, int subdivision, 
                            int order)
 {
   double norm_squared = 0;
   double h = (B - A)/subdivision;
+  // loop over intervals of subdivision
   for (int i=0; i < subdivision; i++) {
-    double a = i*h;
-    double b = a + h;
+    double a0 = A + i*h;
+    double b0 = a0 + h;
     int pts_num;
     double x_phys[MAX_PTS_NUM];
     double w_phys[MAX_PTS_NUM];
-    create_phys_element_quadrature(a, b, order, x_phys, 
+    create_phys_element_quadrature(a0, b0, order, x_phys, 
                                    w_phys, &pts_num);
     double val = 0;
-    for (int j=0; j<pts_num; j++) {
+    // integration over an interval
+    for (int j=0; j < pts_num; j++) {
       double fn_val[MAX_EQN_NUM];
       double fn_der[MAX_EQN_NUM];
       exact_sol(x_phys[j], fn_val, fn_der);
-      double val0 = 0;
       for (int c=0; c<n_eq; c++) {
-        val0 += fn_val[c] * fn_val[c];
+	if (norm == 1) {
+          val += (fn_val[c]*fn_val[c] + fn_der[c]*fn_der[c]) * w_phys[j];
+        }
+        else val += fn_val[c] * fn_val[c] * w_phys[j];
       }
-      val += val0 * w_phys[j];
     }
-  
     norm_squared += val;
   }
+
   return sqrt(norm_squared);
 }
 
-double calc_elem_exact_error_squared(int norm_h1, exact_sol_type exact_sol,
+double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
                                      Element *e, double *y_prev, 
                                      double *bc_left_dir_values,
 			             double *bc_right_dir_values,
@@ -1296,8 +1408,13 @@ double calc_elem_exact_error_squared(int norm_h1, exact_sol_type exact_sol,
   for (int c=0; c<n_eq; c++) {
     norm_squared[c] = 0;
     for (int i=0; i<pts_num; i++) {
-      double diff = phys_u_exact[c][i] - phys_u[c][i];
-      norm_squared[c] += diff * diff * phys_weights[i];
+      double diff_val = phys_u_exact[c][i] - phys_u[c][i];
+      if (norm == 1) {
+        double diff_der = phys_dudx_exact[c][i] - phys_dudx[c][i];
+        norm_squared[c] += (diff_val*diff_val + diff_der*diff_der)
+                            * phys_weights[i];
+      }
+      else norm_squared[c] += diff_val * diff_val * phys_weights[i];
     }
   }
 
@@ -1308,7 +1425,7 @@ double calc_elem_exact_error_squared(int norm_h1, exact_sol_type exact_sol,
   return err_squared;
 }
 
-double calc_exact_sol_error(int norm_h1, Mesh *mesh, double *y_prev, 
+double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev, 
                             exact_sol_type exact_sol, 
                             int order) 
 {
@@ -1317,7 +1434,7 @@ double calc_exact_sol_error(int norm_h1, Mesh *mesh, double *y_prev,
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
       double elem_err_squared = 
-        calc_elem_exact_error_squared(norm_h1, exact_sol, e, y_prev, 
+        calc_elem_exact_error_squared(norm, exact_sol, e, y_prev, 
                                       mesh->bc_left_dir_values,
 			              mesh->bc_right_dir_values,
                                       order);
@@ -1326,7 +1443,8 @@ double calc_exact_sol_error(int norm_h1, Mesh *mesh, double *y_prev,
   return sqrt(total_err_squared);
 }
 
-int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Element *e_ref, 
+int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list, 
+                               Element *e, Element *e_ref, 
                                double *y_prev_ref, double *bc_left_dir_values,
 			       double *bc_right_dir_values) 
 {
@@ -1336,7 +1454,7 @@ int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Elemen
   for (int i=0; i<num_cand; i++) {
     if (cand_list[i][0] == 0) { // p-refinement
       int p_new = cand_list[i][1];
-      crit = check_refin_coarse_p_fine_p(e, e_ref, y_prev_ref, p_new,
+      crit = check_refin_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, p_new,
                                          bc_left_dir_values,
 			                 bc_right_dir_values);
 
@@ -1344,7 +1462,7 @@ int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Elemen
     else {                      // hp-refinement
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
-      crit = check_refin_coarse_hp_fine_p(e, e_ref, 
+      crit = check_refin_coarse_hp_fine_p(norm, e, e_ref, 
                                           y_prev_ref, p_new_left, p_new_right, 
                                           bc_left_dir_values,
 					  bc_right_dir_values);
@@ -1363,7 +1481,8 @@ int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Elemen
   return choice;
 }
 
-int select_hp_refinement_ref_hp(int num_cand, int3 *cand_list, Element *e, Element *e_ref_left, 
+int select_hp_refinement_ref_hp(int norm,  int num_cand, int3 *cand_list, 
+                                Element *e, Element *e_ref_left, 
                                 Element *e_ref_right, double *y_prev_ref, 
                                 double *bc_left_dir_values,
 			        double *bc_right_dir_values) 
@@ -1374,19 +1493,19 @@ int select_hp_refinement_ref_hp(int num_cand, int3 *cand_list, Element *e, Eleme
   for (int i=0; i<num_cand; i++) {
     if (cand_list[i][0] == 0) { // p-refinement
       int p_new = cand_list[i][1];
-      crit = check_refin_coarse_p_fine_hp(e, e_ref_left, e_ref_right, 
-                                             y_prev_ref, p_new,
-                                             bc_left_dir_values,
-					     bc_right_dir_values);
+      crit = check_refin_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
+                                          y_prev_ref, p_new,
+                                          bc_left_dir_values,
+					  bc_right_dir_values);
 
     }
     else {                      // hp-refinement
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
-      crit = check_refin_coarse_hp_fine_hp(e, e_ref_left, e_ref_right, 
-                                              y_prev_ref, p_new_left, p_new_right, 
-                                              bc_left_dir_values,
-					      bc_right_dir_values);
+      crit = check_refin_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
+                                           y_prev_ref, p_new_left, p_new_right, 
+                                           bc_left_dir_values,
+					   bc_right_dir_values);
     }
 
     //printf("  Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 

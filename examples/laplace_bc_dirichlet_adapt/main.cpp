@@ -9,8 +9,8 @@
 
 // General input:
 static int N_eq = 1;
-int N_elem = 3;                         // Number of elements
-double A = 0, B = 2*M_PI;               // Domain end points
+int N_elem = 2;                         // Number of elements
+double A = -1, B = 1;               // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Stopping criteria for Newton
@@ -22,7 +22,7 @@ const double THRESHOLD = 0.7;           // Refined will be all elements whose er
                                         // is greater than THRESHOLD*max_elem_error
 const double TOL_ERR_REL = 1e-3;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
-const int NORM = 1;                     // 1... H1 norm
+const int NORM = 0;                     // 1... H1 norm
                                         // 0... L2 norm
 
 // Boundary conditions
@@ -31,14 +31,17 @@ double Val_dir_right = 0;               // Dirichlet condition right
 
 // Function f(x)
 double f(double x) {
-  return sin(x);
+  //return sin(x);
+  return 2;
 }
 
 // Exact solution
 const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
-  u[0] = sin(x);
-  dudx[0] = cos(x);
+  //u[0] = sin(x);
+  //dudx[0] = cos(x);
+  u[0] = 1. - x*x;
+  dudx[0] = -2.*x;
 }
 
 // ********************************************************************
@@ -296,12 +299,16 @@ int main() {
 
     // Estimate element errors (squared)
     double err_est_squared_array[MAX_ELEM_NUM]; 
-    double err_est_total;
-    calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
+    double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
                                  y_prev_ref, err_est_squared_array);
+
+    printf("err_est_total = %g\n", err_est_total);
 
     // Calculate the norm of the reference solution
     double ref_sol_norm = calc_approx_sol_norm(NORM, mesh_ref, y_prev_ref);
+
+    printf("ref_sol_norm = %g\n", ref_sol_norm);
+
 
     // Calculate an estimate of the global relative error
     double err_est_rel = err_est_total/ref_sol_norm;
@@ -312,12 +319,17 @@ int main() {
       // Calculate element errors wrt. exact solution (squared)
       int order = 20; // heuristic parameter
       double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
+     
+      printf("err_exact_total = %g\n", err_exact_total);
 
       // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
       int subdivision = 100; // heuristic parameter
       double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
                                                   subdivision, order);
+
+      printf("exact_sol_norm = %g\n", exact_sol_norm);
+
       // Calculate an estimate of the global relative error
       double err_exact_rel = err_exact_total/exact_sol_norm;
       printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
@@ -331,10 +343,11 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 3) break;
+    if (adapt_iterations == 1) break;
   
     // Refine elements in the id_array list whose id_array >= 0
-    mesh->adapt(THRESHOLD, mesh_ref, y_prev, y_prev_ref, err_est_squared_array);
+    mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 
+                y_prev_ref, err_est_squared_array);
     N_dof = mesh->assign_dofs();
 
     adapt_iterations++;

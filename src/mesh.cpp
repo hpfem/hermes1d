@@ -867,7 +867,7 @@ void Mesh::plot_error_exact(const char *filename,
 }
 
 // Refine all elements in the id_array list whose id_array >= 0
-void Mesh::adapt(double threshold, Mesh *mesh_ref, 
+void Mesh::adapt(int norm, double threshold, Mesh *mesh_ref, 
                  double *y_prev, double *y_prev_ref, 
                  double *err_squared_array) 
 {
@@ -934,7 +934,8 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref,
       if (e->level == e_ref->level) { // element 'e' was not refined in space
                                       // for reference solution
         int num_cand = e->create_cand_list(e_ref->p, -1, cand_list);
-        choice = select_hp_refinement_ref_p(num_cand, cand_list, e, e_ref, y_prev_ref, 
+        choice = select_hp_refinement_ref_p(norm, num_cand, cand_list, e, 
+                                            e_ref, y_prev_ref, 
                                             this->bc_left_dir_values,
 	  		                    this->bc_right_dir_values);
       }
@@ -942,7 +943,8 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref,
         Element* e_ref_left = e_ref;
         Element* e_ref_right = I_ref->next_active_element();
         int num_cand = e->create_cand_list(e_ref_left->p, e_ref_right->p, cand_list);
-        choice = select_hp_refinement_ref_hp(num_cand, cand_list, e, e_ref_left, 
+        choice = select_hp_refinement_ref_hp(norm, num_cand, cand_list, 
+                                             e, e_ref_left, 
                                              e_ref_right, y_prev_ref, 
                                              this->bc_left_dir_values,
 			                     this->bc_right_dir_values);

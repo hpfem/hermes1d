@@ -317,7 +317,8 @@ int main() {
     if(err_est_rel < TOL_ERR_REL) break;
 
     // Refine elements in the id_array list whose id_array >= 0
-    mesh->adapt(THRESHOLD, mesh_ref, y_prev, y_prev_ref, err_est_squared_array);
+    mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 
+                y_prev_ref, err_est_squared_array);
 
     adapt_iterations++;
   };
