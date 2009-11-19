@@ -290,7 +290,8 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on 'e_ref_left'
-// and degree 'p_right' on 'e_ref_right'
+// and degree 'p_right' on 'e_ref_right'. Returned is projection error and
+// number of dof added by this candidate.
 double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left, 
                                     Element *e_ref_right, 
                                     double *y_prev_ref, int p_left, int p_right, 
@@ -586,7 +587,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
 // Assumes that reference solution is defined on one single element 'e_ref' = 'e'. 
 // The reference solution is projected onto the space of (discontinuous) 
 // polynomials of degree 'p_left' on the left half of 'e' and degree 
-// 'p_right' on the right half of 'e' 
+// 'p_right' on the right half of 'e'. Returned is projection error and
+// number of dof added by this candidate.
 double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
                                    double *y_prev_ref, int p_left, int p_right,
                                    double bc_left_dir_values[MAX_EQN_NUM],
@@ -868,7 +870,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
-// polynomials of degree 'p' on 'e'
+// polynomials of degree 'p' on 'e'. Returned is projection error and
+// number of dof added by this candidate.
 double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left, 
                                    Element *e_ref_right, 
                                    double *y_prev_ref, int p,
@@ -1156,7 +1159,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
 // Assumes that reference solution is defined on one single element 
 // 'e_ref' (reference refinement did not split the element in space). 
 // The reference solution is projected onto the space of 
-// polynomials of degree 'p' on 'e'
+// polynomials of degree 'p' on 'e'. Returned is projection error and
+// number of dof added by this candidate.
 double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
                                   double *y_prev_ref, int p,
                                   double bc_left_dir_values[MAX_EQN_NUM],
@@ -1419,16 +1423,27 @@ double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev,
   return sqrt(total_err_squared);
 }
 
-int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list, 
-                               Element *e, Element *e_ref, 
-                               double *y_prev_ref, double *bc_left_dir_values,
-			       double *bc_right_dir_values) 
+// Selects best hp-refinement from the given list (distinguishes whether 
+// the reference refinement on that element was p- or hp-refinement). 
+// Each refinement candidate is a triple of integers. First one means 
+// p-refinement (0) or hp-refinement (1). Second and/or third number are 
+// the new proposed polynomial degrees.
+int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2, 
+                         int num_cand, int3 *cand_list, 
+                         int ref_sol_type, int norm, 
+                         double *y_prev_ref, double *bc_left_dir_values,
+			 double *bc_right_dir_values) 
 {
+  Element *e_ref_left, *e_ref_right;  
+  if (ref_sol_type == 1) {
+    e_ref_left = e_ref;
+    e_ref_right = e_ref2;
+  }
   int choice = -1;
   double crit_max = -1e10;
   double crit;
   for (int i=0; i<num_cand; i++) {
-    if (cand_list[i][0] == 0) { // p-refinement
+    if (cand_list[i][0] == 0 && ref_sol_type == 0) {
       int p_new = cand_list[i][1];
       double err;
       int dof;
@@ -1436,10 +1451,21 @@ int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list,
                                  bc_left_dir_values,
 				 bc_right_dir_values, err, dof);
       // NOTE: this may need some experimantation
-      double error_scaled = -log(err) / dof; 
+      crit = -log(err) / dof; 
 
     }
-    else {                      // hp-refinement
+    if (cand_list[i][0] == 0 && ref_sol_type == 1) {
+      double err;
+      int dof;
+      int p_new = cand_list[i][1];
+      check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
+                                  y_prev_ref, p_new,
+                                  bc_left_dir_values,
+				  bc_right_dir_values, err, dof);
+      // NOTE: this may need some experimantation
+      crit = -log(err) / dof; 
+    }
+    if (cand_list[i][0] == 1 && ref_sol_type == 0) {
       double err;
       int dof;
       int p_new_left = cand_list[i][1];
@@ -1449,7 +1475,19 @@ int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list,
                                   bc_left_dir_values,
 				  bc_right_dir_values, err, dof);
       // NOTE: this may need some experimantation
-      double error_scaled = -log(err) / dof; 
+      crit = -log(err) / dof; 
+    }
+    if (cand_list[i][0] == 1 && ref_sol_type == 1) {
+      double err;
+      int dof;
+      int p_new_left = cand_list[i][1];
+      int p_new_right = cand_list[i][2];
+      check_cand_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
+                                   y_prev_ref, p_new_left, p_new_right, 
+                                   bc_left_dir_values,
+				   bc_right_dir_values, err, dof);
+      // NOTE: this may need some experimantation
+      crit = -log(err) / dof; 
     }
 
     // debug
@@ -1473,60 +1511,5 @@ int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list,
   return choice;
 }
 
-int select_hp_refinement_ref_hp(int norm,  int num_cand, int3 *cand_list, 
-                                Element *e, Element *e_ref_left, 
-                                Element *e_ref_right, double *y_prev_ref, 
-                                double *bc_left_dir_values,
-			        double *bc_right_dir_values) 
-{
-  int choice = -1;
-  double crit_max = -1e10;
-  double crit;
-  for (int i=0; i<num_cand; i++) {
-    if (cand_list[i][0] == 0) { // p-refinement
-      double err;
-      int dof;
-      int p_new = cand_list[i][1];
-      check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
-                                  y_prev_ref, p_new,
-                                  bc_left_dir_values,
-				  bc_right_dir_values, err, dof);
-      // NOTE: this may need some experimantation
-      double error_scaled = -log(err) / dof; 
-    }
-    else {                      // hp-refinement
-      double err;
-      int dof;
-      int p_new_left = cand_list[i][1];
-      int p_new_right = cand_list[i][2];
-      check_cand_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
-                                   y_prev_ref, p_new_left, p_new_right, 
-                                   bc_left_dir_values,
-				   bc_right_dir_values, err, dof);
-      // NOTE: this may need some experimantation
-      double error_scaled = -log(err) / dof; 
-    }
-
-    // debug
-    if (PRINT_CANDIDATES) {
-      printf("  Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
-             cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
-    }
-
-    if (crit > crit_max) {
-      crit_max = crit;
-      choice = i;
-    }
-  }
-
-  if (choice == -1) error("Candidate not found in select_hp_refinement_ref_hp().");
-
-  // debug
-  if (PRINT_CANDIDATES) {
-    printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
-  }
-
-  return choice;
-}
 
 

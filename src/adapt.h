@@ -47,21 +47,22 @@ double calc_approx_sol_norm(int norm, Mesh* mesh, double* y_prev);
 // Sort err_array[] and returning array of sorted element indices
 void sort_element_errors(int n, double *err_array, int *id_array); 
 
-// Assumes that reference solution is defined on two half-elements 'e_ref_left' 
+// Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
-// (discontinuous) polynomials of degree 'p_left' on (-1, 0)
-// and degree 'p_right' on (0, 1). 
+// (discontinuous) polynomials of degree 'p_left' on 'e_ref_left'
+// and degree 'p_right' on 'e_ref_right'. Returned is projection error and
+// number of dof added by this candidate.
 void check_cand_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
                                   double *y_prev_ref, int p_left, int p_right, 
                                   double bc_left_dir_values[MAX_EQN_NUM],
 	  	                  double bc_right_dir_values[MAX_EQN_NUM],
                                   double &err, int &dof);
 
-
-// Assumes that reference solution is defined on two half-elements 'e_ref_left'
-// and 'e_ref_right'. The reference solution is projected onto the space of 
-// (discontinuous) polynomials of degree 'p_left' on (-1, 0)
-// and degree 'p_right' on (0, 1). 
+// Assumes that reference solution is defined on one single element 'e_ref' = 'e'. 
+// The reference solution is projected onto the space of (discontinuous) 
+// polynomials of degree 'p_left' on the left half of 'e' and degree 
+// 'p_right' on the right half of 'e'. Returned is projection error and
+// number of dof added by this candidate.
 void check_cand_coarse_hp_fine_p(Element *e, Element *e_ref,
                                  double *y_prev_ref, int p_left, int p_right, 
                                  double bc_left_dir_values[MAX_EQN_NUM],
@@ -70,7 +71,8 @@ void check_cand_coarse_hp_fine_p(Element *e, Element *e_ref,
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
-// polynomials of degree 'p' on (-1, 1). 
+// polynomials of degree 'p' on 'e'. Returned is projection error and
+// number of dof added by this candidate.
 void check_cand_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
                                  double *y_prev_ref, int p,
                                  double bc_left_dir_values[MAX_EQN_NUM],
@@ -80,7 +82,8 @@ void check_cand_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_ref
 // Assumes that reference solution is defined on one single element 
 // 'e_ref' (reference refinement did not split the element in space). 
 // The reference solution is projected onto the space of 
-// polynomials of degree 'p' on (-1, 1). 
+// polynomials of degree 'p' on 'e'. Returned is projection error and
+// number of dof added by this candidate.
 void check_cand_coarse_p_fine_p(Element *e, Element *e_ref, 
                                 double *y_prev_ref, int p, 
                                 double bc_left_dir_values[MAX_EQN_NUM],
@@ -105,21 +108,14 @@ double calc_exact_sol_norm(int norm, exact_sol_type exact_sol,
                            double A, double B, int subdivision, 
                            int order);
 
-// Selects best hp-refinement from the given list (assumes that reference refinement
-// on that element was p-refinement). Each refinement candidate is a triple of
-// integers. First one means p-refinement (0) or hp-refinement (1). Second and/or
-// third number are the new proposed polynomial degrees.
-int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list, 
-                               Element *e, Element *e_ref, 
-                               double *y_prev_ref, double *bc_left_dir_values,
-			       double *bc_right_dir_values); 
-
-// Selects best hp-refinement from the given list (assumes that reference refinement
-// on that element was hp-refinement)
-int select_hp_refinement_ref_hp(int norm, int num_cand, int3 *cand_list, 
-                                Element *e, Element *e_ref_left, 
-                                Element *e_ref_right, double *y_prev_ref, 
-                                double *bc_left_dir_values, double *bc_right_dir_values); 
-
+// Selects best hp-refinement from the given list (distinguishes whether 
+// the reference refinement on that element was p- or hp-refinement). 
+// Each refinement candidate is a triple of integers. First one means 
+// p-refinement (0) or hp-refinement (1). Second and/or third number are 
+// the new proposed polynomial degrees.
+int select_hp_refinement(Element *e, Element *e_ref, Element * e_ref2,
+                         int num_cand, int3 *cand_list, int ref_sol_type, 
+                         int norm, double *y_prev_ref, double *bc_left_dir_values,
+			 double *bc_right_dir_values); 
 
 #endif

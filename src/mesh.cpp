@@ -934,20 +934,21 @@ void Mesh::adapt(int norm, double threshold, Mesh *mesh_ref,
       if (e->level == e_ref->level) { // element 'e' was not refined in space
                                       // for reference solution
         int num_cand = e->create_cand_list(e_ref->p, -1, cand_list);
-        choice = select_hp_refinement_ref_p(norm, num_cand, cand_list, e, 
-                                            e_ref, y_prev_ref, 
-                                            this->bc_left_dir_values,
-	  		                    this->bc_right_dir_values);
+        // reference element was p-refined
+        choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
+                                      0, norm, y_prev_ref, 
+                                      this->bc_left_dir_values,
+	  		              this->bc_right_dir_values);
       }
       else { // element 'e' was refined in space for reference solution
         Element* e_ref_left = e_ref;
         Element* e_ref_right = I_ref->next_active_element();
         int num_cand = e->create_cand_list(e_ref_left->p, e_ref_right->p, cand_list);
-        choice = select_hp_refinement_ref_hp(norm, num_cand, cand_list, 
-                                             e, e_ref_left, 
-                                             e_ref_right, y_prev_ref, 
-                                             this->bc_left_dir_values,
-			                     this->bc_right_dir_values);
+        // reference element was hp-refined
+        choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
+                                      num_cand, cand_list, 1, norm, y_prev_ref, 
+                                      this->bc_left_dir_values,
+			              this->bc_right_dir_values);
       }
       Element *e_last = e;
       e = I->next_active_element();
