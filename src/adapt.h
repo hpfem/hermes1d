@@ -13,36 +13,36 @@
 #include "matrix.h"
 #include "iterator.h"
 
-// Calculates the square in L2-norm of the difference between 
+// Calculates the square in L2 or H1 norm of the difference between 
 // the coarse and fine mesh solution, for all solution components.
 // Assumes that the element was not refined in space for the 
 // reference solution. 
 // FIXME: to be moved to the Element class
-double calc_elem_est_L2_error_squared_p(Element *e, Element *e_ref,
+double calc_elem_est_error_squared_p(int norm_h1, Element *e, Element *e_ref,
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]);
 
-// Calculates the square in L2-norm of the difference between 
+// Calculates the square in L2 or H1 norm of the difference between 
 // the coarse and fine mesh solution, for all solution components.
 // Assumes that the element was refined in space for the 
 // reference solution.
 // FIXME: to be moved to the Element class
-double calc_elem_est_L2_error_squared_hp(Element *e, 
+double calc_elem_est_error_squared_hp(int norm_h1, Element *e, 
                         Element *e_ref_left, Element *e_ref_right,
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]);
 
-// Calculates l2-norm (squared) of the difference between the coarse
+// Calculates l2 or H1 norm (squared) of the difference between the coarse
 // and reference solutions in all active elements of 'mesh'. Total
 // error is returned.
-double calc_elem_est_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
-				   double* y_prev, double* y_prev_ref, 
-				   double *err_squared_array);
+double calc_elem_est_errors_squared(int norm_h1, Mesh* mesh, Mesh* mesh_ref, 
+				    double* y_prev, double* y_prev_ref, 
+				    double *err_squared_array);
 
 // Can be used for both the coarse and reference solutions
-double calc_approx_sol_L2_norm(Mesh* mesh, double* y_prev);
+double calc_approx_sol_norm(int norm_h1, Mesh* mesh, double* y_prev);
 
 // Sort err_array[] and returning array of sorted element indices
 void sort_element_errors(int n, double *err_array, int *id_array); 
@@ -79,27 +79,27 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
 // The reference solution is projected onto the space of 
 // polynomials of degree 'p' on (-1, 1). 
 double check_refin_coarse_p_fine_p(Element *e, Element *e_ref, 
-                                 double *y_prev_ref, int p, 
-                                 double bc_left_dir_values[MAX_EQN_NUM],
-	  	                 double bc_right_dir_values[MAX_EQN_NUM]);
+                                   double *y_prev_ref, int p, 
+                                   double bc_left_dir_values[MAX_EQN_NUM],
+	  	                   double bc_right_dir_values[MAX_EQN_NUM]);
 
 // Error wrt. exact solution (if provided) on element 'e' 
-double calc_elem_exact_L2_error_squared(exact_sol_type exact_sol,
-                                        Element *e, double *y_prev, 
-                                        double *bc_left_dir_values,
-			                double *bc_right_dir_values,
-                                        int order);
+double calc_elem_exact_error_squared(int norm_h1, exact_sol_type exact_sol,
+                                     Element *e, double *y_prev, 
+                                     double *bc_left_dir_values,
+			             double *bc_right_dir_values,
+                                     int order);
 
 // Error wrt. exact solution (if provided) on the entire interval (A, B) 
-double calc_exact_sol_L2_error(Mesh *mesh, double *y_prev, 
-                               exact_sol_type exact_sol, int order); 
+double calc_exact_sol_error(int norm_h1, Mesh *mesh, double *y_prev, 
+                            exact_sol_type exact_sol,  
+                            int order); 
 
-// Calculates L2 norm of function exact_sol in interval (A, B)
-double calc_exact_sol_L2_norm(exact_sol_type exact_sol, int n_eq, 
-                                   double A, double B, int subdivision, 
-                                   int order);
-
-
+// Calculates L2 or H1 norm of function exact_sol in interval (A, B)
+double calc_exact_sol_norm(int norm_h1, exact_sol_type exact_sol, 
+                           int n_eq, 
+                           double A, double B, int subdivision, 
+                           int order);
 
 // Selects best hp-refinement from the given list (assumes that reference refinement
 // on that element was p-refinement). Each refinement candidate is a triple of

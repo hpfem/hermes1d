@@ -346,8 +346,6 @@ void Mesh::refine_elems(int elem_num, int *id_array, int3 *cand_array)
 // increases poly degree in sons by one
 void Mesh::reference_refinement(int start_elem_id, int elem_num)
 {
-    printf("Reference refinement: %d elems starting with %d\n", elem_num, start_elem_id);
-
     Iterator *I = new Iterator(this);
     Element *e;
     int count = 0;
@@ -360,7 +358,6 @@ void Mesh::reference_refinement(int start_elem_id, int elem_num)
             count++;
         }
     }
-    printf("After ref refinement nelem = %d\n", n_active_elem);
 }
 
 void Mesh::set_bc_left_dirichlet(int eq_n, double val)
@@ -509,13 +506,13 @@ int Element::create_cand_list(int p_ref_left, int p_ref_right, int3 *cand_list)
     // p->p+2
     new_p = this->p + 2;
     candidate_ok = 1;
-    if (ref_solution_p_refined) {
+    if (ref_solution_p_refined) //{
         if (new_p >= p_ref)
             candidate_ok = 0;
-    } else {
-        if (new_p > max(p_ref_left, p_ref_right))
-            candidate_ok = 0;
-    }
+    //} else {
+    //    if (new_p > max(p_ref_left, p_ref_right))
+    //        candidate_ok = 0;
+    //}
     if (candidate_ok) {
       cand_list[counter][0] = 0;
       cand_list[counter][1] = this->p + 2;
@@ -912,9 +909,9 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref,
   }
  
   // Debug: Printing list of elements to be refined
-  printf("Elements to be refined: ");
-  for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
-  printf("\n");
+  //printf("Elements to be refined: ");
+  //for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
+  //printf("\n");
 
   Iterator *I = new Iterator(this);
   Iterator *I_ref = new Iterator(mesh_ref);

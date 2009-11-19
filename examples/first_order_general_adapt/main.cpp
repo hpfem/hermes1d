@@ -24,6 +24,8 @@ const double THRESHOLD = 0.7;           // Refined will be all elements whose er
                                         // is greater than THRESHOLD*max_elem_error
 const double TOL_ERR_REL = 1.0;         // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
+const int NORM = 1;                     // 1... H1 norm
+                                        // 0... L2 norm
  
 // Right-hand side function f(y, x)
 double f(double y, double x) {
@@ -175,14 +177,14 @@ int main() {
       // Construct residual vector
       dp->assemble_matrix_and_vector(mat, res, y_prev); 
 
-      // Calculate L2 norm of residual vector
+      // Calculate norm of residual vector
       double res_norm = 0;
       for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
       res_norm = sqrt(res_norm);
 
       // If residual norm less than TOL_NEWTON_COARSE, quit
       // latest solution is in y_prev
-      printf("Residual L2 norm: %.15f\n", res_norm);
+      printf("Residual norm: %.15f\n", res_norm);
       if(res_norm < TOL_NEWTON_COARSE) break;
 
       // Change sign of vector res
@@ -258,14 +260,14 @@ int main() {
       // Construct residual vector
       dp_ref->assemble_matrix_and_vector(mat_ref, res_ref, y_prev_ref); 
 
-      // Calculate L2 norm of residual vector
+      // Calculate norm of residual vector
       double res_ref_norm = 0;
       for(int i=0; i<N_dof_ref; i++) res_ref_norm += res_ref[i]*res_ref[i];
       res_ref_norm = sqrt(res_ref_norm);
 
       // If residual norm less than TOL_NEWTON_REF, quit
       // latest solution is in y_prev
-      printf("ref: Residual L2 norm: %.15f\n", res_ref_norm);
+      printf("ref: Residual norm: %.15f\n", res_ref_norm);
       if(res_ref_norm < TOL_NEWTON_REF) break;
 
       // Change sign of vector res_ref
@@ -285,30 +287,30 @@ int main() {
 
     // Estimate element errors (squared)
     double err_est_squared_array[MAX_ELEM_NUM]; //FIXME - change this to dynamic allocation
-    double err_est_total = calc_elem_est_L2_errors_squared(mesh, mesh_ref, y_prev, 
+    double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
                            y_prev_ref, err_est_squared_array);
 
-    // Calculate the L2 norm of the reference solution
-    double ref_sol_L2_norm = calc_approx_sol_L2_norm(mesh_ref, y_prev_ref);
+    // Calculate the norm of the reference solution
+    double ref_sol_norm = calc_approx_sol_norm(NORM, mesh_ref, y_prev_ref);
 
     // Calculate an estimate of the global relative error
-    double err_est_rel = err_est_total/ref_sol_L2_norm;
+    double err_est_rel = err_est_total/ref_sol_norm;
     printf("Relative error (est) = %g %%\n", 100.*err_est_rel);
 
     // If exact solution available, also calculate exact error
     if (EXACT_SOL_PROVIDED) {
       // Calculate element errors wrt. exact solution (squared)
       int order = 20; // heuristic parameter
-      double err_exact_L2_total = calc_exact_sol_L2_error(mesh, y_prev, exact_sol, order);
+      double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
 
-      // Calculate the L2 norm of the exact solution
+      // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
       int subdivision = 100; // heuristic parameter
-      double exact_sol_L2_norm = calc_exact_sol_L2_norm(exact_sol, N_eq, A, B,
-                                                        subdivision, order);
+      double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
+                                                  subdivision, order);
       // Calculate an estimate of the global relative error
-      double err_exact_L2_rel = err_exact_L2_total/exact_sol_L2_norm;
-      printf("Relative error (exact) = %g %%\n", 100.*err_exact_L2_rel);
+      double err_exact_rel = err_exact_total/exact_sol_norm;
+      printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
     }
 
     // Decide whether the relative error is sufficiently small

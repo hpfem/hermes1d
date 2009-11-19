@@ -6,8 +6,11 @@
 #include "transforms.h"
 #include "common.h"
 
-// to debug automatic adaptivity
-int PLOT_CANDIDATE_PROJECTIONS = 1;
+// To debug automatic adaptivity. This generates Gnuplot files 
+// for all refinement candidates, showing both the reference 
+// solution and the projection. Thus one can compare the 
+// candidates visually.
+int PLOT_CANDIDATE_PROJECTIONS = 0;
 
 // returns values of normalized Legendre polynomials on (a, b)
 double legendre(int i, double a, double b, double x) {  // x \in (a, b)
@@ -15,7 +18,7 @@ double legendre(int i, double a, double b, double x) {  // x \in (a, b)
   return norm_const*legendre_fn_tab_1d[i](inverse_map(a, b, x));
 }
 
-double calc_elem_L2_norm_squared(Element *e, double *y_prev, 
+double calc_elem_norm_squared(int norm_h1, Element *e, double *y_prev, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
 {
@@ -55,7 +58,7 @@ double calc_elem_L2_norm_squared(Element *e, double *y_prev,
   return elem_norm_squared;
 }
 
-double calc_elem_est_L2_error_squared_p(Element *e, Element *e_ref, 
+double calc_elem_est_error_squared_p(int norm_h1, Element *e, Element *e_ref, 
                         double *y_prev, double *y_prev_ref, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
@@ -94,7 +97,7 @@ double calc_elem_est_L2_error_squared_p(Element *e, Element *e_ref,
   return err_squared;
 }
 
-double calc_elem_est_L2_error_squared_hp(Element *e, 
+double calc_elem_est_error_squared_hp(int norm_h1, Element *e, 
 				   Element *e_ref_left, Element *e_ref_right,
                                    double *y_prev, double *y_prev_ref, 
                                    double bc_left_dir_values[MAX_EQN_NUM],
@@ -174,9 +177,9 @@ double calc_elem_est_L2_error_squared_hp(Element *e,
   return err_squared;
 }
 
-double calc_elem_est_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref, 
-				   double* y_prev, double* y_prev_ref, 
-				   double *err_squared_array)
+double calc_elem_est_errors_squared(int norm_h1, Mesh* mesh, Mesh* mesh_ref, 
+				    double* y_prev, double* y_prev_ref, 
+				    double *err_squared_array)
 {
   double err_total_squared = 0;
   Iterator *I = new Iterator(mesh);
@@ -189,37 +192,37 @@ double calc_elem_est_L2_errors_squared(Mesh* mesh, Mesh* mesh_ref,
     double err_squared;
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      err_squared = calc_elem_est_L2_error_squared_p(e, e_ref, y_prev, y_prev_ref, 
+      err_squared = calc_elem_est_error_squared_p(norm_h1, e, e_ref, y_prev, y_prev_ref, 
                                          mesh->bc_left_dir_values,
 			                 mesh->bc_right_dir_values);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
-      err_squared = calc_elem_est_L2_error_squared_hp(e, e_ref_left, e_ref_right, 
+      err_squared = calc_elem_est_error_squared_hp(norm_h1, e, e_ref_left, e_ref_right, 
                                           y_prev, y_prev_ref, 
                                           mesh->bc_left_dir_values,
 			                  mesh->bc_right_dir_values);
     }
-    printf("  Elem (%g, %g): err_est = %g\n", e->x1, e->x2, sqrt(err_squared));
+    //printf("  Elem (%g, %g): err_est = %g\n", e->x1, e->x2, sqrt(err_squared));
     err_squared_array[e->id] = err_squared;
     err_total_squared += err_squared;
   }
   return sqrt(err_total_squared);
 }
 
-double calc_approx_sol_L2_norm(Mesh* mesh, double* y_prev)
+double calc_approx_sol_norm(int norm_h1, Mesh* mesh, double* y_prev)
 {
   double norm_squared = 0;
   Iterator *I = new Iterator(mesh);
 
-  // traverse 'mesh' and calculate squared solution L2 norm 
+  // traverse 'mesh' and calculate squared solution L2 or H1 norm 
   // in every element 
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
-    norm_squared += calc_elem_L2_norm_squared(e, y_prev,
-                                         mesh->bc_left_dir_values,
-			                 mesh->bc_right_dir_values);
+    norm_squared += calc_elem_norm_squared(norm_h1, e, y_prev,
+                                           mesh->bc_left_dir_values,
+			                   mesh->bc_right_dir_values);
   }
   return sqrt(norm_squared);
 }
@@ -265,7 +268,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   int n_eq = e->dof_size;
 
   // First in 'e_ref_left': 
-  // Calculate L2 projection of the reference solution on 
+  // Calculate L2 or H1 projection of the reference solution on 
   // transformed Legendre polynomials of degree 'p_left'
 
   // create Gauss quadrature on 'e_ref_left'
@@ -321,7 +324,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     }
   }
 
-  // calculate the error squared in L2 norm for every solution  
+  // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e_ref_left'
   double err_squared_left[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
@@ -333,7 +336,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   }
 
   // Second on 'e_ref_right': 
-  // Calculate L2 projection of the reference solution on 
+  // Calculate L2 or H1 projection of the reference solution on 
   // transformed Legendre polynomials of degree 'p_right'
 
   // create Gauss quadrature on 'e_ref_right'
@@ -391,7 +394,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
     }
   }
 
-  // calculate the error squared in L2 norm for every solution  
+  // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e_ref_right'
   double err_squared_right[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
@@ -541,7 +544,7 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   int n_eq = e->dof_size;
 
   // First in the left half of 'e': 
-  // Calculate L2 projection of the reference solution on 
+  // Calculate L2 or H1 projection of the reference solution on 
   // transformed Legendre polynomials of degree 'p_left'
 
   // create Gauss quadrature on the left half
@@ -597,7 +600,7 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
     }
   }
 
-  // calculate the error squared in L2 norm for every solution  
+  // calculate the error squared in L2 or H1 norm for every solution  
   // component in the left half
   double err_squared_left[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
@@ -609,7 +612,7 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
   }
 
   // Second on the right half: 
-  // Calculate L2 projection of the reference solution on 
+  // Calculate L2 or H1 projection of the reference solution on 
   // transformed Legendre polynomials of degree 'p_right'
 
   // create Gauss quadrature on the right half
@@ -665,7 +668,7 @@ double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
     }
   }
 
-  // calculate the error squared in L2 norm for every solution  
+  // calculate the error squared in L2 or H1 norm for every solution  
   // component on the right half
   double err_squared_right[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
@@ -926,7 +929,7 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
     }
   }
 
-  // calculate the error squared in L2 norm for every solution  
+  // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e_ref_left'
   double err_squared_left[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
@@ -937,7 +940,7 @@ double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_
     }
   }
 
-  // calculate the error squared in L2 norm for every solution  
+  // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e_ref_right'
   double err_squared_right[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
@@ -1080,7 +1083,7 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
 {
   int n_eq = e->dof_size;
 
-  // Calculate L2 projection of the reference solution on 
+  // Calculate L2 or H1 projection of the reference solution on 
   // (original) Legendre polynomials of degree 'p'
 
   // create Gauss quadrature on 'e'
@@ -1129,7 +1132,7 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
     }
   }
 
-  // calculate the error squared in L2 norm for every solution  
+  // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e'
   double err_squared[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
@@ -1224,9 +1227,10 @@ double check_refin_coarse_p_fine_p(Element *e, Element *e_ref,
   return error_scaled; 
 }
 
-double calc_exact_sol_L2_norm(exact_sol_type exact_sol, int n_eq, 
-                              double A, double B, int subdivision, 
-                              int order)
+double calc_exact_sol_norm(int norm_h1, exact_sol_type exact_sol, 
+                           int n_eq, 
+                           double A, double B, int subdivision, 
+                           int order)
 {
   double norm_squared = 0;
   double h = (B - A)/subdivision;
@@ -1255,11 +1259,11 @@ double calc_exact_sol_L2_norm(exact_sol_type exact_sol, int n_eq,
   return sqrt(norm_squared);
 }
 
-double calc_elem_exact_L2_error_squared(exact_sol_type exact_sol,
-                                        Element *e, double *y_prev, 
-                                        double *bc_left_dir_values,
-			                double *bc_right_dir_values,
-                                        int order)
+double calc_elem_exact_error_squared(int norm_h1, exact_sol_type exact_sol,
+                                     Element *e, double *y_prev, 
+                                     double *bc_left_dir_values,
+			             double *bc_right_dir_values,
+                                     int order)
 {
   // create Gauss quadrature on 'e'
   int pts_num;
@@ -1304,18 +1308,19 @@ double calc_elem_exact_L2_error_squared(exact_sol_type exact_sol,
   return err_squared;
 }
 
-double calc_exact_sol_L2_error(Mesh *mesh, double *y_prev, 
-                               exact_sol_type exact_sol, int order) 
+double calc_exact_sol_error(int norm_h1, Mesh *mesh, double *y_prev, 
+                            exact_sol_type exact_sol, 
+                            int order) 
 {
   double total_err_squared = 0;
   Iterator *I = new Iterator(mesh);
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
       double elem_err_squared = 
-        calc_elem_exact_L2_error_squared(exact_sol, e, y_prev, 
-                                         mesh->bc_left_dir_values,
-			                 mesh->bc_right_dir_values,
-                                         order);
+        calc_elem_exact_error_squared(norm_h1, exact_sol, e, y_prev, 
+                                      mesh->bc_left_dir_values,
+			              mesh->bc_right_dir_values,
+                                      order);
       total_err_squared += elem_err_squared;
   }
   return sqrt(total_err_squared);
@@ -1344,8 +1349,8 @@ int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Elemen
                                           bc_left_dir_values,
 					  bc_right_dir_values);
     }
-    printf("  Elem (%g, %g): cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
-           cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
+    //printf("  Elem (%g, %g): cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
+    //       cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
     if (crit > crit_max) {
       crit_max = crit;
       choice = i;
@@ -1354,7 +1359,7 @@ int select_hp_refinement_ref_p(int num_cand, int3 *cand_list, Element *e, Elemen
 
   if (choice == -1) error("Candidate not found in select_hp_refinement_ref_p().");
 
-  printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  //printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
   return choice;
 }
 
@@ -1384,8 +1389,8 @@ int select_hp_refinement_ref_hp(int num_cand, int3 *cand_list, Element *e, Eleme
 					      bc_right_dir_values);
     }
 
-    printf("  Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
-           cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
+    //printf("  Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
+    //       cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
 
     if (crit > crit_max) {
       crit_max = crit;
@@ -1395,7 +1400,7 @@ int select_hp_refinement_ref_hp(int num_cand, int3 *cand_list, Element *e, Eleme
 
   if (choice == -1) error("Candidate not found in select_hp_refinement_ref_hp().");
 
-  printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  //printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
   return choice;
 }
 
