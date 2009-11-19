@@ -187,7 +187,7 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
     for (int i=0; i<pts_num_right; i++) {
       double diff_val = phys_u_ref_right[c][i] - phys_u_right[c][i];
       if (norm == 1) {
-        double diff_der = phys_u_ref_right[c][i] - phys_u_right[c][i];
+        double diff_der = phys_dudx_ref_right[c][i] - phys_dudx_right[c][i];
         norm_squared_right[c] += (diff_val*diff_val + diff_der*diff_der)
                                   * phys_weights_right[i];
       }
@@ -199,6 +199,7 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
   for (int c=0; c<n_eq; c++) {
     err_squared += norm_squared_left[c] + norm_squared_right[c];
   }
+  
   return err_squared;
 }
 
@@ -1439,11 +1440,8 @@ double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev,
                                       mesh->bc_left_dir_values,
 			              mesh->bc_right_dir_values,
                                       order);
-      printf("elem_err_squared = %g\n", elem_err_squared);
       total_err_squared += elem_err_squared;
   }
-  printf("total_err_exact = %g\n", sqrt(total_err_squared));
-  //exit(0);
   
   return sqrt(total_err_squared);
 }

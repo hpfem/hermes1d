@@ -302,13 +302,8 @@ int main() {
     double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
                                  y_prev_ref, err_est_squared_array);
 
-    printf("err_est_total = %g\n", err_est_total);
-
     // Calculate the norm of the reference solution
     double ref_sol_norm = calc_approx_sol_norm(NORM, mesh_ref, y_prev_ref);
-
-    printf("ref_sol_norm = %g\n", ref_sol_norm);
-
 
     // Calculate an estimate of the global relative error
     double err_est_rel = err_est_total/ref_sol_norm;
@@ -320,17 +315,13 @@ int main() {
       int order = 20; // heuristic parameter
       double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
      
-      printf("err_exact_total = %g\n", err_exact_total);
-
       // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
       int subdivision = 100; // heuristic parameter
       double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
                                                   subdivision, order);
 
-      printf("exact_sol_norm = %g\n", exact_sol_norm);
-
-      // Calculate an estimate of the global relative error
+       // Calculate an estimate of the global relative error
       double err_exact_rel = err_exact_total/exact_sol_norm;
       printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
       graph.add_values(0, N_dof, 100 * err_exact_rel);
@@ -343,7 +334,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    if (adapt_iterations == 1) break;
+    //if (adapt_iterations == 1) break;
   
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 
