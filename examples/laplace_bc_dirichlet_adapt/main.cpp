@@ -22,7 +22,7 @@ const double THRESHOLD = 0.7;           // Refined will be all elements whose er
                                         // is greater than THRESHOLD*max_elem_error
 const double TOL_ERR_REL = 1e-3;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
-const int NORM = 0;                     // 1... H1 norm
+const int NORM = 1;                     // 1... H1 norm
                                         // 0... L2 norm
 
 // Boundary conditions
@@ -343,7 +343,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    if (adapt_iterations == 2) break;
+    if (adapt_iterations == 1) break;
   
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 

@@ -1394,12 +1394,13 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
   int n_eq = e->dof_size;
   double phys_u_exact[MAX_EQN_NUM][MAX_PTS_NUM], 
          phys_dudx_exact[MAX_EQN_NUM][MAX_PTS_NUM];
-  for (int j=0; j<pts_num; j++) {
+  for (int j=0; j < pts_num; j++) {
     double phys_u_exact_pt[MAX_EQN_NUM], 
            phys_dudx_exact_pt[MAX_EQN_NUM]; 
     exact_sol(phys_x[j], phys_u_exact_pt, phys_dudx_exact_pt); 
     for (int c=0; c < n_eq; c++) {
       phys_u_exact[c][j] = phys_u_exact_pt[c];
+      phys_dudx_exact[c][j] = phys_dudx_exact_pt[c];
     }
   }
 
@@ -1419,7 +1420,7 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
   }
 
   double err_squared = 0;
-  for (int c=0; c<n_eq; c++)  
+  for (int c=0; c < n_eq; c++)  
     err_squared += norm_squared[c];
 
   return err_squared;
@@ -1438,8 +1439,12 @@ double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev,
                                       mesh->bc_left_dir_values,
 			              mesh->bc_right_dir_values,
                                       order);
+      printf("elem_err_squared = %g\n", elem_err_squared);
       total_err_squared += elem_err_squared;
   }
+  printf("total_err_exact = %g\n", sqrt(total_err_squared));
+  //exit(0);
+  
   return sqrt(total_err_squared);
 }
 
