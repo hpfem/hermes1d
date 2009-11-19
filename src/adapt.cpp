@@ -422,7 +422,7 @@ double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e
   // refinement candidate
   // NOTE: this may need some experimantation
   int dof_orig = e->p + 1;
-  int dof_new = p_left + p_right + 2; 
+  int dof_new = p_left + p_right + 1; 
   int dof_added = dof_new - dof_orig; 
   double error_scaled = -log(err_total) / dof_added; 
 

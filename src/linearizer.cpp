@@ -106,8 +106,11 @@ void Linearizer::get_xy(double *y_prev, int comp,
     Element *e;
     int counter = 0;
     while ((e = I->next_active_element()) != NULL) {
-        if (counter >= n_active_elem)
+        if (counter >= n_active_elem) {
+	  printf("n_active_elem = %d\n", n_active_elem);
+	  printf("counter = %d\n", counter);
             error("Internal error: wrong n_active_elem");
+        }
         // FIXME:
         if(e->p > MAX_POLYORDER)
             error("element degree too hign in plot(solution).");

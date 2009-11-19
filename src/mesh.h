@@ -13,7 +13,7 @@
 class Element {
 public:
     Element();
-    Element(double x_left, double x_right, int deg, int n_eq);
+    Element(double x_left, double x_right, int lev, int deg, int n_eq);
     void free_element() {
         if (this->sons[0] != NULL) delete this->sons[0];
         if (this->sons[1] != NULL) delete this->sons[1];
@@ -95,6 +95,9 @@ class Mesh {
         }
         int get_n_active_elem() {
             return this->n_active_elem;
+        }
+        void set_n_active_elem(int n_active_elem) {
+            this->n_active_elem = n_active_elem;
         }
         int get_n_dof() {
             return this->n_dof;

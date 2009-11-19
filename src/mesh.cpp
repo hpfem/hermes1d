@@ -19,7 +19,7 @@ Element::Element()
   dof_size = 0;
 }
 
-Element::Element(double x_left, double x_right, int deg, int n_eq) 
+Element::Element(double x_left, double x_right, int lev, int deg, int n_eq) 
 {
   x1 = x_left;
   x2 = x_right;
@@ -29,7 +29,7 @@ Element::Element(double x_left, double x_right, int deg, int n_eq)
   if (dof == NULL) error("Not enough memory in Element().");
   sons[0] = sons[1] = NULL; 
   active = 1;
-  level = 0;
+  level = lev;
   id = -1;
 }
 
@@ -48,10 +48,8 @@ void Element::refine(int3 cand)
     double x1 = this->x1;
     double x2 = this->x2;
     double midpoint = (x1 + x2)/2.; 
-    this->sons[0] = new Element(x1, midpoint, cand[1], dof_size);
-    this->sons[1] = new Element(midpoint, x2, cand[2], dof_size);
-    this->sons[0]->level = this->level + 1; 
-    this->sons[1]->level = this->level + 1; 
+    this->sons[0] = new Element(x1, midpoint, this->level + 1, cand[1], dof_size);
+    this->sons[1] = new Element(midpoint, x2, this->level + 1, cand[2], dof_size);
     // copying negative dof to sons if any
     for(int c=0; c<dof_size; c++) {
       if (this->dof[c][0] < 0) this->sons[0]->dof[c][0] = this->dof[c][0];
@@ -338,7 +336,7 @@ void Mesh::refine_elems(int elem_num, int *id_array, int3 *cand_array)
             if (count >= elem_num)
                 error("refine_multi_elems: not enough elems specified");
             e->refine(cand_array[count]);
-            this->n_active_elem++;
+            if (cand_array[count][0] == 1) this->n_active_elem++;
             count++;
         }
     }
@@ -348,6 +346,8 @@ void Mesh::refine_elems(int elem_num, int *id_array, int3 *cand_array)
 // increases poly degree in sons by one
 void Mesh::reference_refinement(int start_elem_id, int elem_num)
 {
+    printf("Reference refinement: %d elems starting with %d\n", elem_num, start_elem_id);
+
     Iterator *I = new Iterator(this);
     Element *e;
     int count = 0;
@@ -360,6 +360,7 @@ void Mesh::reference_refinement(int start_elem_id, int elem_num)
             count++;
         }
     }
+    printf("After ref refinement nelem = %d\n", n_active_elem);
 }
 
 void Mesh::set_bc_left_dirichlet(int eq_n, double val)
@@ -408,7 +409,7 @@ int Mesh::assign_dofs()
     // (2) enumerate bubble dofs
     I->reset();
     while ((e = I->next_active_element()) != NULL) {
-      for(int j=2; j<=e->p; j++) {
+      for(int j=2; j <= e->p; j++) {
         e->dof[c][j] = count_dof;
         count_dof++;
       }
@@ -449,7 +450,8 @@ int Mesh::assign_elem_ids()
     Element *e;
     I->reset();
     while ((e = I->next_active_element()) != NULL) {
-        e->id = count_id++;
+        e->id = count_id;
+        count_id++;
     }
     delete I;
 }
@@ -603,7 +605,7 @@ Mesh *Mesh::replicate()
   }
 
   // copy number of base elements
-  mesh_ref->set_n_base_elem(this->get_n_base_elem());
+  mesh_ref->set_n_base_elem(this->n_base_elem);
     
   // copy arrays of Dirichlet boundary conditions
   for(int c = 0; c<this->n_eq; c++) {
@@ -630,6 +632,12 @@ Mesh *Mesh::replicate()
     Element *e_trg = mesh_ref->get_base_elems() + i;
     e_src->copy_sons_recursively(e_trg);
   }
+
+  // copy number of base elements
+  mesh_ref->set_n_active_elem(this->n_active_elem);
+
+  // enumerate DOF in the reference mesh
+  mesh_ref->assign_dofs();
 
   // enumerate elements in reference mesh
   mesh_ref->assign_elem_ids();
@@ -862,12 +870,13 @@ void Mesh::plot_error_exact(const char *filename,
 }
 
 // Refine all elements in the id_array list whose id_array >= 0
-void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_prev_ref, 
+void Mesh::adapt(double threshold, Mesh *mesh_ref, 
+                 double *y_prev, double *y_prev_ref, 
                  double *err_squared_array) 
 {
   // Find element with largest error
   double max_elem_error = 0;
-  for(int i=0; i<this->get_n_active_elem(); i++) {
+  for(int i=0; i < this->get_n_active_elem(); i++) {
     double elem_error = sqrt(err_squared_array[i]);
     if (elem_error > max_elem_error) {
       max_elem_error = elem_error;
@@ -876,7 +885,7 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
 
   // Create auxiliary array of element indices
   int id_array[MAX_ELEM_NUM];
-  for(int i=0; i<this->get_n_active_elem(); i++) {
+  for(int i=0; i < this->get_n_active_elem(); i++) {
    if(sqrt(err_squared_array[i]) < threshold*max_elem_error) id_array[i] = -1; 
    else id_array[i] = i;
   }
@@ -895,7 +904,7 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
 
   // Create list of elements to be refined, in increasing order
   //for (int i=0; i<this->get_n_active_elem(); i++) printf("id_array[%d] = %d\n", i, id_array[i]);
-  for (int i=0; i<this->get_n_active_elem(); i++) {
+  for (int i=0; i < this->get_n_active_elem(); i++) {
     if (id_array[i] >= 0) {
       adapt_list[num_to_adapt] = id_array[i];
       num_to_adapt++;
@@ -903,8 +912,9 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
   }
  
   // Debug: Printing list of elements to be refined
-  printf("Elements to be refined:\n");
-  for (int i=0; i<num_to_adapt; i++) printf("Elem[%d]\n", adapt_list[i]);
+  printf("Elements to be refined: ");
+  for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
+  printf("\n");
 
   Iterator *I = new Iterator(this);
   Iterator *I_ref = new Iterator(mesh_ref);
@@ -919,7 +929,7 @@ void Mesh::adapt(double threshold, Mesh *mesh_ref, double *y_prev, double *y_pre
     if (e->id == adapt_list[counter]) {
       counter++;
       int choice = 0;
-      int3 cand_list[MAX_CAND_NUM];    // Every refinement candidates consists of three
+      int3 cand_list[MAX_CAND_NUM];   // Every refinement candidates consists of three
                                       // numbers: 1/0 whether it is a p-candidate or not,
                                       // and then either one or two polynomial degrees
       // debug:

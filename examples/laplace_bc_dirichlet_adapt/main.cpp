@@ -184,7 +184,7 @@ int main() {
 
       // If residual norm less than TOL_NEWTON_COARSE, quit
       // latest solution is in y_prev
-      printf("Residual L2 norm: %.15f\n", res_norm);
+      printf("Residual L2 norm (coarse): %.15f\n", res_norm);
       if(res_norm < TOL_NEWTON_COARSE) break;
 
       // Change sign of vector res
@@ -218,7 +218,7 @@ int main() {
       // First time: replicate the mesh
       mesh_ref = mesh->replicate();
     }
- 
+
     // Perform refinements in the reference mesh
     // Refines 'num_to_ref' elements starting with element 'start_elem_id'
     // For now, refine entire mesh uniformly in 'h' and 'p'
@@ -270,7 +270,7 @@ int main() {
 
       // If residual norm less than TOL_NEWTON_REF, quit
       // latest solution is in y_prev
-      printf("ref: Residual L2 norm: %.15f\n", res_ref_norm);
+      printf("Residual L2 norm (ref): %.15f\n", res_ref_norm);
       if(res_ref_norm < TOL_NEWTON_REF) break;
 
       // Change sign of vector res_ref
@@ -326,7 +326,7 @@ int main() {
     // Decide whether the relative error is sufficiently small
     if(err_est_L2_rel*100 < TOL_ERR_REL) break;
 
-    if (adapt_iterations == 3) break;
+    if (adapt_iterations == 6) break;
   
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(THRESHOLD, mesh_ref, y_prev, y_prev_ref, err_est_L2_squared_array);
