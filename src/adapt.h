@@ -51,37 +51,41 @@ void sort_element_errors(int n, double *err_array, int *id_array);
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on (-1, 0)
 // and degree 'p_right' on (0, 1). 
-double check_refin_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
-                                   double *y_prev_ref, int p_left, int p_right, 
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-	  	                   double bc_right_dir_values[MAX_EQN_NUM]);
+void check_cand_coarse_hp_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
+                                  double *y_prev_ref, int p_left, int p_right, 
+                                  double bc_left_dir_values[MAX_EQN_NUM],
+	  	                  double bc_right_dir_values[MAX_EQN_NUM],
+                                  double &err, int &dof);
 
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on (-1, 0)
 // and degree 'p_right' on (0, 1). 
-double check_refin_coarse_hp_fine_p(Element *e, Element *e_ref,
-                                   double *y_prev_ref, int p_left, int p_right, 
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-	  	                   double bc_right_dir_values[MAX_EQN_NUM]);
+void check_cand_coarse_hp_fine_p(Element *e, Element *e_ref,
+                                 double *y_prev_ref, int p_left, int p_right, 
+                                 double bc_left_dir_values[MAX_EQN_NUM],
+	  	                 double bc_right_dir_values[MAX_EQN_NUM],
+                                 double &err, int &dof);
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // polynomials of degree 'p' on (-1, 1). 
-double check_refin_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
-                                    double *y_prev_ref, int p,
-                                    double bc_left_dir_values[MAX_EQN_NUM],
-		                    double bc_right_dir_values[MAX_EQN_NUM]);
+void check_cand_coarse_p_fine_hp(Element *e, Element *e_ref_left, Element *e_ref_right, 
+                                 double *y_prev_ref, int p,
+                                 double bc_left_dir_values[MAX_EQN_NUM],
+		                 double bc_right_dir_values[MAX_EQN_NUM],
+                                 double &err, int &dof);
 
 // Assumes that reference solution is defined on one single element 
 // 'e_ref' (reference refinement did not split the element in space). 
 // The reference solution is projected onto the space of 
 // polynomials of degree 'p' on (-1, 1). 
-double check_refin_coarse_p_fine_p(Element *e, Element *e_ref, 
-                                   double *y_prev_ref, int p, 
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-	  	                   double bc_right_dir_values[MAX_EQN_NUM]);
+void check_cand_coarse_p_fine_p(Element *e, Element *e_ref, 
+                                double *y_prev_ref, int p, 
+                                double bc_left_dir_values[MAX_EQN_NUM],
+				double bc_right_dir_values[MAX_EQN_NUM],
+                                double &err, int &dof);
 
 // Error wrt. exact solution (if provided) on element 'e' 
 double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,

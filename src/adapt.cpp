@@ -6,11 +6,16 @@
 #include "transforms.h"
 #include "common.h"
 
-// To debug automatic adaptivity. This generates Gnuplot files 
-// for all refinement candidates, showing both the reference 
-// solution and the projection. Thus one can compare the 
-// candidates visually.
-int PLOT_CANDIDATE_PROJECTIONS = 0;
+// This is great help to debug automatic adaptivity. Generated are 
+// Gnuplot files for all refinement candidates, showing both the 
+// reference solution and the projection. Thus one can visually 
+// examine the candidates and see whether the adaptivity algorithm
+// selects the correct one. 
+int PLOT_CANDIDATE_PROJECTIONS = 1;
+
+// This is another help for debugging hp-adaptivity; All candidates
+//that are tried are printed along with their performance criterion
+int PRINT_CANDIDATES = 1;
 
 // returns values of normalized Legendre polynomials on (a, b)
 double legendre(int i, double a, double b, double x) {  // x \in (a, b)
@@ -286,11 +291,12 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on 'e_ref_left'
 // and degree 'p_right' on 'e_ref_right'
-double check_refin_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left, 
-                                     Element *e_ref_right, 
-                                     double *y_prev_ref, int p_left, int p_right, 
-                                     double bc_left_dir_values[MAX_EQN_NUM],
-		                     double bc_right_dir_values[MAX_EQN_NUM])
+double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left, 
+                                    Element *e_ref_right, 
+                                    double *y_prev_ref, int p_left, int p_right, 
+                                    double bc_left_dir_values[MAX_EQN_NUM],
+				    double bc_right_dir_values[MAX_EQN_NUM],
+                                    double &err, int &dof)
 {
   int n_eq = e->dof_size;
 
@@ -470,20 +476,13 @@ double check_refin_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   }
   //if (err_total < 1e-10) {
   //    printf("candidate (1 %d %d)\n", p_left, p_right);
-  //    warning("in check_refin_coarse_hp_fine_hp: bad refinement candidate (err_total=0)");
+  //    warning("in check_cand_coarse_hp_fine_hp: bad refinement candidate (err_total=0)");
   //    return -1e6;
   //}
-  err_total = sqrt(err_total);
-
-  // penalizing the error by the number of DOF induced by this 
-  // refinement candidate
-  // NOTE: this may need some experimantation
+  err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p_left + p_right + 1; 
-  int dof_added = dof_new - dof_orig; 
-  double error_scaled = -log(err_total) / dof_added; 
-
-  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+  dof = dof_new - dof_orig; 
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -582,18 +581,17 @@ double check_refin_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     fclose(f_cand);
   }
   // **************************************************************************
-
-  return error_scaled; 
 }
 
 // Assumes that reference solution is defined on one single element 'e_ref' = 'e'. 
 // The reference solution is projected onto the space of (discontinuous) 
 // polynomials of degree 'p_left' on the left half of 'e' and degree 
 // 'p_right' on the right half of 'e' 
-double check_refin_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
-                                    double *y_prev_ref, int p_left, int p_right,
-                                    double bc_left_dir_values[MAX_EQN_NUM],
-		                    double bc_right_dir_values[MAX_EQN_NUM])
+double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
+                                   double *y_prev_ref, int p_left, int p_right,
+                                   double bc_left_dir_values[MAX_EQN_NUM],
+				   double bc_right_dir_values[MAX_EQN_NUM],
+                                   double &err, int &dof)
 {
   int n_eq = e->dof_size;
 
@@ -763,20 +761,13 @@ double check_refin_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   }
   //if (err_total < 1e-10) {
   //    printf("candidate (1 %d %d)\n", p_left, p_right);
-  //    warning("in check_refin_coarse_hp_fine_p: bad refinement candidate (err_total=0)");
+  //    warning("in check_cand_coarse_hp_fine_p: bad refinement candidate (err_total=0)");
   //    return -1e6;
   //}
-  err_total = sqrt(err_total);
-
-  // penalizing the error by the number of DOF induced by this 
-  // refinement candidate
-  // NOTE: this may need some experimantation
+  err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p_left + p_right + 1; 
-  int dof_added = dof_new - dof_orig; 
-  double error_scaled = -log(err_total) / dof_added; 
-
-  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+  dof = dof_new - dof_orig; 
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -873,18 +864,17 @@ double check_refin_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     fclose(f_cand);
   }
   // **************************************************************************
-
-  return error_scaled;
 }
 
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // polynomials of degree 'p' on 'e'
-double check_refin_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left, 
-                                    Element *e_ref_right, 
-                                    double *y_prev_ref, int p,
-                                    double bc_left_dir_values[MAX_EQN_NUM],
-		                    double bc_right_dir_values[MAX_EQN_NUM])
+double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left, 
+                                   Element *e_ref_right, 
+                                   double *y_prev_ref, int p,
+                                   double bc_left_dir_values[MAX_EQN_NUM],
+				   double bc_right_dir_values[MAX_EQN_NUM],
+                                   double &err, int &dof)
 {
   int n_eq = e->dof_size;
 
@@ -1058,20 +1048,13 @@ double check_refin_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   }
   //if (err_total < 1e-10) {
   //    printf("candidate (0 %d -1)\n", p);
-  //    warning("in check_refin_coarse_p_fine_hp: bad refinement candidate (err_total=0)");
+  //    warning("in check_cand_coarse_p_fine_hp: bad refinement candidate (err_total=0)");
   //    return -1e6;
   //}
-  err_total = sqrt(err_total);
-
-  // penalizing the error by the number of DOF induced by this 
-  // refinement candidate
-  // NOTE: this may need some experimantation
+  err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p + 1; 
-  int dof_added = dof_new - dof_orig; 
-  double error_scaled = -log(err_total) / dof_added; 
-
-  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+  dof = dof_new - dof_orig; 
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -1168,18 +1151,17 @@ double check_refin_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     fclose(f_cand);
   }
   // **************************************************************************
-
-  return error_scaled; 
 }
 
 // Assumes that reference solution is defined on one single element 
 // 'e_ref' (reference refinement did not split the element in space). 
 // The reference solution is projected onto the space of 
 // polynomials of degree 'p' on 'e'
-double check_refin_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
-                                   double *y_prev_ref, int p,
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-		                   double bc_right_dir_values[MAX_EQN_NUM])
+double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
+                                  double *y_prev_ref, int p,
+                                  double bc_left_dir_values[MAX_EQN_NUM],
+				  double bc_right_dir_values[MAX_EQN_NUM],
+                                  double &err, int &dof)
 {
   int n_eq = e->dof_size;
 
@@ -1260,20 +1242,13 @@ double check_refin_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   }
   //if (err_total < 1e-10) {
   //    printf("candidate (0 %d -1)\n", p);
-  //    warning("in check_refin_coarse_p_fine_p: bad refinement candidate (err_total=0)");
+  //    warning("in check_cand_coarse_p_fine_p: bad refinement candidate (err_total=0)");
   //    return -1e6;
   //}
-  err_total = sqrt(err_total);
-
-  // penalizing the error by the number of DOF induced by this 
-  // refinement candidate
-  // NOTE: this may need some experimantation
+  err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p + 1; 
-  int dof_added = dof_new - dof_orig; 
-  double error_scaled = -log(err_total) / dof_added; 
-
-  if (!PLOT_CANDIDATE_PROJECTIONS) return error_scaled;
+  dof = dof_new - dof_orig; 
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -1333,8 +1308,6 @@ double check_refin_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     fclose(f_cand);
   }
   // **************************************************************************
-
-  return error_scaled; 
 }
 
 double calc_exact_sol_norm(int norm, exact_sol_type exact_sol, 
@@ -1457,21 +1430,34 @@ int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list,
   for (int i=0; i<num_cand; i++) {
     if (cand_list[i][0] == 0) { // p-refinement
       int p_new = cand_list[i][1];
-      crit = check_refin_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, p_new,
-                                         bc_left_dir_values,
-			                 bc_right_dir_values);
+      double err;
+      int dof;
+      check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, p_new,
+                                 bc_left_dir_values,
+				 bc_right_dir_values, err, dof);
+      // NOTE: this may need some experimantation
+      double error_scaled = -log(err) / dof; 
 
     }
     else {                      // hp-refinement
+      double err;
+      int dof;
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
-      crit = check_refin_coarse_hp_fine_p(norm, e, e_ref, 
-                                          y_prev_ref, p_new_left, p_new_right, 
-                                          bc_left_dir_values,
-					  bc_right_dir_values);
+      check_cand_coarse_hp_fine_p(norm, e, e_ref, 
+                                  y_prev_ref, p_new_left, p_new_right, 
+                                  bc_left_dir_values,
+				  bc_right_dir_values, err, dof);
+      // NOTE: this may need some experimantation
+      double error_scaled = -log(err) / dof; 
     }
-    //printf("  Elem (%g, %g): cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
-    //       cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
+
+    // debug
+    if (PRINT_CANDIDATES) {
+      printf("  Elem (%g, %g): cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
+             cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
+    }
+
     if (crit > crit_max) {
       crit_max = crit;
       choice = i;
@@ -1480,7 +1466,10 @@ int select_hp_refinement_ref_p(int norm, int num_cand, int3 *cand_list,
 
   if (choice == -1) error("Candidate not found in select_hp_refinement_ref_p().");
 
-  //printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  // debug
+  if (PRINT_CANDIDATES) {
+    printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  }
   return choice;
 }
 
@@ -1495,24 +1484,34 @@ int select_hp_refinement_ref_hp(int norm,  int num_cand, int3 *cand_list,
   double crit;
   for (int i=0; i<num_cand; i++) {
     if (cand_list[i][0] == 0) { // p-refinement
+      double err;
+      int dof;
       int p_new = cand_list[i][1];
-      crit = check_refin_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
-                                          y_prev_ref, p_new,
-                                          bc_left_dir_values,
-					  bc_right_dir_values);
-
+      check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
+                                  y_prev_ref, p_new,
+                                  bc_left_dir_values,
+				  bc_right_dir_values, err, dof);
+      // NOTE: this may need some experimantation
+      double error_scaled = -log(err) / dof; 
     }
     else {                      // hp-refinement
+      double err;
+      int dof;
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
-      crit = check_refin_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
-                                           y_prev_ref, p_new_left, p_new_right, 
-                                           bc_left_dir_values,
-					   bc_right_dir_values);
+      check_cand_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
+                                   y_prev_ref, p_new_left, p_new_right, 
+                                   bc_left_dir_values,
+				   bc_right_dir_values, err, dof);
+      // NOTE: this may need some experimantation
+      double error_scaled = -log(err) / dof; 
     }
 
-    //printf("  Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
-    //       cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
+    // debug
+    if (PRINT_CANDIDATES) {
+      printf("  Elem (%g, %g): ref hp, cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
+             cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
+    }
 
     if (crit > crit_max) {
       crit_max = crit;
@@ -1522,7 +1521,11 @@ int select_hp_refinement_ref_hp(int norm,  int num_cand, int3 *cand_list,
 
   if (choice == -1) error("Candidate not found in select_hp_refinement_ref_hp().");
 
-  //printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  // debug
+  if (PRINT_CANDIDATES) {
+    printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
+  }
+
   return choice;
 }
 

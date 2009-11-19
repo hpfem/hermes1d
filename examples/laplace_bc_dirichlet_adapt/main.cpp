@@ -334,7 +334,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 1) break;
+    if (adapt_iterations == 2) break;
   
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 
