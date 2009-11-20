@@ -11,11 +11,11 @@
 // reference solution and the projection. Thus one can visually 
 // examine the candidates and see whether the adaptivity algorithm
 // selects the correct one. 
-int PLOT_CANDIDATE_PROJECTIONS = 1;
+int PLOT_CANDIDATE_PROJECTIONS = 0;
 
 // This is another help for debugging hp-adaptivity; All candidates
 //that are tried are printed along with their performance criterion
-int PRINT_CANDIDATES = 1;
+int PRINT_CANDIDATES = 0;
 
 // returns values of normalized Legendre polynomials on (a, b)
 double legendre(int i, double a, double b, double x) {  // x \in (a, b)
@@ -348,7 +348,6 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
         proj_coeffs_left[c][m] += 
           phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
       }
-      //printf("proj_coeffs_left[%d][%d] = %g\n", c, m, proj_coeffs_left[c][m]);
     }
   }
 
@@ -359,6 +358,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
       phys_u_left[c][j] = 0;
+      phys_dudx_left[c][j] = 0;
       for (int m=0; m<p_left+1; m++) { // loop over transf. Leg. polynomials
         phys_u_left[c][j] += 
           leg_pol_val_left[m][j] * proj_coeffs_left[c][m];
@@ -431,7 +431,6 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
         proj_coeffs_right[c][m] += 
           phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
       }
-      //printf("proj_coeffs_right[%d][%d] = %g\n", c, m, proj_coeffs_right[c][m]);
     }
   }
 
@@ -442,6 +441,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_right; j++) { // loop over integration points
       phys_u_right[c][j] = 0;
+      phys_dudx_right[c][j] = 0;
       for (int m=0; m<p_right+1; m++) { // loop over transf. Leg. polynomials
         phys_u_right[c][j] += 
           leg_pol_val_right[m][j] * proj_coeffs_right[c][m];
@@ -652,6 +652,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
       phys_u_left[c][j] = 0;
+      phys_dudx_left[c][j] = 0;
       for (int m=0; m<p_left+1; m++) { // loop over transf. Leg. polynomials
         phys_u_left[c][j] += 
           leg_pol_val_left[m][j] * proj_coeffs_left[c][m];
@@ -732,6 +733,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num_right; j++) { // loop over integration points
       phys_u_right[c][j] = 0;
+      phys_dudx_right[c][j] = 0;
       for (int m=0; m < p_right+1; m++) { // loop over transf. Leg. polynomials
         phys_u_right[c][j] += 
           leg_pol_val_right[m][j] * proj_coeffs_right[c][m];
@@ -918,7 +920,6 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
         proj_coeffs_left[c][m] += 
           phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
       }
-      //printf("proj_coeffs_left[%d][%d] = %g\n", c, m, proj_coeffs_left[c][m]);
     }
   }
 
@@ -956,13 +957,12 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // calculate the second part of the projection coefficients
   double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
+    for(int c=0; c < n_eq; c++) { // loop over solution components
       proj_coeffs_right[c][m] = 0;
-      for(int j=0; j<pts_num_right; j++) { // loop over integration points
+      for(int j=0; j < pts_num_right; j++) { // loop over integration points
         proj_coeffs_right[c][m] += 
           phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
       }
-      //printf("proj_coeffs_right[%d][%d] = %g\n", c, m, proj_coeffs_right[c][m]);
     }
   }
 
@@ -985,6 +985,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num_left; j++) { // loop over integration points left
       phys_u_left[c][j] = 0;
+      phys_dudx_left[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
         phys_u_left[c][j] += 
           leg_pol_val_left[m][j] * proj_coeffs[c][m];
@@ -1001,6 +1002,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num_right; j++) { // loop over integration points right
       phys_u_right[c][j] = 0;
+      phys_dudx_right[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
         phys_u_right[c][j] += 
           leg_pol_val_right[m][j] * proj_coeffs[c][m];
@@ -1029,9 +1031,9 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e_ref_right'
   double err_squared_right[MAX_EQN_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
+  for (int c=0; c < n_eq; c++) { // loop over solution components
     err_squared_right[c] = 0;
-    for (int j=0; j<pts_num_right; j++) { // loop over integration points left
+    for (int j=0; j < pts_num_right; j++) { // loop over integration points left
       double diff_val = phys_u_ref_right[c][j] - phys_u_right[c][j];
       if (norm == 1) {
         double diff_der = phys_dudx_ref_right[c][j] - phys_dudx_right[c][j];
@@ -1208,6 +1210,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num; j++) { // loop over integration points
       phys_u[c][j] = 0;
+      phys_dudx[c][j] = 0;
       for (int m=0; m < p + 1; m++) { // loop over Leg. polynomials
         phys_u[c][j] += 
           leg_pol_val[m][j] * proj_coeffs[c][m];

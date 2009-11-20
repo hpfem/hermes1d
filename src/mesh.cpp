@@ -954,7 +954,7 @@ void Mesh::adapt(int norm, double threshold, Mesh *mesh_ref,
       e = I->next_active_element();
       e_ref = I_ref->next_active_element();
       // perform the refinement
-      printf("Refining element (%g, %g), cand = (%d %d %d)\n", e_last->x1, e_last->x2, 
+      printf("  Refining element (%g, %g), cand = (%d %d %d)\n", e_last->x1, e_last->x2, 
              cand_list[choice][0], cand_list[choice][1], cand_list[choice][2]);
       e_last->refine(cand_list[choice]);
       if(cand_list[choice][0] == 1) this->n_active_elem++; 
