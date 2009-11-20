@@ -26,6 +26,7 @@ double legendre(int i, double a, double b, double x) {  // x \in (a, b)
 // returns derivatives of normalized Legendre polynomials on (a, b)
 double legendre_der(int i, double a, double b, double x) {  // x \in (a, b)
   double norm_const = sqrt(2/(b-a));
+  norm_const *= 2./(b-a); // to account for interval stretching/shortening
   return norm_const*legendre_der_tab_1d[i](inverse_map(a, b, x));
 }
 
@@ -517,7 +518,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_%d_fine_%d_%d_visit_%d.gp", 
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_%d_fine_%d_%d_visit_%d.gp", 
 	    e->x1, e->x2, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
@@ -568,7 +569,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
     // plotting the projection on the left and right halves
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_cand_%d_%d_fine_%d_%d_visit_%d.gp", 
+    sprintf(filename_cand, "cand_%g_%g_coarse_%d_%d_fine_%d_%d_visit_%d.gp", 
 	    e->x1, e->x2, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
@@ -761,11 +762,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
-  //if (err_total < 1e-10) {
-  //    printf("candidate (1 %d %d)\n", p_left, p_right);
-  //    warning("in check_cand_coarse_hp_fine_p: bad refinement candidate (err_total=0)");
-  //    return -1e6;
-  //}
+
   err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p_left + p_right + 1; 
@@ -801,7 +798,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_%d_fine_%d_visit_%d.gp", 
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_%d_fine_%d_visit_%d.gp", 
 	    e->x1, e->x2, p_left, p_right, e_ref->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
@@ -852,7 +849,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     }
     // plotting the projection on the left and right halves
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_cand_%d_%d_fine_%d_visit_%d.gp", 
+    sprintf(filename_cand, "cand_%g_%g_coarse_%d_%d_fine_%d_visit_%d.gp", 
 	    e->x1, e->x2, p_left, p_right, e_ref->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
@@ -890,13 +887,14 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   double phys_x_left[MAX_PTS_NUM];          // quad points
   double phys_weights_left[MAX_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
-                                 order_left, phys_x_left, phys_weights_left, &pts_num_left); 
+                                 order_left, phys_x_left, phys_weights_left, 
+                                 &pts_num_left); 
 
   // get fine mesh solution values and derivatives on 'e_ref_left'
   double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
          phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, phys_dudx_ref_left, 
-                           y_prev_ref, 
+  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, 
+                           phys_dudx_ref_left, y_prev_ref, 
                            bc_left_dir_values, bc_right_dir_values); 
 
   // get values of (original) Legendre polynomials in 'e_ref_left'
@@ -974,7 +972,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // add the two parts of projection coefficients
   double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
   for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
+    for(int c=0; c < n_eq; c++) { // loop over solution components
       proj_coeffs[c][m] = proj_coeffs_left[c][m] + proj_coeffs_right[c][m];
       //printf("  proj_coeffs[%d][%d] = %g\n", c, m, proj_coeffs[c][m]);
     }
@@ -984,8 +982,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // and every integration point
   double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
   double phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
-    for (int j=0; j<pts_num_left; j++) { // loop over integration points left
+  for (int c=0; c < n_eq; c++) { // loop over solution components
+    for (int j=0; j < pts_num_left; j++) { // loop over integration points left
       phys_u_left[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
         phys_u_left[c][j] += 
@@ -1000,8 +998,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // and every integration point
   double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
   double phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  for (int c=0; c<n_eq; c++) { // loop over solution components
-    for (int j=0; j<pts_num_right; j++) { // loop over integration points right
+  for (int c=0; c < n_eq; c++) { // loop over solution components
+    for (int j=0; j < pts_num_right; j++) { // loop over integration points right
       phys_u_right[c][j] = 0;
       for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
         phys_u_right[c][j] += 
@@ -1046,14 +1044,10 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
 
   // summing errors over components
   double err_total = 0;
-  for (int c=0; c<n_eq; c++) { // loop over solution components
+  for (int c=0; c < n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
-  //if (err_total < 1e-10) {
-  //    printf("candidate (0 %d -1)\n", p);
-  //    warning("in check_cand_coarse_p_fine_hp: bad refinement candidate (err_total=0)");
-  //    return -1e6;
-  //}
+
   err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p + 1; 
@@ -1089,7 +1083,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_fine_%d_%d_visit_%d.gp", 
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_fine_%d_%d_visit_%d.gp", 
 	    e->x1, e->x2, p, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
@@ -1140,7 +1134,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
     // plotting the projection on the left and right halves
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_cand_%d_fine_%d_%d_visit_%d.gp", 
+    sprintf(filename_cand, "cand_%g_%g_coarse_%d_fine_%d_%d_visit_%d.gp", 
 	    e->x1, e->x2, p, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
@@ -1273,7 +1267,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_cand_%d_fine_%d_visit_%d.gp", 
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_fine_%d_visit_%d.gp", 
 	    e->x1, e->x2, p, e_ref->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points
@@ -1302,7 +1296,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     }
     // plotting the projection
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_cand_%d_fine_%d_visit_%d.gp", 
+    sprintf(filename_cand, "cand_%g_%g_coarse_%d_fine_%d_visit_%d.gp", 
 	    e->x1, e->x2, p, e_ref->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting
@@ -1442,58 +1436,53 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
   int choice = -1;
   double crit_max = -1e10;
   double crit;
+  // Traverse the list of all refinement candidates,
+  // for each calculate the projection of the reference
+  // solution on it, and the number of dofs it would 
+  // contribute if selected
   for (int i=0; i<num_cand; i++) {
+    double err;
+    int dof;
     if (cand_list[i][0] == 0 && ref_sol_type == 0) {
       int p_new = cand_list[i][1];
-      double err;
-      int dof;
       check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, p_new,
-                                 bc_left_dir_values,
-				 bc_right_dir_values, err, dof);
-      // NOTE: this may need some experimantation
-      crit = -log(err) / dof; 
-
+        bc_left_dir_values, bc_right_dir_values, err, dof);
     }
     if (cand_list[i][0] == 0 && ref_sol_type == 1) {
-      double err;
-      int dof;
       int p_new = cand_list[i][1];
       check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
-                                  y_prev_ref, p_new,
-                                  bc_left_dir_values,
-				  bc_right_dir_values, err, dof);
-      // NOTE: this may need some experimantation
-      crit = -log(err) / dof; 
+        y_prev_ref, p_new, bc_left_dir_values, bc_right_dir_values, err, dof);
     }
     if (cand_list[i][0] == 1 && ref_sol_type == 0) {
-      double err;
-      int dof;
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
-      check_cand_coarse_hp_fine_p(norm, e, e_ref, 
-                                  y_prev_ref, p_new_left, p_new_right, 
-                                  bc_left_dir_values,
-				  bc_right_dir_values, err, dof);
-      // NOTE: this may need some experimantation
-      crit = -log(err) / dof; 
+      check_cand_coarse_hp_fine_p(norm, e, e_ref, y_prev_ref, p_new_left, 
+        p_new_right, bc_left_dir_values, bc_right_dir_values, err, dof);
     }
     if (cand_list[i][0] == 1 && ref_sol_type == 1) {
-      double err;
-      int dof;
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
       check_cand_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
-                                   y_prev_ref, p_new_left, p_new_right, 
-                                   bc_left_dir_values,
-				   bc_right_dir_values, err, dof);
-      // NOTE: this may need some experimantation
-      crit = -log(err) / dof; 
+        y_prev_ref, p_new_left, p_new_right, bc_left_dir_values,
+	bc_right_dir_values, err, dof);
     }
+
+    // This is heuristic and may need some experimentation:
+    if (fabs(err) < 1e-6) {
+      choice = i;
+      if (PRINT_CANDIDATES) {
+        printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d\n", 
+               e->x1, e->x2, 
+               cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof);
+      }
+      return choice;
+    }
+    crit = -log(err) / dof; 
 
     // debug
     if (PRINT_CANDIDATES) {
-      printf("  Elem (%g, %g): cand (%d %d %d), crit = %g\n", e->x1, e->x2, 
-             cand_list[i][0], cand_list[i][1], cand_list[i][2], crit);
+      printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d\n", e->x1, e->x2, 
+             cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof);
     }
 
     if (crit > crit_max) {
@@ -1504,10 +1493,6 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
 
   if (choice == -1) error("Candidate not found in select_hp_refinement_ref_p().");
 
-  // debug
-  if (PRINT_CANDIDATES) {
-    printf("  Elem (%g, %g): choice = %d\n", e->x1, e->x2, choice);
-  }
   return choice;
 }
 

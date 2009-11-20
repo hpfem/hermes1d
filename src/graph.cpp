@@ -248,6 +248,6 @@ void GnuplotGraph::save(const char* filename)
   }  
 
   fprintf(f, "set terminal x11\n");
-  printf("Graph saved. Process the file '%s' with gnuplot.\n", filename);
+  printf("Type 'gnuplot %s' to get convergence graph as .eps file.\n", filename);
   fclose(f);
 }
