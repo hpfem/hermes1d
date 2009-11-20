@@ -8,7 +8,8 @@ from sympy import var, pprint, ccode
 from sympy.matrices.orthogonalization import (gram_schmidt, l2_inner_product,
         h1_inner_product, integrate)
 
-N = 8
+N = 20
+precision = 25
 
 def check(basis):
     print "orthonormality matrix:"
@@ -25,14 +26,17 @@ polys = [x**i for i in range(N)]
 print "Applying Gram Schmidt process..."
 h1_basis = gram_schmidt(polys, inner_product=h1_ip)
 print "Orthonormal basis:"
-print h1_basis
+#print h1_basis
 #check(h1_basis)
 
 functions = []
 for i, v in enumerate(h1_basis):
+    f = v.n(precision)
+    f_diff = v.diff(x).n(precision)
+    print "i:", f
     functions.append({"id": i,
-        "expr": ccode(v),
-        "expr_diff": ccode(v.diff(x)),
+        "expr": ccode(f),
+        "expr_diff": ccode(f_diff),
         })
 
 print "Generating the C file..."
