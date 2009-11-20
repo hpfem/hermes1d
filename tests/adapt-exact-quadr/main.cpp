@@ -1,11 +1,15 @@
 #include "hermes1d.h"
 
-// ********************************************************************
+#include "legendre.h"
+#include "lobatto.h"
+#include "quad_std.h"
 
-// This example solves adaptively the Poisson equation -u'' - f = 0 
-// in an interval (A, B), equipped with Dirichlet boundary
-// conditions on both end points. Among others it shows how 
-// one can measure error wrt. exact solution (if available).
+// This test makes sure that an exact function 
+// 1-x^2 is found after one step of hp-adaptivity, 
+// and that both refinements were p-refinements.
+
+#define ERROR_SUCCESS                               0
+#define ERROR_FAILURE                               -1
 
 // General input:
 static int N_eq = 1;
@@ -310,6 +314,7 @@ int main() {
     printf("Relative error (est) = %g %%\n", 100.*err_est_rel);
 
     // If exact solution available, also calculate exact error
+    double err_exact_rel;
     if (EXACT_SOL_PROVIDED) {
       // Calculate element errors wrt. exact solution (squared)
       int order = 20; // heuristic parameter
@@ -322,16 +327,31 @@ int main() {
                                                   subdivision, order);
 
        // Calculate an estimate of the global relative error
-      double err_exact_rel = err_exact_total/exact_sol_norm;
+      err_exact_rel = err_exact_total/exact_sol_norm;
       printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
       graph.add_values(0, N_dof, 100 * err_exact_rel);
     }
 
-    // add entry to DOF convergence graph
-    graph.add_values(1, N_dof, 100 * err_est_rel);
+    // extra code for this test:
+    if (adapt_iterations == 2) {
+      int success = 1;
+      if (err_est_rel > 1e-10) success = 0;
+      if (err_exact_rel > 1e-10) success = 0;
+      if (mesh->get_n_active_elem() != 2) success = 0;
+      Element *e = mesh->first_active_element();
+      if (e->p != 2) success = 0;
+      e = mesh->last_active_element();
+      if (e->p != 2) success = 0;
 
-    // Decide whether the relative error is sufficiently small
-    if(err_est_rel*100 < TOL_ERR_REL) break;
+      if (success) {
+        printf("Success!\n");
+        return ERROR_SUCCESS;
+      }
+      else {
+        printf("Failure!\n");
+        return ERROR_FAILURE;
+      }
+    }
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 
@@ -340,32 +360,4 @@ int main() {
 
     adapt_iterations++;
   };
-
-  // Plot meshes, results, and errors
-  plotting(mesh, mesh_ref, y_prev, y_prev_ref);
-
-  // Save convergence graph
-  graph.save("conv_dof.gp");
-
-  printf("Done.\n");
-  return 1;
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
