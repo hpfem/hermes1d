@@ -1505,7 +1505,7 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
 
     // Most frequent case of neither err == 0 or dof == 0. Corresponds
     // to steepest descent of the convergence curve on semilog scale. 
-    if (dof > 0) crit = -log(err) / dof; 
+    if (dof > 0) crit = -log(err) / sqrt(dof); 
 
     // debug
     if (PRINT_CANDIDATES) {
