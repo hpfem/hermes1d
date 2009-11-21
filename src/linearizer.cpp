@@ -111,9 +111,6 @@ void Linearizer::get_xy(double *y_prev, int comp,
 	  printf("counter = %d\n", counter);
             error("Internal error: wrong n_active_elem");
         }
-        // FIXME:
-        if(e->p > MAX_P)
-            error("element degree too hign in plot(solution).");
         double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
         e->get_coeffs(y_prev, coeffs, 
                       this->mesh->bc_left_dir_values,

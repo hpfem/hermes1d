@@ -57,7 +57,7 @@ public:
 			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM], 
                             double *y_prev, double *bc_left_dir_values,
                             double *bc_right_dir_values);
-    int create_cand_list(int p_ref_left, int p_ref_right, int3 *cand_list);
+    int create_cand_list(int adapt_type, int p_ref_left, int p_ref_right, int3 *cand_list);
     void print_cand_list(int num_cand, int3 *cand_list);
     void refine(int3 cand);
     unsigned is_active();
@@ -121,7 +121,7 @@ class Mesh {
         void refine_single_elem(int id, int3 cand);
         void refine_elems(int elem_num, int *id_array, int3 *cand_array);
         void reference_refinement(int start_elem_id, int elem_num);
-        void adapt(int norm, double threshold, Mesh *mesh_ref, 
+        void adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref, 
                    double *y_prev, double *y_prev_ref, 
                    double *err_squared_array);
         Mesh *replicate(); 
@@ -129,7 +129,8 @@ class Mesh {
         void plot_element_error_p(FILE *f[MAX_EQN_NUM], Element *p, Element *e_ref, 
 				  double* y_prev, double* y_prev_ref, 
                                   int subdivision = 20); // plots error wrt. reference solution
-        void plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *p, Element *e_ref_left, Element *e_ref_right, 
+        void plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *p, 
+                                   Element *e_ref_left, Element *e_ref_right, 
 				   double* y_prev, double* y_prev_ref, 
                                    int subdivision = 20); // plots error wrt. reference solution
                                                           // if ref. refinement was hp-refinement

@@ -22,6 +22,9 @@ double TOL_NEWTON_COARSE = 1e-5;        // Coarse mesh
 double TOL_NEWTON_REF = 1e-3;           // Reference mesh
 
 // Adaptivity
+const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
+                                        // 1... h-adaptivity
+                                        // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
 const double TOL_ERR_REL = 1e-3;        // Tolerance for the relative error between 
@@ -354,7 +357,7 @@ int main() {
     }
 
     // Refine elements in the id_array list whose id_array >= 0
-    mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 
+    mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
                 y_prev_ref, err_est_squared_array);
     N_dof = mesh->assign_dofs();
 

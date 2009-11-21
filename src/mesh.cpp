@@ -471,59 +471,8 @@ Element* Mesh::last_active_element()
   return e;
 }
 
-/*
-   p_ref_left and p_ref_right are the polynomial orders of the reference
-   solution (left and right refinement). If p_ref_right is -1, then the
-   reference solution is only "p" refined.
-   */
-int Element::create_cand_list(int p_ref_left, int p_ref_right, int3 *cand_list) 
-{
-    int ref_solution_p_refined = (p_ref_right == -1);
-    int p_ref = p_ref_left; // use only if ref_solution_p_refined == 1
-    int counter = 0;
-    int candidate_ok;
-    int new_p;
-    // By default, we take each candidate (if the new_p is too high, we reject
-    // it)
-
-    // p->p+1
-    new_p = this->p + 1;
-    candidate_ok = 1;
-    if (ref_solution_p_refined) {
-        if (new_p >= p_ref)
-            candidate_ok = 0;
-    } else {
-        if (new_p > max(p_ref_left, p_ref_right))
-            candidate_ok = 0;
-    }
-    if (candidate_ok) {
-          cand_list[counter][0] = 0;
-          cand_list[counter][1] = new_p;
-          cand_list[counter][2] = -1;
-          counter++;
-        }
-
-    // p->p+2
-    new_p = this->p + 2;
-    candidate_ok = 1;
-    if (ref_solution_p_refined) //{
-        if (new_p >= p_ref)
-            candidate_ok = 0;
-    //} else {
-    //    if (new_p > max(p_ref_left, p_ref_right))
-    //        candidate_ok = 0;
-    //}
-    if (candidate_ok) {
-      cand_list[counter][0] = 0;
-      cand_list[counter][1] = this->p + 2;
-      cand_list[counter][2] = -1;
-      counter++;
-    }
-
-    int new_p_left, new_p_right;
-    int base_p = this->p / 2; 
-    if (base_p < 1) base_p = 1;
-#define handle_candidate(new_p_left, new_p_right) \
+// defining macro to check whether hp candidates are admissible
+#define add_hp_candidate_if_ok(new_p_left, new_p_right) \
     candidate_ok = 1; \
     if (ref_solution_p_refined) { \
         if (new_p_left >= p_ref && new_p_right >= p_ref) \
@@ -541,15 +490,61 @@ int Element::create_cand_list(int p_ref_left, int p_ref_right, int3 *cand_list)
         counter++; \
     }
 
-    handle_candidate(base_p, base_p); // p -> (p/2, p/2) 
-    handle_candidate(base_p + 1, base_p); // p -> (p/2+1, p/2) 
-    handle_candidate(base_p, base_p + 1); // p -> (p/2, p/2+1) 
-    handle_candidate(base_p + 1, base_p + 1); // p -> (p/2+1, p/2+1) 
-    handle_candidate(base_p + 2, base_p); // p -> (p/2+2, p/2) 
-    handle_candidate(base_p, base_p + 2); // p -> (p/2, p/2+2) 
-    handle_candidate(base_p + 1, base_p + 2); // p -> (p/2+1, p/2+2) 
-    handle_candidate(base_p + 2, base_p + 1); // p -> (p/2+2, p/2+1) 
-    handle_candidate(base_p + 2, base_p + 2); // p -> (p/2+2, p/2+2) 
+// defining macro to check whether p candidates are admissible
+#define add_p_candidate_if_ok(new_p) \
+    candidate_ok = 1; \
+    if (ref_solution_p_refined) \
+        if (new_p >= p_ref) \
+            candidate_ok = 0; \
+    if (candidate_ok) { \
+          cand_list[counter][0] = 0; \
+          cand_list[counter][1] = new_p; \
+          cand_list[counter][2] = -1; \
+          counter++; \
+        } \
+
+/*
+   p_ref_left and p_ref_right are the polynomial orders of the reference
+   solution (left and right refinement). If p_ref_right is -1, then the
+   reference solution is only "p" refined.
+   adapt_type = 0 ... hp-adaptivity (full list of candidates)
+   adapt_type = 1 ... h-adaptivity (h-candidates only)
+   */
+int Element::create_cand_list(int adapt_type, int p_ref_left, 
+                              int p_ref_right, int3 *cand_list) 
+{
+    int ref_solution_p_refined = (p_ref_right == -1);
+    int p_ref = p_ref_left; // use only if ref_solution_p_refined == 1
+    int counter = 0;
+    int candidate_ok;
+
+    if (adapt_type == 0) {
+      // p-adaptivity candidates: 
+      add_p_candidate_if_ok(this->p + 1);
+      add_p_candidate_if_ok(this->p + 2);
+
+      // hp-adaptivity candidates: 
+      // we first divide the poly degree by two
+      int base_p = this->p / 2; 
+      if (base_p < 1) base_p = 1;
+
+      add_hp_candidate_if_ok(base_p, base_p); // p -> (p/2, p/2) 
+      add_hp_candidate_if_ok(base_p + 1, base_p); // p -> (p/2+1, p/2) 
+      add_hp_candidate_if_ok(base_p, base_p + 1); // p -> (p/2, p/2+1) 
+      add_hp_candidate_if_ok(base_p + 1, base_p + 1); // p -> (p/2+1, p/2+1) 
+      add_hp_candidate_if_ok(base_p + 2, base_p); // p -> (p/2+2, p/2) 
+      add_hp_candidate_if_ok(base_p, base_p + 2); // p -> (p/2, p/2+2) 
+      add_hp_candidate_if_ok(base_p + 1, base_p + 2); // p -> (p/2+1, p/2+2) 
+      add_hp_candidate_if_ok(base_p + 2, base_p + 1); // p -> (p/2+2, p/2+1) 
+      add_hp_candidate_if_ok(base_p + 2, base_p + 2); // p -> (p/2+2, p/2+2) 
+    }
+    if (adapt_type == 1) {
+      add_hp_candidate_if_ok(this->p, this->p); // p -> (p, p) 
+    }
+    if (adapt_type == 2) {
+      add_p_candidate_if_ok(this->p + 1);
+      add_p_candidate_if_ok(this->p + 2);
+    }
 
     return counter;
 }
@@ -867,7 +862,7 @@ void Mesh::plot_error_exact(const char *filename,
 }
 
 // Refine all elements in the id_array list whose id_array >= 0
-void Mesh::adapt(int norm, double threshold, Mesh *mesh_ref, 
+void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref, 
                  double *y_prev, double *y_prev_ref, 
                  double *err_squared_array) 
 {
@@ -933,7 +928,7 @@ void Mesh::adapt(int norm, double threshold, Mesh *mesh_ref,
       //e->print_cand_list(num_cand, cand_list);
       if (e->level == e_ref->level) { // element 'e' was not refined in space
                                       // for reference solution
-        int num_cand = e->create_cand_list(e_ref->p, -1, cand_list);
+        int num_cand = e->create_cand_list(adapt_type, e_ref->p, -1, cand_list);
         // reference element was p-refined
         choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
                                       0, norm, y_prev_ref, 
@@ -943,7 +938,7 @@ void Mesh::adapt(int norm, double threshold, Mesh *mesh_ref,
       else { // element 'e' was refined in space for reference solution
         Element* e_ref_left = e_ref;
         Element* e_ref_right = I_ref->next_active_element();
-        int num_cand = e->create_cand_list(e_ref_left->p, e_ref_right->p, cand_list);
+        int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, e_ref_right->p, cand_list);
         // reference element was hp-refined
         choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
                                       num_cand, cand_list, 1, norm, y_prev_ref, 
