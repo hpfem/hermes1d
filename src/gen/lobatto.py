@@ -7,6 +7,7 @@ from sympy import Symbol, integrate, legendre, factor, sqrt, ccode
 
 n_functions = 100
 precision = 25
+factor_const = False
 
 def legendre_int(i, x):
     """
@@ -28,7 +29,7 @@ def lobatto(i, x):
         f /= sqrt(2)
     return f.expand()
 
-def horner_scheme(p, x):
+def horner_scheme(p, x, factor_const=True):
     """
     Rewrites the polynomial using the Horner scheme.
     """
@@ -36,7 +37,15 @@ def horner_scheme(p, x):
     if p == a:
         return p
     rest = ((p-a)/x).expand()
-    return x*horner_scheme(rest, x)+a
+    if factor_const:
+        const = rest.subs(x, 0)
+        if const != 0:
+            rest = (rest/const).expand()
+        else:
+            const = 1
+    else:
+        const = 1
+    return const*x*horner_scheme(rest, x, factor_const)+a
 
 x = Symbol("x")
 env = Environment(loader=FileSystemLoader('.'))
@@ -47,8 +56,10 @@ for i in range(n_functions):
     print "  i=%d" % i
     lob = lobatto(i, x)
     lob_diff = lob.diff(x)
-    lob = horner_scheme(lob.n(precision), x)
-    lob_diff = horner_scheme(lob_diff.n(precision), x)
+    lob = horner_scheme(lob.n(precision), x, factor_const=factor_const)
+    print lob
+    lob_diff = horner_scheme(lob_diff.n(precision), x,
+            factor_const=factor_const)
     functions.append({"id": i,
         "expr": ccode(lob),
         "expr_diff": ccode(lob_diff),
