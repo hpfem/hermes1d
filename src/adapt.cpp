@@ -1005,11 +1005,11 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   }
 
   // debug
-  printf("Elem (%g, %g):\n", e->x1, e->x2);
-  for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
-    printf("proj_coeffs_left[%d] = %g, proj_coeffs_right[%d] = %g\n", 
-	   m, proj_coeffs_left[0][m], m, proj_coeffs_right[0][m]);
-  }
+  //printf("Elem (%g, %g):\n", e->x1, e->x2);
+  //for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
+  //  printf("proj_coeffs_left[%d] = %g, proj_coeffs_right[%d] = %g\n", 
+  //   m, proj_coeffs_left[0][m], m, proj_coeffs_right[0][m]);
+  //}
 
   // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e_ref_left'
@@ -1509,7 +1509,9 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
 
     // debug
     if (PRINT_CANDIDATES) {
-      printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d, crit = %g\n", e->x1, e->x2, cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof, crit);
+      printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d, crit = %g\n", 
+             e->x1, e->x2, cand_list[i][0], cand_list[i][1], cand_list[i][2], 
+             err, dof, crit);
     }
 
     if (crit > crit_max) {
