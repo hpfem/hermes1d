@@ -141,7 +141,6 @@ int main() {
   graph.add_row("exact error", "k", "-", "o");
   graph.add_row("error estimate", "k", "--");
 
-
   // Create coarse mesh, set Dirichlet BC, enumerate basis functions
   mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, Val_dir_left);
@@ -297,7 +296,7 @@ int main() {
       newton_iterations_ref++;
       printf("Finished fine mesh Newton iteration: %d\n", newton_iterations_ref);
     }
-    // Update y_prev by the increment stored in res
+    // Update y_prev_ref by the increment stored in res
     for(int i=0; i<N_dof_ref; i++) {
       y_prev_ref[i] += res_ref[i];
       //printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
