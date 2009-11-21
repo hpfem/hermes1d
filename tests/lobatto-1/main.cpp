@@ -15,6 +15,7 @@ int main(int argc, char* argv[])
 {
   // maximum index of Lobatto function tested
   int max_n = 23; //FIXME: should be 99
+  int ok = 1;
 
   // maximum allowed error
   double max_allowed_error = 1e-10;
@@ -27,14 +28,18 @@ int main(int argc, char* argv[])
       lobatto_fn_tab_1d[n](1.0);
     if (fabs(val_left) > max_allowed_error) {
       printf("n = %d, val_left = %g\n", n, val_left); 
-      return ERROR_FAILURE;
+      ok = 0;
     }
     if (fabs(val_right) > max_allowed_error) {
       printf("n = %d, val_right = %g\n", n, val_right); 
-      return ERROR_FAILURE;
+      ok = 0;
     }
   }
-
-  printf("Success!\n");
-  return ERROR_SUCCESS;
+  if (ok) {
+      printf("Success!\n");
+      return ERROR_SUCCESS;
+  } else {
+      printf("Failure!\n");
+      return ERROR_FAILURE;
+  }
 }
