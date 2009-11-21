@@ -1,6 +1,6 @@
-========
-Hermes1D
-========
+============
+Introduction
+============
 
 Introduction and motivation
 ---------------------------
