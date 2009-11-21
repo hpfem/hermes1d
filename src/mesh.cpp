@@ -66,7 +66,7 @@ void Element::init(double x1, double x2, int p_init, int n_eq)
   this->p = p_init;
   this->dof_size = n_eq;
   // allocate element dof arrays for all solution components 
-  // and length MAX_POLYORDER
+  // and length MAX_P
   this->dof_alloc();
 }
 
@@ -76,9 +76,9 @@ void Element::dof_alloc()
   if(this->dof == NULL) error("Element dof_alloc() failed.");
   // c is solution component
   for(int c=0; c<dof_size; c++) {
-    this->dof[c] = new int[MAX_POLYORDER + 1];
+    this->dof[c] = new int[MAX_P + 1];
     // important for th etreatment of boundary conditions
-    for(int i=0; i<MAX_POLYORDER + 1; i++) this->dof[c][i] = 0;
+    for(int i=0; i<MAX_P + 1; i++) this->dof[c][i] = 0;
   }
 }
 
@@ -251,7 +251,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   // allocate element array
   this->base_elems = new Element[this->n_base_elem];     
   if (base_elems == NULL) error("Not enough memory in Mesh::create().");
-  if (p_init > MAX_POLYORDER) 
+  if (p_init > MAX_P) 
     error("Max element order exceeded (set in common.h).");
   // element length
   double h = (b - a)/this->n_base_elem;          
@@ -292,12 +292,12 @@ Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
   if (base_elems == NULL) error("Not enough memory in Mesh::create().");
   // fill initial element array
   for(int i=0; i<this->n_base_elem; i++) {
-    if (p_array[i] > MAX_POLYORDER) 
+    if (p_array[i] > MAX_P) 
       error("Max element order exceeded (set in common.h).");
     // polynomial degree
     this->base_elems[i].p = p_array[i];
     // allocate element dof arrays for all solution components 
-    // and length MAX_POLYORDER
+    // and length MAX_P
     this->base_elems[i].dof_alloc();
     // define element end points
     this->base_elems[i].x1 = pts_array[i];

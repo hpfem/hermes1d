@@ -19,13 +19,13 @@
 const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
                                        // candidates of an element
 
-const int MAX_POLYORDER = 100;         // maximum polynomial degree on elements
-
 const int MAX_ELEM_NUM = 100000;       // maximum number of elements
 const int MAX_EQN_NUM = 10;            // maximum number of equations in the system
 const int MAX_PTS_NUM = 101;           // refers both to plotting subdivision and Gauss quadrature points
-const int MAX_P = 5;                   // this is the maximum polynomial degree allowed in elements
-const int MAX_COEFFS_NUM = MAX_P + 1;  // this is the maximum polynomial degree allowed in elements
+const int MAX_P = 10;                  // this is the maximum polynomial degree allowed in elements
+                                       // WARNING: projections taking place in transfer_solution()
+                                       // use quadrature of order 2*MAX_P
+const int MAX_COEFFS_NUM = MAX_P + 1;  // this is the maximum number of polynomial coefficients
 const int MAX_STRING_LENGTH = 100;     // maximum string length 
 
 typedef double (*exact_sol_type)(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]);

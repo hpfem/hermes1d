@@ -5,28 +5,46 @@
 
 #include "transforms.h"
 
-#define N_proj_max (3+2*(MAX_P-1))
-typedef double ProjectionMatrix[N_proj_max][N_proj_max];
-typedef double TransformationMatrix[N_proj_max][MAX_P+1];
+typedef double ProjMatrix[MAX_P+1][MAX_P+1];
+typedef double TransMatrix[MAX_P+1][MAX_P+1];
 
-TransformationMatrix transformation_matrix;
-int transformation_matrix_initialized=0;
+TransMatrix trans_matrix_left;    // transforms coefficients of Lobatto shape functions 
+                                  // from (-1, 1) to (-1, 0)
+TransMatrix trans_matrix_right;   // transforms coefficients of Lobatto shape functions 
+                                  // from (-1, 1) to (0, 1)
+int trans_matrices_initialized = 0;
 
 // transform values from (-1, 0) to (-1, 1)
 #define map_left(x) (2*x+1)
 // transform values from (0, 1) to (-1, 1)
 #define map_right(x) (2*x-1)
 
+double lobatto_left(int i, double x) // x \in (-1, 0)
+{
+  return lobatto_fn_tab_1d[i](map_left(x));
+}
+
+double lobatto_right(int i, double x) // x \in (0, 1)
+{
+  return lobatto_fn_tab_1d[i](map_right(x));
+}
+
+double lobatto(int i, double x) // x \in (-1, 1)
+{
+  return lobatto_fn_tab_1d[i](x);
+}
+
+/* OLD VERSION
 double phi(int i, double x)
 {
-    if (x < 0) {
+    if (x < 0) {    // i-th Lobatto function transformed to (-1, 0)
         if (i == 0)
             return lobatto_fn_tab_1d[0](map_left(x));
         else if (i % 2 == 0)
             return 0;
         else
             return lobatto_fn_tab_1d[(i+1)/2](map_left(x));
-    } else {
+    } else {  // i-th Lobatto function transformed to (0, 1)
         if (i == 0)
             return 0;
         else if (i == 1)
@@ -38,7 +56,9 @@ double phi(int i, double x)
         }
     } 
 }
+*/
 
+/* OLD VERSION
 double projection_inner_product(double i, double j, int right, int order)
 {
     double phys_x[MAX_PTS_NUM];                  // quad points
@@ -58,32 +78,39 @@ double projection_inner_product(double i, double j, int right, int order)
 
     return result;
 }
+*/
 
-double projection_rhs_integral(int j_coarse, int i_fine, int right, int order)
+// Fills projection matrix, i.e., the matrix of L2 products 
+// of Lobatto shape functions transformed to (-1, 0). The matrix
+// is the same for interval (0, 1).
+void fill_proj_matrix(int n, ProjMatrix *proj_matrix)
 {
-    double phys_x[MAX_PTS_NUM];                  // quad points
-    double phys_weights[MAX_PTS_NUM];              // quad weights
-    int    pts_num = 0;
-    if (right) {
-        create_phys_element_quadrature(0, 1, order, phys_x, phys_weights,
-                &pts_num); 
-    } else {
-        create_phys_element_quadrature(-1, 0, order, phys_x, phys_weights,
-                &pts_num); 
+  int order = 2*MAX_P; // two times max polyorder on reference element
+
+  double phys_x[MAX_PTS_NUM];                  // quad points
+  double phys_weights[MAX_PTS_NUM];            // quad weights
+  int    pts_num = 0;
+  create_phys_element_quadrature(-1, 0, order, phys_x, phys_weights,
+                                 &pts_num); 
+
+  // L2 product of Lobatto shape functions transformed to (-1, 0). 
+  // Obviously this is the same as L2 product of Lobatto shape 
+  // functions transformed to (0, 1).
+  for (int i=0; i < n; i++) {
+    for (int j=0; j < n; j++) {
+      double result = 0;
+      for (int k=0; k < pts_num; k++ ) {
+        result += phys_weights[k] * lobatto_left(i, phys_x[k]) * lobatto_left(j, phys_x[k]);
+      }
+      (*proj_matrix)[i][j] = result;
     }
-
-    double result = 0;
-    for (int k=0; k < pts_num; k++ )
-        result += phys_weights[k] * (lobatto_fn_tab_1d[j_coarse](phys_x[k]) *
-                phi(i_fine, phys_x[k]));
-
-    return result;
+  }
 }
 
-
-void fill_projection_matrix(int n, ProjectionMatrix *proj_matrix)
+/* OLD VERSION
+void fill_proj_matrix(int n, ProjMatrix *proj_matrix)
 {
-    int order=N_proj_max*2;
+    int order = 2*MAX_P;
     int left = 0, right = 1;
     for (int i=0; i < n; i++) {
         for (int j=0; j < n; j++) {
@@ -92,44 +119,73 @@ void fill_projection_matrix(int n, ProjectionMatrix *proj_matrix)
              projection_inner_product(i, j, left, order) +
              projection_inner_product(i, j, right, order); 
         }
-        //printf("\n");
     }
-    //error("stop.");
 }
+*/
 
-void fill_transformation_matrix(TransformationMatrix
-        transformation_matrix)
+void fill_trans_matrices(TransMatrix trans_matrix_left, 
+                         TransMatrix trans_matrix_right)
 {
-    int order=N_proj_max+MAX_P;
-    int left = 0, right = 1;
-    ProjectionMatrix proj_matrix;
-    int n = N_proj_max;
-    fill_projection_matrix(n, &proj_matrix);
+    int order = 2*MAX_P;
+    ProjMatrix proj_matrix;
+    const int n = MAX_P + 1;
+    fill_proj_matrix(n, &proj_matrix);
+
+    // prepare quadrature in (-1, 0) and (0, 1)
+    double phys_x_left[MAX_PTS_NUM];                     // quad points
+    double phys_x_right[MAX_PTS_NUM];                    // quad points
+    double phys_weights_left[MAX_PTS_NUM];               // quad weights
+    double phys_weights_right[MAX_PTS_NUM];              // quad weights
+    int    pts_num_left = 0;
+    int    pts_num_right = 0;
+    create_phys_element_quadrature(-1, 0, order, phys_x_left, phys_weights_left,
+                                   &pts_num_left); 
+    create_phys_element_quadrature(0, 1, order, phys_x_right, phys_weights_right,
+                                   &pts_num_right); 
 
     // loop over shape functions on coarse element
     for (int j=0; j < MAX_P; j++) {
-        // FIXME: don't compute the matrix all the time, e.g.  move this out of
-        // the cycle and make sure the gaussian elimination doesn't overwrite
-        // the _mat.
-        Matrix *_mat = new DenseMatrix(n);
-        _mat->zero();
-        for (int _i=0; _i < n; _i++)
-            for (int _j=0; _j < n; _j++)
-                _mat->add(_i, _j, proj_matrix[_i][_j]);
-        // fill right-hand side vector for j-th shape function on coarse element 
-        double f[n];
-        for (int i=0; i < n; i++)
-	  f[i] = projection_rhs_integral(j, i, left, order) +
-                 projection_rhs_integral(j, i, right, order);
-        // solve linear system to obtain another column in transformation matrix
-        solve_linear_system(_mat, f);
-        for (int i=0; i < n; i++)
-            transformation_matrix[i][j] = f[i];
+        // backup of projectionmatrix
+        Matrix *mat_left = new DenseMatrix(n);
+        Matrix *mat_right = new DenseMatrix(n);
+        mat_left->zero();
+        mat_right->zero();
+        for (int r=0; r < n; r++) {
+	    for (int s=0; s < n; s++) {
+                mat_left->add(r, s, proj_matrix[r][s]);
+                mat_right->add(r, s, proj_matrix[r][s]);
+            }
+        }
+        // fill right-hand side vectors f_left and f_right for j-th 
+        // Lobatto shape function on (-1, 0) and (0, 1), respectively
+        double f_left[n];
+        double f_right[n];
+        for (int i=0; i < n; i++) {
+          f_left[i] = 0;
+          f_right[i] = 0;
+          for (int k=0; k < pts_num_left; k++) {
+            f_left[i] += phys_weights_left[k] * lobatto(j, phys_x_left[k]) *
+                                                lobatto_left(i, phys_x_left[k]);
+          }
+          for (int k=0; k < pts_num_right; k++) {
+            f_right[i] += phys_weights_right[k] * lobatto(j, phys_x_right[k]) *
+                                                  lobatto_right(i, phys_x_right[k]);
+	  }
+        }
+        // for each 'j' we get a new column in the 
+        // transformation matrices
+        solve_linear_system(mat_left, f_left);
+        solve_linear_system(mat_right, f_right);
+        for (int i=0; i < n; i++) {
+            trans_matrix_left[i][j] = f_left[i];
+            trans_matrix_right[i][j] = f_right[i];
+        }
     }
-    /*
+    /* DEBUG
     for (int i=0; i < n; i++) {
         for (int j=0; j < p+1; j++) {
-            printf("%f ", transformation_matrix[i][j]);
+            printf("transf_matrix_left[%d][%d] = %g\n", i, j, transf_matrix_left[i][j]);
+            printf("transf_matrix_right[%d][%d] = %g\n", i, j, transf_matrix_right[i][j]);
         }
         printf("\n");
     }
@@ -144,7 +200,8 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
 {
     //printf("ELEMENT: %d %f %f\n", e->id, e->x1, e->x2);
     double y_prev_loc[MAX_P+1];
-    double y_prev_loc_trans[N_proj_max+1];
+    double y_prev_loc_trans_left[MAX_P+1];
+    double y_prev_loc_trans_right[MAX_P+1];
     if (e->dof[comp][0] == -1)
         y_prev_loc[0] = mesh->bc_left_dir_values[comp];
     else
@@ -159,38 +216,38 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
     for (int i=0; i < e->p + 1; i++)
         printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
         */
-    if (transformation_matrix_initialized == 0) {
-        fill_transformation_matrix(transformation_matrix);
-        transformation_matrix_initialized=1;
+    if (trans_matrices_initialized == 0) {
+      fill_trans_matrices(trans_matrix_left, trans_matrix_right);
+      trans_matrices_initialized = 1;
     }
-    //fill_transformation_matrix();
-    //double TransformationMatrix *transformation_matrix =
-    //    get_transformation_matrix(e_ref_left->p + 1);
-    for (int i=0; i < 3 + 2*(e_ref_left->p - 1); i++) {
-        y_prev_loc_trans[i] = 0.;
+    // transform coefficients on the left son
+    for (int i=0; i < e_ref_left->p; i++) {
+        y_prev_loc_trans_left[i] = 0.;
         for (int j=0; j < e->p + 1; j++)
-            y_prev_loc_trans[i] += transformation_matrix[i][j] * y_prev_loc[j];
+            y_prev_loc_trans_left[i] += trans_matrix_left[i][j] * y_prev_loc[j];
     }
-    /*
-    for (int i=0; i < 3 + 2*(e_ref_left->p - 1); i++)
-        printf("y_prev_loc_trans[%d] = %f\n", i, y_prev_loc_trans[i]);
-    printf("----------------------\n");
-    */
+    // transform coefficients on the right son
+    for (int i=0; i < e_ref_right->p; i++) {
+        y_prev_loc_trans_right[i] = 0.;
+        for (int j=0; j < e->p + 1; j++)
+            y_prev_loc_trans_right[i] += trans_matrix_right[i][j] * y_prev_loc[j];
+    }
+
     // copying computed coefficients into the elements e_ref_left and
     // e_ref_right
     if (e->dof[comp][0] != -1)
-        y_prev_ref[e_ref_left->dof[comp][0]] = y_prev_loc_trans[0];
-    y_prev_ref[e_ref_left->dof[comp][1]] = y_prev_loc_trans[1];
-    y_prev_ref[e_ref_right->dof[comp][0]] = y_prev_loc_trans[1];
+        y_prev_ref[e_ref_left->dof[comp][0]] = y_prev_loc_trans_left[0];
+    y_prev_ref[e_ref_left->dof[comp][1]] = y_prev_loc_trans_left[1];
+    y_prev_ref[e_ref_right->dof[comp][0]] = y_prev_loc_trans_right[1];
     if (e->dof[comp][1] != -1)
-        y_prev_ref[e_ref_right->dof[comp][1]] = y_prev_loc_trans[2];
+        y_prev_ref[e_ref_right->dof[comp][1]] = y_prev_loc_trans_right[2];
     if (e_ref_left->p != e_ref_right->p)
         error("internal error in transform_element: the left and right elements must have the same order.");
     int counter = 0;
     for (int p=2; p < e_ref_left->p + 1; p++) {
-        y_prev_ref[e_ref_left->dof[comp][p]] = y_prev_loc_trans[3+counter];
+        y_prev_ref[e_ref_left->dof[comp][p]] = y_prev_loc_trans_right[3+counter];
         counter++;
-        y_prev_ref[e_ref_right->dof[comp][p]] = y_prev_loc_trans[3+counter];
+        y_prev_ref[e_ref_right->dof[comp][p]] = y_prev_loc_trans_right[3+counter];
         counter++;
     }
 }

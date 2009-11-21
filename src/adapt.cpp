@@ -467,20 +467,12 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
   }
 
-  /*
-  printf("err_squared_left = %f\n", err_squared_left[0]);
-  printf("err_squared_right = %f\n", err_squared_right[0]);
-  */
   // summing errors on 'e_ref_left' and 'e_ref_right'
   double err_total = 0;
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += (err_squared_left[c] + err_squared_right[c]);
   }
-  //if (err_total < 1e-10) {
-  //    printf("candidate (1 %d %d)\n", p_left, p_right);
-  //    warning("in check_cand_coarse_hp_fine_hp: bad refinement candidate (err_total=0)");
-  //    return -1e6;
-  //}
+
   err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p_left + p_right + 1; 
@@ -518,8 +510,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_%d_fine_%d_%d_visit_%d.gp", 
-	    e->x1, e->x2, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
       fprintf(f_refsol, "%g %g\n", plot_x_left[j], plot_u_ref_left[0][j]);
@@ -569,8 +561,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
     // plotting the projection on the left and right halves
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_coarse_%d_%d_fine_%d_%d_visit_%d.gp", 
-	    e->x1, e->x2, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
+    sprintf(filename_cand, "proj_%g_%g_coarse_%d_cand_%d_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p_left, p_right, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
       fprintf(f_cand, "%g %g\n", plot_x_left[j], plot_u_left[0][j]);
@@ -800,8 +792,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_%d_fine_%d_visit_%d.gp", 
-	    e->x1, e->x2, p_left, p_right, e_ref->p, visit);
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p_left, p_right, e_ref->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
       fprintf(f_refsol, "%g %g\n", plot_x_left[j], plot_u_ref_left[0][j]);
@@ -851,8 +843,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     }
     // plotting the projection on the left and right halves
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_coarse_%d_%d_fine_%d_visit_%d.gp", 
-	    e->x1, e->x2, p_left, p_right, e_ref->p, visit);
+    sprintf(filename_cand, "proj_%g_%g_coarse_%d_cand_%d_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p_left, p_right, e_ref->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
       fprintf(f_cand, "%g %g\n", plot_x_left[j], plot_u_left[0][j]);
@@ -1012,6 +1004,13 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
   }
 
+  // debug
+  printf("Elem (%g, %g):\n", e->x1, e->x2);
+  for (int m=0; m < p+1; m++) { // loop over Leg. polynomials
+    printf("proj_coeffs_left[%d] = %g, proj_coeffs_right[%d] = %g\n", 
+	   m, proj_coeffs_left[0][m], m, proj_coeffs_right[0][m]);
+  }
+
   // calculate the error squared in L2 or H1 norm for every solution  
   // component in 'e_ref_left'
   double err_squared_left[MAX_EQN_NUM];
@@ -1085,8 +1084,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_fine_%d_%d_visit_%d.gp", 
-	    e->x1, e->x2, p, e_ref_left->p, e_ref_right->p, visit);
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
       fprintf(f_refsol, "%g %g\n", plot_x_left[j], plot_u_ref_left[0][j]);
@@ -1136,8 +1135,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
     // plotting the projection on the left and right halves
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_coarse_%d_fine_%d_%d_visit_%d.gp", 
-	    e->x1, e->x2, p, e_ref_left->p, e_ref_right->p, visit);
+    sprintf(filename_cand, "proj_%g_%g_coarse_%d_cand_%d_fine_%d_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p, e_ref_left->p, e_ref_right->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
       fprintf(f_cand, "%g %g\n", plot_x_left[j], plot_u_left[0][j]);
@@ -1270,8 +1269,8 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution
     char filename_refsol[255];
-    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_fine_%d_visit_%d.gp", 
-	    e->x1, e->x2, p, e_ref->p, visit);
+    sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p, e_ref->p, visit);
     FILE *f_refsol = fopen(filename_refsol, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting points
       fprintf(f_refsol, "%g %g\n", plot_x[j], plot_u_ref[0][j]);
@@ -1299,8 +1298,8 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     }
     // plotting the projection
     char filename_cand[255];
-    sprintf(filename_cand, "cand_%g_%g_coarse_%d_fine_%d_visit_%d.gp", 
-	    e->x1, e->x2, p, e_ref->p, visit);
+    sprintf(filename_cand, "proj_%g_%g_coarse_%d_cand_%d_fine_%d_visit_%d.gp", 
+	    e->x1, e->x2, e->p, p, e_ref->p, visit);
     FILE *f_cand = fopen(filename_cand, "wb");
     for (int j=0; j<plot_pts_num; j++) { // loop over plotting
       fprintf(f_cand, "%g %g\n", plot_x[j], plot_u[0][j]);
@@ -1470,7 +1469,8 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
 	bc_right_dir_values, err, dof);
     }
 
-    // This is heuristic and may need some experimentation:
+    // The projection error is zero (reference 
+    // solution is recovered exactly). 
     if (fabs(err) < 1e-6) {
       choice = i;
       if (PRINT_CANDIDATES) {
@@ -1480,12 +1480,36 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
       }
       return choice;
     }
-    crit = -log(err) / dof; 
+
+    // The number of new degrees of freedom is less or equal to 
+    // the coarse mesh element.
+    if (dof <= 0) {
+      double err_orig;
+      int dof_orig;
+      // reference solution was p-refined 
+      if (ref_sol_type == 0) {
+        int p_new = cand_list[i][1];
+        check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, e->p,
+          bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
+      }
+      if (ref_sol_type == 1) {
+        int p_new = cand_list[i][1];
+        check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, e->p,
+          bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
+      }  
+      printf("  Elem (%g, %g): dof = 0, err_orig = %g, err_new = %g\n", 
+	     e->x1, e->x2, err_orig, err);
+      if (err < err_orig) return i;
+      else crit = -1e10;  // forget this candidate
+    }
+
+    // Most frequent case of neither err == 0 or dof == 0. Corresponds
+    // to steepest descent of the convergence curve on semilog scale. 
+    if (dof > 0) crit = -log(err) / dof; 
 
     // debug
     if (PRINT_CANDIDATES) {
-      printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d\n", e->x1, e->x2, 
-             cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof);
+      printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d, crit = %g\n", e->x1, e->x2, cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof, crit);
     }
 
     if (crit > crit_max) {

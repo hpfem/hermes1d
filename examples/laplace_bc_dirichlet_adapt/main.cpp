@@ -10,7 +10,7 @@
 // General input:
 static int N_eq = 1;
 int N_elem = 2;                         // Number of elements
-double A = -1, B = 1;               // Domain end points
+double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Stopping criteria for Newton
@@ -31,17 +31,19 @@ double Val_dir_right = 0;               // Dirichlet condition right
 
 // Function f(x)
 double f(double x) {
-  //return sin(x);
-  return 2;
+  return sin(x);
+  //return 2;
 }
 
-// Exact solution
+// Exact solution:
+// When changing exact solution, do not 
+// forget to update interval accordingly
 const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
-  //u[0] = sin(x);
-  //dudx[0] = cos(x);
-  u[0] = 1. - x*x;
-  dudx[0] = -2.*x;
+  u[0] = sin(x);
+  dudx[0] = cos(x);
+  //u[0] = 1. - x*x;
+  //dudx[0] = -2.*x;
 }
 
 // ********************************************************************
@@ -317,7 +319,7 @@ int main() {
      
       // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
-      int subdivision = 100; // heuristic parameter
+      int subdivision = 500; // heuristic parameter
       double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
                                                   subdivision, order);
 
@@ -332,6 +334,9 @@ int main() {
 
     // Decide whether the relative error is sufficiently small
     if(err_est_rel*100 < TOL_ERR_REL) break;
+
+    // debug
+    //if (adapt_iterations == 4) break;
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, THRESHOLD, mesh_ref, y_prev, 
