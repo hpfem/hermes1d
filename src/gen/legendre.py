@@ -11,7 +11,7 @@ from common import horner_scheme, ccode_pow2, legendre_norm, \
 
 n_functions = 30
 precision = 25
-factor_const = False
+factor_const = True
 
 x = Symbol("x")
 env = Environment(loader=FileSystemLoader('.'))
