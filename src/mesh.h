@@ -126,23 +126,23 @@ class Mesh {
                    double *err_squared_array);
         Mesh *replicate(); 
         void plot(const char* filename); // plots the mesh and polynomial degrees of elements
-        void plot_element_error_p(FILE *f[MAX_EQN_NUM], Element *p, Element *e_ref, 
+        void plot_element_error_p(int norm, FILE *f, Element *p, Element *e_ref, 
 				  double* y_prev, double* y_prev_ref, 
                                   int subdivision = 20); // plots error wrt. reference solution
-        void plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *p, 
+        void plot_element_error_hp(int norm, FILE *f, Element *p, 
                                    Element *e_ref_left, Element *e_ref_right, 
 				   double* y_prev, double* y_prev_ref, 
                                    int subdivision = 20); // plots error wrt. reference solution
                                                           // if ref. refinement was hp-refinement
-        void plot_element_error_exact(FILE *f[MAX_EQN_NUM], Element *p, 
+        void plot_element_error_exact(int norm, FILE *f, Element *p, 
 				   double* y_prev, exact_sol_type exact_sol,
                                    int subdivision = 20); // plots error wrt. reference solution
                                                           // if ref. refinement was hp-refinement
-        void plot_error_est(const char *filename, Mesh* mesh_ref, 
+        void plot_error_est(int norm, const char *filename, Mesh* mesh_ref, 
 			double* y_prev, double* y_prev_ref, 
-                        int subdivision = 100);  // plots error wrt. reference solution
-        void plot_error_exact(const char *filename, double* y_prev, exact_sol_type exact_sol, 
-                        int subdivision = 100); // plots error wrt. exact solution
+                        int subdivision = 500);  // plots error wrt. reference solution
+        void plot_error_exact(int norm, const char *filename, double* y_prev, exact_sol_type exact_sol, 
+                        int subdivision = 500); // plots error wrt. exact solution
         int assign_elem_ids();
         double bc_left_dir_values[MAX_EQN_NUM];  // values for the Dirichlet condition left
         double bc_right_dir_values[MAX_EQN_NUM]; // values for the Dirichlet condition right

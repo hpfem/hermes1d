@@ -17,6 +17,7 @@ add_subdirectory(laplace_bc_dirichlet_adapt)
 add_subdirectory(system_chaotic)
 add_subdirectory(system_car_model)
 add_subdirectory(homogenous_line)
+add_subdirectory(homogenous_line_adapt)
 
 if(WITH_PYTHON)
     add_subdirectory(schroedinger)

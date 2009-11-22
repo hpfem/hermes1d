@@ -24,8 +24,8 @@
 
 // General input:
 static int N_eq = 2;
-int N_elem = 10;          // number of elements
-double A = 0, B = 10;     // domain end points
+int N_elem = 4;            // number of elements
+double A = 0, B = 10;      // domain end points
 int P_init = 1;            // initial polynomal degree
 double k = 0.5;
 
@@ -41,7 +41,7 @@ const double THRESHOLD = 0.7;           // Refined will be all elements whose er
                                         // is greater than THRESHOLD*max_elem_error
 const double TOL_ERR_REL = 1e-2;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
-const int NORM = 1;                     // To measure errors:
+const int NORM = 0;                     // To measure errors:
                                         // 1... H1 norm
                                         // 0... L2 norm
 
@@ -80,12 +80,12 @@ void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref)
   // Plot the error estimate (difference between 
   // coarse and reference mesh solutions)
   const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
+  mesh->plot_error_est(NORM, err_est_filename, mesh_ref, y_prev, y_prev_ref);
 
   // Plot error wrt. exact solution (if available)
   if (EXACT_SOL_PROVIDED) {   
     const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
+    mesh->plot_error_exact(NORM, err_exact_filename, y_prev, exact_sol);
   }
 }
 
@@ -192,7 +192,6 @@ int main() {
   GnuplotGraph graph;
   graph.set_log_y();
   graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
-  graph.add_row("exact error", "k", "-", "o");
   graph.add_row("error estimate", "k", "--");
 
   // Create coarse mesh, set Dirichlet BC, enumerate basis functions
@@ -210,10 +209,6 @@ int main() {
   dp->add_matrix_form(1, 1, jacobian_1_1);
   dp->add_vector_form(0, residual_0);
   dp->add_vector_form(1, residual_1);
-
-  // Zero initial condition for the Newton's method
-  // on the basic mesh
-  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Main adaptivity loop
   int adapt_iterations = 1;
@@ -257,7 +252,7 @@ int main() {
 
       // If residual norm less than TOL_NEWTON_COARSE, quit
       // latest solution is in y_prev
-      printf("Residual L2 norm: %.15f\n", res_norm);
+      printf("Residual norm: %.15f\n", res_norm);
       if(res_norm < TOL_NEWTON_COARSE) break;
 
       // Change sign of vector res
@@ -328,7 +323,6 @@ int main() {
     printf("--- Newton iteration on reference mesh ----\n"); 
     printf("N_dof_ref = %d\n", N_dof_ref);
 
-
     // Obtain reference solution via Newton's method
     int newton_iterations_ref = 0;
     while(1) {
@@ -376,10 +370,13 @@ int main() {
     printf("Relative error (est) = %g %%\n", 100.*err_est_rel);
 
     // add entry to DOF convergence graph
-    graph.add_values(1, N_dof, 100 * err_est_rel);
+    graph.add_values(0, N_dof, 100 * err_est_rel);
 
     // Decide whether the relative error is sufficiently small
     if(err_est_rel*100 < TOL_ERR_REL) break;
+
+    // debug
+    if (adapt_iterations == 7) break;
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 

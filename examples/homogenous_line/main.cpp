@@ -21,7 +21,7 @@ double L=25e-9;               // induktance [H/m]
 double C=10e-12;              // capacitance [F/m]
 double G=1e-9;                // conductance [S/m]
 double R=1e-3;                // resistance [Ohm/m]
-double l=4 ;                  // length of the line [m]
+double l=10 ;                  // length of the line [m]
 double omega=2*PI*3e8;        //
 double Zl=60;                  // load impedance[Ohm]
 
@@ -37,13 +37,14 @@ double A = 0, B = l;        // domain end points
 int P_init = 2;             // initial polynomal degree
 
 // Error tolerance
-double TOL_NEWTON_BASIC = 1e-5;  // tolerance for the Newton's method on basic mesh
-double TOL_NEWTON_REF = 1e-4;    // tolerance for the Newton's method on reference mesh
-double TOL_ADAPT = 1e-5;         // tolerance for the adaptivity loop      
+double TOL_NEWTON_COARSE = 1e-2;  // tolerance for the Newton's method on basic mesh
+double TOL_NEWTON_REF = 1e-2;     // tolerance for the Newton's method on reference mesh
 
 // Boundary conditions
 double Val_dir_left_1 = 1;       // real part of the voltage at the beginnig of the line
 double Val_dir_left_2 = 0;       // imaginary part of the voltage at the beginnig of the line
+double Val_dir_left_3 = 0;       // real part of the voltage at the beginnig of the line
+double Val_dir_left_4 = 0;       // imaginary part of the voltage at the beginnig of the line
 
 //At the end of the line is an indirect boundary condition U(l) = I(l)*Zl see below
 
@@ -299,10 +300,10 @@ int main() {
     Mesh mesh(A, B, N_elem, P_init, N_eq);
     mesh.set_bc_left_dirichlet(0, Val_dir_left_1);
     mesh.set_bc_left_dirichlet(1, Val_dir_left_2);
-    // mesh.set_bc_left_dirichlet(2, Val_dir_right_3);
-    // mesh.set_bc_left_dirichlet(3, Val_dir_right_4);
-    int N_dof_basic = mesh.assign_dofs();
-    printf("N_dof_basic = %d\n", N_dof_basic);
+    mesh.set_bc_left_dirichlet(2, Val_dir_left_3);
+    mesh.set_bc_left_dirichlet(3, Val_dir_left_4);
+    int N_dof = mesh.assign_dofs();
+    printf("N_dof = %d\n", N_dof);
 
     // register weak forms
     DiscreteProblem dp(&mesh);
@@ -329,19 +330,19 @@ int main() {
     dp.add_matrix_form_surf(1, 3, jacobian_surf_right_I_Im, BOUNDARY_RIGHT);
 
     // Allocate Jacobi matrix and residual
-    Matrix *mat = new CooMatrix(N_dof_basic);
-    double *y_prev = new double[N_dof_basic];
-    double *res = new double[N_dof_basic];
+    Matrix *mat = new CooMatrix(N_dof);
+    double *y_prev = new double[N_dof];
+    double *res = new double[N_dof];
 
     // Set zero initial condition for the Newton's method
-    // on the basic mesh
-    for(int i=0; i<N_dof_basic; i++) y_prev[i] = 0;
+    // on the coarse mesh
+    for(int i=0; i<N_dof; i++) y_prev[i] = 0;
 
     Mesh *mesh_ref;
     double *y_prev_ref;
 
 
-    printf("------------- Newton's iterations on basic mesh -------------- \n");
+    printf("------------- Newton's iterations on coarse mesh -------------- \n");
 
     // Newton's loop on coarse mesh
     int newton_iterations = 0;
@@ -354,31 +355,31 @@ int main() {
 
         // Calculate L2 norm of residual vector
         double res_norm = 0;
-        for(int i=0; i<N_dof_basic; i++) res_norm += res[i]*res[i];
+        for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
         res_norm = sqrt(res_norm);
 
-        // If residual norm less than TOL_NEWTON_BASIC, quit
+        // If residual norm less than TOL_NEWTON_COARSE, quit
         // latest solution is in y_prev
         printf("Residual L2 norm: %.15f\n", res_norm);
-        if(res_norm < TOL_NEWTON_BASIC) break;
+        if(res_norm < TOL_NEWTON_COARSE) break;
 
         // Change sign of vector res
-        for(int i=0; i<N_dof_basic; i++) res[i]*= -1;
+        for(int i=0; i<N_dof; i++) res[i]*= -1;
 
         // Solve the matrix system
         solve_linear_system_umfpack((CooMatrix*)mat, res);
 
         // Update y_prev by new solution which is in res
-        for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
+        for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
         newton_iterations++;
         printf("Finished coarse Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
-    for(int i=0; i<N_dof_basic; i++) y_prev[i] += res[i];
+    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
 
-    // plotting the basic solution
+    // plotting the coarse mesh solution
     Linearizer l(&mesh);
     const char *out_filename = "solution.gp";
     l.plot_solution(out_filename, y_prev);

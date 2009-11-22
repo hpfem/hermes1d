@@ -73,12 +73,12 @@ void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref)
   // Plot the error estimate (difference between 
   // coarse and reference mesh solutions)
   const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
+  mesh->plot_error_est(NORM, err_est_filename, mesh_ref, y_prev, y_prev_ref);
 
   // Plot error wrt. exact solution (if available)
   if (EXACT_SOL_PROVIDED) {   
     const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
+    mesh->plot_error_exact(NORM, err_exact_filename, y_prev, exact_sol);
   }
 }
 
@@ -134,7 +134,7 @@ int main() {
   DiscreteProblem *dp = NULL;       // discrete problem (coarse mesh)
   DiscreteProblem *dp_ref = NULL;   // discrete problem (reference mesh)
 
-  // convergence graph wrt. the number of degrees of freedom
+  // Convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
   graph.set_log_y();
   graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
@@ -325,8 +325,7 @@ int main() {
       int subdivision = 500; // heuristic parameter
       double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
                                                   subdivision, order);
-
-       // Calculate an estimate of the global relative error
+      // Calculate an estimate of the global relative error
       double err_exact_rel = err_exact_total/exact_sol_norm;
       printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
       graph.add_values(0, N_dof, 100 * err_exact_rel);

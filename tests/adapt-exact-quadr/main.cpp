@@ -53,38 +53,6 @@ double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
 
 // ********************************************************************
 
-void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref) 
-{
-  // Plot the coarse mesh solution
-  Linearizer l(mesh);
-  const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev);
-
-  // Plot the reference solution
-  Linearizer lxx(mesh_ref);
-  const char *out_filename2 = "solution_ref.gp";
-  lxx.plot_solution(out_filename2, y_prev_ref);
-
-  // Plot the coarse and reference mesh
-  const char *mesh_filename = "mesh.gp";
-  mesh->plot(mesh_filename);
-  const char *mesh_ref_filename = "mesh_ref.gp";
-  mesh_ref->plot(mesh_ref_filename);
-
-  // Plot the error estimate (difference between 
-  // coarse and reference mesh solutions)
-  const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
-
-  // Plot error wrt. exact solution (if available)
-  if (EXACT_SOL_PROVIDED) {   
-    const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
-  }
-}
-
-// ********************************************************************
-
 // bilinear form for the Jacobi matrix 
 // num...number of Gauss points in element
 // x[]...Gauss points

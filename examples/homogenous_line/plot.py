@@ -1,29 +1,38 @@
-from pylab import *
+from pylab import plot, show, legend
 import numpy
-import scipy
-
 data = numpy.loadtxt("solution.gp_0")
-U_re = data[:, 1]
 x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="0")
 data = numpy.loadtxt("solution.gp_1")
-U_im = data[:, 1]
-
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="1")
 data = numpy.loadtxt("solution.gp_2")
 x = data[:, 0]
-I_re = data[:, 1]
+y = data[:, 1]
+plot(x, y, label="2")
 data = numpy.loadtxt("solution.gp_3")
-I_im = data[:, 1]
-figure(1)
-U = scipy.sqrt(U_re**2+U_im**2);
-plot(x, U)
-xlabel('l[m]');
-ylabel('U[V]');
-ylim(0,2)
-
-I=scipy.sqrt(I_re**2+I_im**2);
-figure(2)
-plot(x, I);
-xlabel('l[m]');
-ylabel('I[A]');
-ylim(0,0.035)
-show();
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="3")
+"""
+data = numpy.loadtxt("solution_ref.gp_0")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="0 ref")
+data = numpy.loadtxt("solution_ref.gp_1")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="1 ref")
+data = numpy.loadtxt("solution_ref.gp_2")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="2 ref")
+data = numpy.loadtxt("solution_ref.gp_3")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="3 ref")
+"""
+legend()
+show()

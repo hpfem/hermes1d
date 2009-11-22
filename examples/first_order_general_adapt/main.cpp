@@ -25,7 +25,7 @@ const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1.0;         // Tolerance for the relative error between 
+const double TOL_ERR_REL = 0.1;         // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 const int NORM = 1;                     // To measure errors:
                                         // 1... H1 norm
@@ -73,12 +73,12 @@ void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref)
   // Plot the error estimate (difference between 
   // coarse and reference mesh solutions)
   const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(err_est_filename, mesh_ref, y_prev, y_prev_ref);
+  mesh->plot_error_est(NORM, err_est_filename, mesh_ref, y_prev, y_prev_ref);
 
   // Plot error wrt. exact solution (if available)
   if (EXACT_SOL_PROVIDED) {   
     const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(err_exact_filename, y_prev, exact_sol);
+    mesh->plot_error_exact(NORM, err_exact_filename, y_prev, exact_sol);
   }
 }
 
@@ -135,6 +135,13 @@ int main() {
   double *res_ref = NULL;           // residual vector (reference mesh)
   DiscreteProblem *dp = NULL;       // discrete problem (coarse mesh)
   DiscreteProblem *dp_ref = NULL;   // discrete problem (reference mesh)
+
+  // convergence graph wrt. the number of degrees of freedom
+  GnuplotGraph graph;
+  graph.set_log_y();
+  graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
+  graph.add_row("exact error", "k", "-", "o");
+  graph.add_row("error estimate", "k", "--");
 
   // Create coarse mesh, set Dirichlet BC, enumerate basis functions
   mesh = new Mesh(A, B, N_elem, P_init, N_eq);
@@ -284,14 +291,16 @@ int main() {
       for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
       newton_iterations_ref++;
-      printf("Finished fine mesh Newton iteration: %d\n", newton_iterations_ref);
+      printf("Finished fine mesh Newton iteration: %d\n", 
+             newton_iterations_ref);
     }
     // Update y_prev by the increment stored in res
     for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
     // Estimate element errors (squared)
     double err_est_squared_array[MAX_ELEM_NUM]; //FIXME - change this to dynamic allocation
-    double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
+    double err_est_total = calc_elem_est_errors_squared(NORM, 
+                           mesh, mesh_ref, y_prev, 
                            y_prev_ref, err_est_squared_array);
 
     // Calculate the norm of the reference solution
@@ -305,7 +314,8 @@ int main() {
     if (EXACT_SOL_PROVIDED) {
       // Calculate element errors wrt. exact solution (squared)
       int order = 20; // heuristic parameter
-      double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
+      double err_exact_total = calc_exact_sol_error(NORM, 
+                               mesh, y_prev, exact_sol, order);
 
       // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
@@ -315,10 +325,16 @@ int main() {
       // Calculate an estimate of the global relative error
       double err_exact_rel = err_exact_total/exact_sol_norm;
       printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
+      graph.add_values(0, N_dof, 100 * err_exact_rel);
     }
+
+    // add entry to DOF convergence graph
+    graph.add_values(1, N_dof, 100 * err_est_rel);
 
     // Decide whether the relative error is sufficiently small
     if(err_est_rel < TOL_ERR_REL) break;
+
+    if (adapt_iterations == 2) break;
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
@@ -329,6 +345,9 @@ int main() {
 
   // Plot meshes, results, and errors
   plotting(mesh, mesh_ref, y_prev, y_prev_ref);
+
+  // Save convergence graph
+  graph.save("conv_dof.gp");
 
   printf("Done.\n");
   return 1;

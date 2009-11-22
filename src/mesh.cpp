@@ -128,10 +128,10 @@ void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM],
   int p = this->p;
   double x_ref[MAX_PTS_NUM];
   // transforming points to (-1, 1)
-  for (int i=0 ; i<pts_num; i++) x_ref[i] = inverse_map(x1, x2, x_phys[i]);
+  for (int i=0 ; i < pts_num; i++) x_ref[i] = inverse_map(x1, x2, x_phys[i]);
   // filling the values and derivatives
   for(int c=0; c<dof_size; c++) { 
-    for (int i=0 ; i<pts_num; i++) {
+    for (int i=0 ; i < pts_num; i++) {
       der_phys[c][i] = val_phys[c][i] = 0;
       for(int j=0; j<=p; j++) {
         val_phys[c][i] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref[i]);
@@ -474,6 +474,8 @@ Element* Mesh::last_active_element()
 // defining macro to check whether hp candidates are admissible
 #define add_hp_candidate_if_ok(new_p_left, new_p_right) \
     candidate_ok = 1; \
+    if (new_p_left >= MAX_P) candidate_ok = 0; \
+    if (new_p_right >= MAX_P) candidate_ok = 0; \
     if (ref_solution_p_refined) { \
         if (new_p_left >= p_ref && new_p_right >= p_ref) \
             candidate_ok = 0; \
@@ -493,6 +495,7 @@ Element* Mesh::last_active_element()
 // defining macro to check whether p candidates are admissible
 #define add_p_candidate_if_ok(new_p) \
     candidate_ok = 1; \
+    if (new_p >= MAX_P) candidate_ok = 0; \
     if (ref_solution_p_refined) \
         if (new_p >= p_ref) \
             candidate_ok = 0; \
@@ -655,12 +658,16 @@ void Mesh::plot(const char* filename)
 
 // Plots the error between the reference and coarse mesh solutions
 // if the reference refinement was p-refinement
-void Mesh::plot_element_error_p(FILE *f[MAX_EQN_NUM], Element *e, Element *e_ref, 
+void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref, 
                                 double *y_prev, double *y_prev_ref,
                                 int subdivision)
 {
   int n_eq = this->get_n_eq();
   int pts_num = subdivision + 1;
+  if (pts_num > MAX_PTS_NUM) {
+    printf("Try to increase MAX_PTS_NUM in common.h\n");
+    error("MAX_PTS_NUM exceeded in plot_element_error_p().");
+  }
   double x1 = e->x1;
   double x2 = e->x2;
 
@@ -677,29 +684,37 @@ void Mesh::plot_element_error_p(FILE *f[MAX_EQN_NUM], Element *e, Element *e_ref
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives
-  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
   e->get_solution(x_phys, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
-  for (int c=0; c < n_eq; c++) {
-    for (int i=0; i < pts_num; i++) {
-      fprintf(f[c], "%g %g\n", x_phys[i], phys_u_ref[c][i] - phys_u[c][i]);
+  for (int i=0; i < pts_num; i++) {
+    double diff_squared_pt = 0;
+    for (int c=0; c < n_eq; c++) {
+      double val = phys_u_ref[c][i] - phys_u[c][i]; 
+      diff_squared_pt += val*val;
     }
-    fprintf(f[c], "\n");
+    fprintf(f, "%g %g\n", x_phys[i], sqrt(diff_squared_pt));
   }
+  fprintf(f, "\n");
 }
 
 // Plots the error between the reference and coarse mesh solutions
 // if the reference refinement was hp-refinement
-void Mesh::plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *e, Element *e_ref_left, 
+void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e, 
+                                 Element *e_ref_left, 
                                  Element *e_ref_right, 
                                  double *y_prev, double *y_prev_ref,
                                  int subdivision)
 {
-  int n_eq = this->get_n_eq();
   // we will be using two intervals of 50% length
   subdivision /= 2;
   int pts_num = subdivision + 1;
+  if (pts_num > MAX_PTS_NUM) {
+    printf("Try to increase MAX_PTS_NUM in common.h\n");
+    error("MAX_PTS_NUM exceeded in plot_element_error_hp().");
+  }
 
   // First: left half (-1, 0)
   double x1 = e_ref_left->x1;
@@ -713,19 +728,26 @@ void Mesh::plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *e, Element *e_re
   }
 
   // get coarse mesh solution values and derivatives
-  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
   e->get_solution(x_phys_left, pts_num, phys_u_left, phys_dudx_left, y_prev, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_left->get_solution(x_phys_left, pts_num, phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_left->get_solution(x_phys_left, pts_num, phys_u_ref_left, 
+                  phys_dudx_ref_left, y_prev_ref, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
-  for (int c=0; c < n_eq; c++) {
-    for (int i=0; i < pts_num; i++) {
-      fprintf(f[c], "%g %g\n", x_phys_left[i], phys_u_ref_left[c][i] - phys_u_left[c][i]);
+  for (int i=0; i < pts_num; i++) {
+    double diff_squared_pt = 0;
+    for (int c=0; c < n_eq; c++) {
+      double val = phys_u_ref_left[c][i] - phys_u_left[c][i];
+      diff_squared_pt += val*val;
     }
+    fprintf(f, "%g %g\n", x_phys_left[i], sqrt(diff_squared_pt));
+    fprintf(f, "\n");
   }
 
   // Second: right half (0, 1)
@@ -740,29 +762,33 @@ void Mesh::plot_element_error_hp(FILE *f[MAX_EQN_NUM], Element *e, Element *e_re
   }
 
   // get coarse mesh solution values and derivatives
-  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
   e->get_solution(x_phys_right, pts_num, phys_u_right, phys_dudx_right, y_prev, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_right->get_solution(x_phys_right, pts_num, phys_u_ref_right, phys_dudx_ref_right, 
-                            y_prev_ref, this->bc_left_dir_values, this->bc_right_dir_values); 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  e_ref_right->get_solution(x_phys_right, pts_num, phys_u_ref_right, 
+    phys_dudx_ref_right, y_prev_ref, this->bc_left_dir_values, 
+    this->bc_right_dir_values); 
 
-  for (int c=0; c < n_eq; c++) {
-    for (int i=0; i < pts_num; i++) {
-      fprintf(f[c], "%g %g\n", x_phys_right[i], phys_u_ref_right[c][i] - phys_u_right[c][i]);
+  for (int i=0; i < pts_num; i++) {
+    double diff_squared_pt = 0;
+    for (int c=0; c < n_eq; c++) {
+      double val = phys_u_ref_right[c][i] - phys_u_right[c][i];
+      diff_squared_pt += val*val;
     }
-    fprintf(f[c], "\n");
+    fprintf(f, "%g %g\n", x_phys_right[i], sqrt(diff_squared_pt));
+    fprintf(f, "\n");
   }
-
 }
 
 // Plots the error wrt. the exact solution (if available)
-void Mesh::plot_element_error_exact(FILE *f[MAX_EQN_NUM], Element *e, 
+void Mesh::plot_element_error_exact(int norm, FILE *f, Element *e, 
                                     double *y_prev, exact_sol_type exact_sol, int subdivision)
 {
-  int n_eq = this->get_n_eq();
   int pts_num = subdivision + 1;
   double x1 = e->x1;
   double x2 = e->x2;
@@ -783,29 +809,24 @@ void Mesh::plot_element_error_exact(FILE *f[MAX_EQN_NUM], Element *e,
     double exact_sol_point[MAX_EQN_NUM];
     double exact_der_point[MAX_EQN_NUM];
     exact_sol(x_phys[i], exact_sol_point, exact_der_point);
+    double diff_squared_pt = 0; 
     for (int c=0; c < n_eq; c++) {
-      fprintf(f[c], "%g %g\n", x_phys[i], exact_sol_point[c] - phys_u[c][i]);
+      double val = exact_sol_point[c] - phys_u[c][i];
+      diff_squared_pt += val*val;
     }
+    fprintf(f, "%g %g\n", x_phys[i], sqrt(diff_squared_pt));
   }
-  for (int c=0; c < n_eq; c++) fprintf(f[c], "\n");
+  fprintf(f, "\n");
 }
 
 // Plots the error between the reference and coarse mesh solutions
-void Mesh::plot_error_est(const char *filename, Mesh* mesh_ref, 
-		      double* y_prev, double* y_prev_ref, int subdivision)
+void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref, 
+		          double* y_prev, double* y_prev_ref, int subdivision)
 {
-  int n_eq = this->get_n_eq();
-
-  FILE *f_array[MAX_EQN_NUM];
-  char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
-  for(int c=0; c<n_eq; c++) {
-    if(n_eq == 1)
-        sprintf(final_filename[c], "%s", filename);
-    else
-        sprintf(final_filename[c], "%s_%d", filename, c);
-    f_array[c] = fopen(final_filename[c], "wb");
-    if(f_array[c] == NULL) error("problem opening file in plot_error_est().");
-  }
+  char final_filename[MAX_STRING_LENGTH];
+  sprintf(final_filename, "%s", filename);
+  FILE *f = fopen(final_filename, "wb");
+  if(f == NULL) error("problem opening file in plot_error_est().");
 
   // simultaneous traversal of 'this' and 'mesh_ref'
   Element *e;
@@ -815,50 +836,50 @@ void Mesh::plot_error_est(const char *filename, Mesh* mesh_ref,
     Element *e_ref = I_ref->next_active_element();
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      plot_element_error_p(f_array, e, e_ref, y_prev, y_prev_ref, subdivision);
+      if (e_ref->p >= MAX_P) {
+        printf("Try to increase MAX_P in common.h.\n");
+        error("Max poly degree exceeded in plot_error_est().");
+      }
+      plot_element_error_p(norm, f, e, e_ref, y_prev, y_prev_ref, subdivision);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
-      plot_element_error_hp(f_array, e, e_ref_left, e_ref_right, 
+      if (e_ref_left->p >= MAX_P || e_ref_right->p >= MAX_P) {
+        printf("Try to increase MAX_P in common.h.\n");
+        error("Max poly degree exceeded in plot_error_est().");
+      }
+      plot_element_error_hp(norm, f, e, e_ref_left, e_ref_right, 
                             y_prev, y_prev_ref, subdivision);
     }
   }
 
-  for(int c=0; c<n_eq; c++) {
-    fclose(f_array[c]);
-    printf("Error function written to %s.\n", final_filename[c]);
-  }
+  fclose(f);
+  printf("Error function written to %s.\n", final_filename);
 }
 
 // Plots the error wrt. the exact solution (if available)
-void Mesh::plot_error_exact(const char *filename,  
+void Mesh::plot_error_exact(int norm, const char *filename,  
 		            double* y_prev, exact_sol_type exact_sol, int subdivision)
 {
-  int n_eq = this->get_n_eq();
-
-  FILE *f_array[MAX_EQN_NUM];
-  char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
-  for(int c=0; c<n_eq; c++) {
-    if(n_eq == 1)
-        sprintf(final_filename[c], "%s", filename);
-    else
-        sprintf(final_filename[c], "%s_%d", filename, c);
-    f_array[c] = fopen(final_filename[c], "wb");
-    if(f_array[c] == NULL) error("problem opening file in plot_error_exact().");
-  }
+  char final_filename[MAX_STRING_LENGTH];
+  sprintf(final_filename, "%s", filename);
+  FILE *f = fopen(final_filename, "wb");
+  if(f == NULL) error("problem opening file in plot_error_exact().");
 
   // traversal of 'this'
   Element *e;
   Iterator *I = new Iterator(this);
   while ((e = I->next_active_element()) != NULL) {
-    plot_element_error_exact(f_array, e, y_prev, exact_sol, subdivision);
+    if (e->p >= MAX_P) {
+      printf("Try to increase MAX_P in common.h.\n");
+      error("Max poly degree exceeded in plot_error_est().");
+    }
+    plot_element_error_exact(norm, f, e, y_prev, exact_sol, subdivision);
   }
 
-  for(int c=0; c<n_eq; c++) {
-    fclose(f_array[c]);
-    printf("Exact solution error written to %s.\n", final_filename[c]);
-  }
+  fclose(f);
+  printf("Exact solution error written to %s.\n", final_filename);
 }
 
 // Refine all elements in the id_array list whose id_array >= 0
@@ -895,7 +916,8 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
   int num_to_adapt = 0;
 
   // Create list of elements to be refined, in increasing order
-  //for (int i=0; i<this->get_n_active_elem(); i++) printf("id_array[%d] = %d\n", i, id_array[i]);
+  //for (int i=0; i<this->get_n_active_elem(); i++) 
+  //    printf("id_array[%d] = %d\n", i, id_array[i]);
   for (int i=0; i < this->get_n_active_elem(); i++) {
     if (id_array[i] >= 0) {
       adapt_list[num_to_adapt] = id_array[i];
@@ -924,11 +946,11 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
       int3 cand_list[MAX_CAND_NUM];   // Every refinement candidates consists of three
                                       // numbers: 1/0 whether it is a p-candidate or not,
                                       // and then either one or two polynomial degrees
-      // debug:
-      //e->print_cand_list(num_cand, cand_list);
       if (e->level == e_ref->level) { // element 'e' was not refined in space
                                       // for reference solution
         int num_cand = e->create_cand_list(adapt_type, e_ref->p, -1, cand_list);
+      // debug:
+      e->print_cand_list(num_cand, cand_list);
         // reference element was p-refined
         choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
                                       0, norm, y_prev_ref, 
@@ -938,7 +960,8 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
       else { // element 'e' was refined in space for reference solution
         Element* e_ref_left = e_ref;
         Element* e_ref_right = I_ref->next_active_element();
-        int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, e_ref_right->p, cand_list);
+        int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, 
+                                           e_ref_right->p, cand_list);
         // reference element was hp-refined
         choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
                                       num_cand, cand_list, 1, norm, y_prev_ref, 

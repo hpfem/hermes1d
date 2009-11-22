@@ -1497,8 +1497,8 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
         check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, e->p,
           bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
       }  
-      printf("  Elem (%g, %g): dof = 0, err_orig = %g, err_new = %g\n", 
-	     e->x1, e->x2, err_orig, err);
+      //printf("  Elem (%g, %g): dof = 0, err_orig = %g, err_new = %g\n", 
+      //       e->x1, e->x2, err_orig, err);
       if (err < err_orig) return i;
       else crit = -1e10;  // forget this candidate
     }
