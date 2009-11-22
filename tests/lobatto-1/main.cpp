@@ -14,7 +14,7 @@
 int main(int argc, char* argv[])
 {
   // maximum index of Lobatto function tested
-  int max_n = 23; //FIXME: should be 99
+  int max_n = 30; //FIXME: should be 99
   int ok = 1;
 
   // maximum allowed error

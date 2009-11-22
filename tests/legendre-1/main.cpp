@@ -13,7 +13,7 @@
 int main(int argc, char* argv[])
 {
   // maximum poly degree of Legendre polynomials tested
-  int max_poly_degree = 20; //FIXME: should be 99
+  int max_poly_degree = 30; //FIXME: should be 99
 
   // maximum allowed error
   double max_allowed_error = 1e-10;
