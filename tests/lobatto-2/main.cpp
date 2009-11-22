@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
 {
   // maximum index of Lobatto function tested
   int max_n = 30; //FIXME: should be 99
+  int ok = 1;
 
   // maximum allowed error at an integration point
   double max_allowed_error = 1e-12;
@@ -37,12 +38,17 @@ int main(int argc, char* argv[])
         if(val > max_allowed_error) {
           printf("n = %d, quad_order = %d, i = %d, difference = %g\n", 
                  n, quad_order, i, val);
-          return ERROR_FAILURE;
+          ok = 0;
         }
       }
     }
   }
 
-  printf("Success!\n");
-  return ERROR_SUCCESS;
+  if (ok) {
+      printf("Success!\n");
+      return ERROR_SUCCESS;
+  } else {
+      printf("Failure!\n");
+      return ERROR_FAILURE;
+  }
 }

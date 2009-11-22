@@ -22,9 +22,8 @@ for i in range(n_functions):
     print "  i=%d" % i
     lob = legendre_shape_function(i, x)
     lob_diff = lob.diff(x)
-    lob = horner_scheme(lob.n(precision), x, factor_const=factor_const)
-    lob_diff = horner_scheme(lob_diff.n(precision), x,
-            factor_const=factor_const)
+    lob = horner_scheme(lob, x, factor_const=factor_const)
+    lob_diff = horner_scheme(lob_diff, x, factor_const=factor_const)
     functions.append({"id": i,
         "expr": ccode_pow2(lob),
         "expr_diff": ccode_pow2(lob_diff),
