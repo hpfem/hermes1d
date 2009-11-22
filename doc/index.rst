@@ -23,6 +23,7 @@ Indices and Tables
 .. * :ref:`genindex`
 .. * :ref:`modindex`
 .. * :ref:`glossary`
+
 * :ref:`search`
 
 .. _Hermes1D: http://www.hpfem.org/hermes1d
