@@ -3,15 +3,9 @@
 print "Importing..."
 import os
 from jinja2 import Environment, FileSystemLoader
-from sympy import Symbol, ccode
+from sympy import Symbol
 
-def ccode2(s):
-    s = ccode(s)
-    s = s.replace("pow(x,2)", "((x)*(x))")
-    return s
-
-
-from common import lobatto, horner_scheme
+from common import lobatto, horner_scheme, ccode_pow2
 
 n_functions = 30
 precision = 25
@@ -31,8 +25,8 @@ for i in range(n_functions):
     lob_diff = horner_scheme(lob_diff.n(precision), x,
             factor_const=factor_const)
     functions.append({"id": i,
-        "expr": ccode2(lob),
-        "expr_diff": ccode2(lob_diff),
+        "expr": ccode_pow2(lob),
+        "expr_diff": ccode_pow2(lob_diff),
         })
 
 print "Generating the C file..."

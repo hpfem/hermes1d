@@ -2,45 +2,16 @@
 
 print "Importing..."
 import os
-from jinja2 import Environment, FileSystemLoader
-from sympy import Symbol, integrate, legendre, factor, sqrt, ccode
 
-def ccode2(s):
-    s = ccode(s)
-    s = s.replace("pow(x,2)", "((x)*(x))")
-    return s
+from jinja2 import Environment, FileSystemLoader
+from sympy import Symbol
+
+from common import horner_scheme, ccode_pow2, legendre_norm, \
+    legendre_shape_function
 
 n_functions = 30
 precision = 25
-
-def legendre_norm(i, x):
-    """
-    Returns the normalized integrated Legendre polynomial.
-    """
-    f = legendre(i, x)
-    n = sqrt(integrate(f**2, (x, -1, 1)))
-    return f/n
-
-def legendre_shape_function(i, x):
-    """
-    Returns the Lobatto shape function.
-    """
-    #if i == 0:
-    #    return 1-legendre_shape_function(1, x)
-    f = legendre_norm(i, x)
-    #if i == 1:
-    #    f /= sqrt(2)
-    return f.expand()
-
-def horner_scheme(p, x):
-    """
-    Rewrites the polynomial using the Horner scheme.
-    """
-    a = p.subs(x, 0)
-    if p == a:
-        return p
-    rest = ((p-a)/x).expand()
-    return x*horner_scheme(rest, x)+a
+factor_const = False
 
 x = Symbol("x")
 env = Environment(loader=FileSystemLoader('.'))
@@ -51,11 +22,12 @@ for i in range(n_functions):
     print "  i=%d" % i
     lob = legendre_shape_function(i, x)
     lob_diff = lob.diff(x)
-    lob = horner_scheme(lob.n(precision), x)
-    lob_diff = horner_scheme(lob_diff.n(precision), x)
+    lob = horner_scheme(lob.n(precision), x, factor_const=factor_const)
+    lob_diff = horner_scheme(lob_diff.n(precision), x,
+            factor_const=factor_const)
     functions.append({"id": i,
-        "expr": ccode2(lob),
-        "expr_diff": ccode2(lob_diff),
+        "expr": ccode_pow2(lob),
+        "expr_diff": ccode_pow2(lob_diff),
         })
 
 print "Generating the C file..."

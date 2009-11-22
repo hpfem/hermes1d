@@ -2,7 +2,12 @@
 Common functions for all basis generators.
 """
 
-from sympy import Symbol, legendre, sqrt, integrate
+from sympy import Symbol, legendre, sqrt, integrate, ccode
+
+def ccode_pow2(s):
+    s = ccode(s)
+    s = s.replace("pow(x,2)", "((x)*(x))")
+    return s
 
 def legendre_int(i, x):
     """
