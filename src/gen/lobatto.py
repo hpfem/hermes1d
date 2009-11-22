@@ -7,7 +7,7 @@ from sympy import Symbol
 
 from common import lobatto, horner_scheme, ccode_pow2
 
-n_functions = 30
+n_functions = 50
 precision = 25
 factor_const = True
 

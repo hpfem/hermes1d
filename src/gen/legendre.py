@@ -9,7 +9,7 @@ from sympy import Symbol
 from common import horner_scheme, ccode_pow2, legendre_norm, \
     legendre_shape_function
 
-n_functions = 30
+n_functions = 50
 precision = 25
 factor_const = True
 
