@@ -5,6 +5,11 @@ import os
 from jinja2 import Environment, FileSystemLoader
 from sympy import Symbol, integrate, legendre, factor, sqrt, ccode
 
+def ccode2(s):
+    s = ccode(s)
+    s = s.replace("pow(x,2)", "((x)*(x))")
+    return s
+
 n_functions = 30
 precision = 25
 
@@ -49,8 +54,8 @@ for i in range(n_functions):
     lob = horner_scheme(lob.n(precision), x)
     lob_diff = horner_scheme(lob_diff.n(precision), x)
     functions.append({"id": i,
-        "expr": ccode(lob),
-        "expr_diff": ccode(lob_diff),
+        "expr": ccode2(lob),
+        "expr_diff": ccode2(lob_diff),
         })
 
 print "Generating the C file..."
