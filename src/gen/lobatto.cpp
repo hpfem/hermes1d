@@ -11,7 +11,10 @@ int lobatto_order_1d[] = {
 };
 
 {% for f in functions %}
-static double lobatto_fn_{{ f.id }}(double x) { return {{ f.expr }}; }
+static double lobatto_fn_{{ f.id }}(double _x) {
+    long double x = _x;
+    return {{ f.expr }};
+}
 {% endfor %}
 
 shape_fn_t lobatto_fn_tab_1d[] = {
@@ -21,7 +24,10 @@ lobatto_fn_{{ f.id }},{% endfor %}
 
 
 {% for f in functions %}
-static double lobatto_der_{{ f.id }}(double x) { return {{ f.expr_diff }}; }
+static double lobatto_der_{{ f.id }}(double _x) {
+    long double x = _x;
+    return {{ f.expr_diff }};
+}
 {% endfor %}
 
 shape_fn_t lobatto_der_tab_1d[] = {
