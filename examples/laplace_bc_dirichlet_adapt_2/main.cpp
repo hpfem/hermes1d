@@ -345,10 +345,6 @@ int main() {
                 y_prev_ref, err_est_squared_array);
     N_dof = mesh->assign_dofs();
 
-    // Update the reference mesh according to new refinements 
-    // in the coarse mesh
-    mesh_ref->update(mesh);
-
     adapt_iterations++;
   };
 

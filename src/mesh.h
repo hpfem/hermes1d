@@ -60,6 +60,7 @@ public:
     int create_cand_list(int adapt_type, int p_ref_left, int p_ref_right, int3 *cand_list);
     void print_cand_list(int num_cand, int3 *cand_list);
     void refine(int3 cand);
+    void refine(int type, int p_left, int p_right);
     unsigned is_active();
     unsigned active;   // flag used by assembling algorithm
     double x1, x2;     // endpoints
@@ -124,7 +125,6 @@ class Mesh {
         void adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref, 
                    double *y_prev, double *y_prev_ref, 
                    double *err_squared_array);
-        void update(Mesh *mesh_coarse); 
         Mesh *replicate(); 
         void plot(const char* filename); // plots the mesh and polynomial degrees of elements
         void plot_element_error_p(int norm, FILE *f, Element *p, Element *e_ref, 

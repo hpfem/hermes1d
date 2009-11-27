@@ -38,18 +38,17 @@ unsigned Element::is_active()
   return this->active;
 }
 
-void Element::refine(int3 cand) 
+void Element::refine(int type, int p_left, int p_right) 
 {
-  int hp_refinement = cand[0];
-  if(!hp_refinement) {
-    this->p = cand[1];
+  if(type == 0) {         // p-refinement
+    this->p = p_left;
   }
   else {
     double x1 = this->x1;
     double x2 = this->x2;
     double midpoint = (x1 + x2)/2.; 
-    this->sons[0] = new Element(x1, midpoint, this->level + 1, cand[1], dof_size);
-    this->sons[1] = new Element(midpoint, x2, this->level + 1, cand[2], dof_size);
+    this->sons[0] = new Element(x1, midpoint, this->level + 1, p_left, dof_size);
+    this->sons[1] = new Element(midpoint, x2, this->level + 1, p_right, dof_size);
     // copying negative dof to sons if any
     for(int c=0; c<dof_size; c++) {
       if (this->dof[c][0] < 0) this->sons[0]->dof[c][0] = this->dof[c][0];
@@ -57,6 +56,11 @@ void Element::refine(int3 cand)
     }
     this->active = 0;
   }
+}
+
+void Element::refine(int3 cand) 
+{
+  this->refine(cand[0], cand[1], cand[2]);
 }
 
 void Element::init(double x1, double x2, int p_init, int n_eq)
@@ -953,11 +957,15 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
       int3 cand_list[MAX_CAND_NUM];   // Every refinement candidates consists of three
                                       // numbers: 1/0 whether it is a p-candidate or not,
                                       // and then either one or two polynomial degrees
+      Element* e_ref_left;
+      Element* e_ref_right;
       if (e->level == e_ref->level) { // element 'e' was not refined in space
                                       // for reference solution
+        e_ref_left = e_ref;
+        e_ref_right = NULL;
         int num_cand = e->create_cand_list(adapt_type, e_ref->p, -1, cand_list);
-      // debug:
-      e->print_cand_list(num_cand, cand_list);
+        // debug:
+        e->print_cand_list(num_cand, cand_list);
         // reference element was p-refined
         choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
                                       0, norm, y_prev_ref, 
@@ -965,8 +973,8 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
 	  		              this->bc_right_dir_values);
       }
       else { // element 'e' was refined in space for reference solution
-        Element* e_ref_left = e_ref;
-        Element* e_ref_right = I_ref->next_active_element();
+        e_ref_left = e_ref;
+        e_ref_right = I_ref->next_active_element();
         int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, 
                                            e_ref_right->p, cand_list);
         // reference element was hp-refined
@@ -975,14 +983,56 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
                                       this->bc_left_dir_values,
 			              this->bc_right_dir_values);
       }
+      // e_last... element in coarse mesh that will be refined,
+      // e_ref_left... corresponding element in fine mesh (if reference 
+      //               refinement was p-refinement. In this case 
+      //               e_ref_right == NULL
+      // e_ref_left, e_ref_right... corresponding pair of elements 
+      // in the fine mesh if reference refinement was hp-refinement
       Element *e_last = e;
+      // moving pointer 'e' to the next element in coarse mesh
+      // and 'e_ref' to the next element in fine mesh 
       e = I->next_active_element();
       e_ref = I_ref->next_active_element();
-      // perform the refinement
-      printf("  Refining element (%g, %g), cand = (%d %d %d)\n", e_last->x1, e_last->x2, 
-             cand_list[choice][0], cand_list[choice][1], cand_list[choice][2]);
+      // perform the refinement of element e_last
+      printf("  Refining element (%g, %g), cand = (%d %d %d)\n", 
+             e_last->x1, e_last->x2, cand_list[choice][0], 
+             cand_list[choice][1], cand_list[choice][2]);
       e_last->refine(cand_list[choice]);
       if(cand_list[choice][0] == 1) this->n_active_elem++; 
+      // perform corresponding refinement(s) in the fine mesh
+      if (e_last->level == e_ref_left->level) { // ref. refinement was p-refinement
+                                                // so also following ref. refinements 
+                                                // will be p-refinements
+        if (cand_list[choice][0] == 0) { // e_last was p-refined, so we just update 
+                                         // poly order in e_ref_left
+          int new_p = cand_list[choice][1];
+	  e_ref_left->p = new_p + 1;
+        }
+        else { // e_last was hp-refined, so we just split e_ref_left and update
+               // poly orders in sons
+          int new_p_left = cand_list[choice][1];
+          int new_p_right = cand_list[choice][2];
+	  e_ref_left->refine(1, new_p_left + 1, new_p_right + 1);
+        }
+      }
+      else { // ref. refinement was hp-refinement, so also following 
+             // ref. refinements will be hp-refinements
+        if (cand_list[choice][0] == 0) { // e_last was p-refined, so we just 
+                                         // update poly orders in e_ref_left
+                                         // and e_ref_right
+          int new_p = cand_list[choice][1];
+	  e_ref_left->p = new_p + 1;
+	  e_ref_right->p = new_p + 1;
+        }
+        else { // e_last was hp-refined, so we need to split both e_ref_left
+               // and e_ref_right, and update the poly orders accordingly
+          int new_p_left = cand_list[choice][1];
+          int new_p_right = cand_list[choice][2];
+	  e_ref_left->refine(1, new_p_left + 1, new_p_left + 1);
+	  e_ref_right->refine(1, new_p_right + 1, new_p_right + 1);
+       }
+      }
     }
     else {
       e = I->next_active_element();
@@ -994,10 +1044,3 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
   }
 }
 
-void Mesh::update(Mesh *mesh_coarse) 
-{
-
-
-
-
-}
