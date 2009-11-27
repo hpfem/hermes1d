@@ -679,7 +679,8 @@ void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref,
   }
 
   // get coarse mesh solution values and derivatives
-  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], 
+         phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
   e->get_solution(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
@@ -693,7 +694,9 @@ void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref,
     double diff_squared_pt = 0;
     for (int c=0; c < n_eq; c++) {
       double val = phys_u_ref[c][i] - phys_u[c][i]; 
+      double der = phys_dudx_ref[c][i] - phys_dudx[c][i]; 
       diff_squared_pt += val*val;
+      if (norm == 1) diff_squared_pt += der*der;
     }
     fprintf(f, "%g %g\n", x_phys[i], sqrt(diff_squared_pt));
   }
@@ -743,8 +746,10 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
   for (int i=0; i < pts_num; i++) {
     double diff_squared_pt = 0;
     for (int c=0; c < n_eq; c++) {
-      double val = phys_u_ref_left[c][i] - phys_u_left[c][i];
+      double val = phys_u_ref_left[c][i] - phys_u_left[c][i]; 
+      double der = phys_dudx_ref_left[c][i] - phys_dudx_left[c][i]; 
       diff_squared_pt += val*val;
+      if (norm == 1) diff_squared_pt += der*der;
     }
     fprintf(f, "%g %g\n", x_phys_left[i], sqrt(diff_squared_pt));
     fprintf(f, "\n");
@@ -777,8 +782,10 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
   for (int i=0; i < pts_num; i++) {
     double diff_squared_pt = 0;
     for (int c=0; c < n_eq; c++) {
-      double val = phys_u_ref_right[c][i] - phys_u_right[c][i];
+      double val = phys_u_ref_right[c][i] - phys_u_right[c][i]; 
+      double der = phys_dudx_ref_right[c][i] - phys_dudx_right[c][i]; 
       diff_squared_pt += val*val;
+      if (norm == 1) diff_squared_pt += der*der;
     }
     fprintf(f, "%g %g\n", x_phys_right[i], sqrt(diff_squared_pt));
     fprintf(f, "\n");

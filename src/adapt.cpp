@@ -288,6 +288,120 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
     }
 }
 
+// Calculate the projection coefficients for every 
+// transformed Legendre polynomial and every solution 
+// component. The basis are the transformed Legendre 
+// which are orthonormal in L2 (norm == 0)
+void calc_proj_coeffs_L2(int n_eq, int fns_num, int pts_num,
+                         double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
+                         double pol_val[MAX_P+1][MAX_PTS_NUM],
+                         double phys_weights[MAX_PTS_NUM], 
+                         double proj_coeffs[MAX_EQN_NUM][MAX_P+1])
+{
+  for(int m=0; m < fns_num; m++) {   // loop over basis functions
+                                     // (must be L2 orthonormal)
+    for(int c=0; c<n_eq; c++) {      // loop over solution components
+      proj_coeffs[c][m] = 0;
+      for(int j=0; j<pts_num; j++) { // loop over integration points
+        proj_coeffs[c][m] += 
+          phys_u_ref[c][j] * pol_val[m][j] * phys_weights[j];
+      }
+    }
+  }
+}
+
+// allocate and fill projection matrix
+double** get_proj_matrix_H1(int n_eq, int fns_num, int pts_num,
+                            double pol_val[MAX_P+1][MAX_PTS_NUM],
+                            double pol_der[MAX_P+1][MAX_PTS_NUM],
+                            double phys_weights[MAX_PTS_NUM]) 
+{ 
+  // allocate
+  double** matrix = new_matrix<double>(MAX_P+1, MAX_P+1);
+
+  // fill
+  for (int i=0; i<fns_num; i++) {
+    for (int j=0; j<fns_num; j++) {
+      matrix[i][j] = 0;
+      for(int k=0; k < pts_num; k++) { // loop over integration points
+        double val_i = pol_val[i][k];
+        double val_j = pol_val[j][k];
+        double der_i = pol_der[i][k];
+        double der_j = pol_der[j][k];
+        matrix[i][j] += (val_i*val_j + der_i*der_j) * phys_weights[k];
+      }
+    }
+  }
+  return matrix;
+}
+
+// allocate and fill right-hand side
+void fill_proj_rhs_H1(int fns_num, int pts_num,
+                      double phys_u_ref[MAX_PTS_NUM], 
+                      double phys_dudx_ref[MAX_PTS_NUM],
+                      double pol_val[MAX_P+1][MAX_PTS_NUM],
+                      double pol_der[MAX_P+1][MAX_PTS_NUM],
+                      double phys_weights[MAX_PTS_NUM],
+                      double *rhs) 
+{
+  for(int m=0; m < fns_num; m++) {   // loop over basis functions
+    rhs[m] = 0;
+    for(int j=0; j < pts_num; j++) { // loop over integration points
+      rhs[m] += 
+        (phys_u_ref[j] * pol_val[m][j] + phys_dudx_ref[j] * pol_der[m][j]) 
+        * phys_weights[j];
+    }
+  }
+}
+
+// Calculate the projection coefficients for every 
+// transformed Legendre polynomial and every solution 
+// component. The basis are the transformed Legendre 
+// which are NOT orthonormal in H1 (norm == 1)
+void calc_proj_coeffs_H1(int n_eq, int fns_num, int pts_num,
+                         double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
+                         double phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM],
+                         double pol_val[MAX_P+1][MAX_PTS_NUM],
+                         double pol_der[MAX_P+1][MAX_PTS_NUM],
+                         double phys_weights[MAX_PTS_NUM], 
+                         double proj_coeffs[MAX_EQN_NUM][MAX_P+1])
+{ 
+  // allocate and fill projection matrix
+  double** matrix = get_proj_matrix_H1(n_eq, fns_num, pts_num,
+                                       pol_val, pol_der, 
+                                       phys_weights); 
+
+  // replace matrix with its LU decomposition
+  // permutations caused by partial pivoting are 
+  // recorded in the vector indx
+  int *indx = new int[MAX_P+1];
+  double d;
+  ludcmp(matrix, fns_num, indx, &d);
+
+  // allocate projection rhs vector
+  double *rhs = new double[MAX_P+1];
+
+  for(int c=0; c<n_eq; c++) {          // loop over solution components 
+    // fill projection rhs
+    fill_proj_rhs_H1(fns_num, pts_num,
+                     phys_u_ref[c], phys_dudx_ref[c],
+                     pol_val, pol_der,
+		     phys_weights, rhs); 
+
+    // solve system
+    lubksb(matrix, fns_num, indx, rhs);
+
+    // copy sol[] to proj_coeffs[c]
+    for(int m=0; m < fns_num; m++) proj_coeffs[c][m] = rhs[m];
+  }
+
+  // FIXME: can this frequent creation and deletion 
+  // of this matrix be avoided?
+  delete [] matrix;
+  delete [] indx;
+  delete [] rhs;
+}
+
 // Assumes that reference solution is defined on two half-elements 'e_ref_left'
 // and 'e_ref_right'. The reference solution is projected onto the space of 
 // (discontinuous) polynomials of degree 'p_left' on 'e_ref_left'
@@ -325,7 +439,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   // get values of transformed Legendre polynomials in 'e_ref_left'
   double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
   double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
+  int fns_num_left = p_left + 1;
+  for(int m=0; m < fns_num_left; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
       leg_pol_val_left[m][j] = legendre(m, e_ref_left->x1, e_ref_left->x2, 
                                   phys_x_left[j]);
@@ -335,21 +450,20 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
   }
 
-  // calculate the projection coefficients for every 
-  // transformed Legendre polynomial and every solution 
-  // component. Since the basis is orthonormal, these 
-  // are just integrals of the fine mesh solution with 
-  // the transformed Legendre polynomials
+  // calculate projection coefficients on the left
   double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
-      proj_coeffs_left[c][m] = 0;
-      for(int j=0; j<pts_num_left; j++) { // loop over integration points
-        proj_coeffs_left[c][m] += 
-          phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
-      }
-    }
-  }
+  if (norm == 0) calc_proj_coeffs_L2(n_eq, fns_num_left, pts_num_left,
+                                     phys_u_ref_left, 
+                                     leg_pol_val_left, 
+                                     phys_weights_left, 
+                                     proj_coeffs_left);
+  else calc_proj_coeffs_H1(n_eq, fns_num_left, pts_num_left,
+                           phys_u_ref_left, 
+                           phys_dudx_ref_left, 
+                           leg_pol_val_left, 
+                           leg_pol_der_left, 
+                           phys_weights_left, 
+                           proj_coeffs_left);
 
   // evaluate the projection in 'e_ref_left' for every solution component
   // and every integration point
@@ -409,8 +523,9 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   // get values of transformed Legendre polynomials in 'e_ref_right'
   double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
   double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j<pts_num_right; j++) {
+  int fns_num_right = p_right + 1;
+  for(int m=0; m < fns_num_right; m++) { // loop over transf. Leg. polynomials
+    for(int j=0; j < pts_num_right; j++) {
       leg_pol_val_right[m][j] = legendre(m, e_ref_right->x1, 
                             e_ref_right->x2, phys_x_right[j]);
       if (norm == 1) leg_pol_der_right[m][j] = legendre_der(m, e_ref_right->x1, 
@@ -418,21 +533,20 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
   }
 
-  // calculate the projection coefficients for every 
-  // transformed Legendre polynomial and every solution 
-  // component. Since the basis is orthonormal, these 
-  // are just integrals of the fine mesh solution with 
-  // the transformed Legendre polynomials
+  // calculate projection coefficients on the right
   double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m<p_right + 1; m++) { // loop over transf. Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
-      proj_coeffs_right[c][m] = 0;
-      for(int j=0; j<pts_num_right; j++) { // loop over integration points
-        proj_coeffs_right[c][m] += 
-          phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
-      }
-    }
-  }
+  if (norm == 0) calc_proj_coeffs_L2(n_eq, fns_num_right, pts_num_right, 
+                                     phys_u_ref_right, 
+                                     leg_pol_val_right, 
+                                     phys_weights_right, 
+                                     proj_coeffs_right);
+  else calc_proj_coeffs_H1(n_eq, fns_num_right, pts_num_right,  
+                           phys_u_ref_right, 
+                           phys_dudx_ref_right, 
+                           leg_pol_val_right, 
+                           leg_pol_der_right, 
+                           phys_weights_right, 
+                           proj_coeffs_right);
 
   // evaluate the projection in 'e_ref_right' for every solution component
   // and every integration point
@@ -612,7 +726,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   // get values of transformed Legendre polynomials in the left half
   double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
   double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
+  int fns_num_left = p_left + 1;
+  for(int m=0; m < fns_num_left; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
       leg_pol_val_left[m][j] = legendre(m, e->x1, (e->x1 + e->x2)/2,  
 					      phys_x_left[j]);
@@ -621,21 +736,20 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     }
   }
 
-  // calculate the projection coefficients for every 
-  // transformed Legendre polynomial and every solution 
-  // component. Since the basis is orthonormal, these 
-  // are just integrals of the fine mesh solution with 
-  // the transformed Legendre polynomials
+  // calculate projection coefficients on the left
   double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m<p_left + 1; m++) { // loop over transf. Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
-      proj_coeffs_left[c][m] = 0;
-      for(int j=0; j<pts_num_left; j++) { // loop over integration points
-        proj_coeffs_left[c][m] += 
-          phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
-      }
-    }
-  }
+  if (norm == 0) calc_proj_coeffs_L2(n_eq, fns_num_left, pts_num_left, 
+                                     phys_u_ref_left, 
+                                     leg_pol_val_left, 
+                                     phys_weights_left, 
+                                     proj_coeffs_left);
+  else calc_proj_coeffs_H1(n_eq, fns_num_left, pts_num_left,  
+                           phys_u_ref_left, 
+                           phys_dudx_ref_left, 
+                           leg_pol_val_left, 
+                           leg_pol_der_left, 
+                           phys_weights_left, 
+                           proj_coeffs_left);
 
   // evaluate the projection on the left half for every solution component
   // and every integration point
@@ -692,7 +806,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   // get values of transformed Legendre polynomials on the right half
   double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
   double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m < p_right + 1; m++) { // loop over transf. Leg. polynomials
+  int fns_num_right = p_right + 1;
+  for(int m=0; m < fns_num_right; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j < pts_num_right; j++) {
       leg_pol_val_right[m][j] = legendre(m, (e->x1 + e->x2)/2, e->x2,  
 					     phys_x_right[j]);
@@ -702,21 +817,20 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     }
   }
 
-  // calculate the projection coefficients for every 
-  // transformed Legendre polynomial and every solution 
-  // component. Since the basis is orthonormal, these 
-  // are just integrals of the fine mesh solution with 
-  // the transformed Legendre polynomials
+  // calculate projection coefficients on the right
   double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m < p_right + 1; m++) { // loop over transf. Leg. polynomials
-    for(int c=0; c < n_eq; c++) { // loop over solution components
-      proj_coeffs_right[c][m] = 0;
-      for(int j=0; j < pts_num_right; j++) { // loop over integration points
-        proj_coeffs_right[c][m] += 
-          phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
-      }
-    }
-  }
+  if (norm == 0) calc_proj_coeffs_L2(n_eq, fns_num_right, pts_num_right,
+                                     phys_u_ref_right, 
+                                     leg_pol_val_right, 
+                                     phys_weights_right, 
+                                     proj_coeffs_right);
+  else calc_proj_coeffs_H1(n_eq, fns_num_right, pts_num_right,
+                           phys_u_ref_right, 
+                           phys_dudx_ref_right, 
+                           leg_pol_val_right, 
+                           leg_pol_der_right, 
+                           phys_weights_right, 
+                           proj_coeffs_right);
 
   // evaluate the projection on the right half for every solution component
   // and every integration point
@@ -872,9 +986,6 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
 {
   int n_eq = e->dof_size;
 
-  // First in 'e_ref_left': 
-  // Calculate first part of projection coefficients
-
   // create Gauss quadrature on 'e_ref_left'
   int order_left = 2*max(e_ref_left->p, p);
   int pts_num_left;
@@ -894,29 +1005,15 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // get values of (original) Legendre polynomials in 'e_ref_left'
   double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
   double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int j=0; j<pts_num_left; j++) {  
+  int fns_num = p + 1;
+  for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
+    for(int j=0; j < pts_num_left; j++) {  
       leg_pol_val_left[m][j] = legendre(m, e->x1, 
 					   e->x2, phys_x_left[j]);
       if (norm == 1) leg_pol_der_left[m][j] = legendre_der(m, e->x1, 
 					      e->x2, phys_x_left[j]);
     }
   }
-
-  // calculate first part of the projection coefficients 
-  double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m<p + 1; m++) { // loop over Leg. polynomials
-    for(int c=0; c<n_eq; c++) { // loop over solution components
-      proj_coeffs_left[c][m] = 0;
-      for(int j=0; j<pts_num_left; j++) { // loop over integration points
-        proj_coeffs_left[c][m] += 
-          phys_u_ref_left[c][j] * leg_pol_val_left[m][j] * phys_weights_left[j];
-      }
-    }
-  }
-
-  // Second in 'e_ref_right': 
-  // Calculate second part of projection coefficients
 
   // create Gauss quadrature on 'e_ref_right'
   int order_right = 2*max(e_ref_right->p, p);
@@ -937,7 +1034,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // get values of (original) Legendre polynomials in 'e_ref_right'
   double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
   double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+  for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
     for(int j=0; j < pts_num_right; j++) {
       leg_pol_val_right[m][j] = legendre(m, e->x1, 
 					    e->x2, phys_x_right[j]);
@@ -946,28 +1043,74 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     }
   }
 
-  // calculate the second part of the projection coefficients
-  double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int c=0; c < n_eq; c++) { // loop over solution components
-      proj_coeffs_right[c][m] = 0;
-      for(int j=0; j < pts_num_right; j++) { // loop over integration points
-        proj_coeffs_right[c][m] += 
-          phys_u_ref_right[c][j] * leg_pol_val_right[m][j] * phys_weights_right[j];
+  // calculate projection coefficients
+  double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
+  if (norm == 0) {
+    double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
+    calc_proj_coeffs_L2(n_eq, fns_num, pts_num_left,
+                        phys_u_ref_left, 
+                        leg_pol_val_left, 
+                        phys_weights_left, 
+                        proj_coeffs_left);
+    double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
+    calc_proj_coeffs_L2(n_eq, fns_num, pts_num_right, 
+                        phys_u_ref_right, 
+                        leg_pol_val_right, 
+                        phys_weights_right, 
+                        proj_coeffs_right);
+    // add the two parts of projection coefficients together
+    for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
+      for(int c=0; c < n_eq; c++) {  // loop over solution components
+        proj_coeffs[c][m] = proj_coeffs_left[c][m] + proj_coeffs_right[c][m];
       }
     }
   }
-
-  // debug
-  //printf("p_fine_hp: e = (%g, %g)\n", e->x1, e->x2);
-
-  // add the two parts of projection coefficients
-  double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int c=0; c < n_eq; c++) { // loop over solution components
-      proj_coeffs[c][m] = proj_coeffs_left[c][m] + proj_coeffs_right[c][m];
-      //printf("  proj_coeffs[%d][%d] = %g\n", c, m, proj_coeffs[c][m]);
+  else { 
+    // calculate first part of the projection matrix
+    double** matrix_left;  
+    matrix_left = get_proj_matrix_H1(n_eq, fns_num, pts_num_left,
+                                     leg_pol_val_left, leg_pol_der_left, 
+                                     phys_weights_left); 
+    // calculate second part of the projection matrix
+    double** matrix_right;  
+    matrix_right = get_proj_matrix_H1(n_eq, fns_num, pts_num_right,
+                                      leg_pol_val_right, leg_pol_der_right, 
+                                      phys_weights_right); 
+    // add the two matrices 
+    double ** matrix = new_matrix<double>(MAX_P+1, MAX_P+1);
+    for(int i=0; i < fns_num; i++) { 
+      for(int j=0; j < fns_num; j++) { 
+        matrix[i][j] = matrix_left[i][j] + matrix_right[i][j];
+      }
     }
+    // perform LU factorization (result stored in matrix and indx)
+    int *indx = new int[MAX_P+1];
+    double d;
+    ludcmp(matrix, fns_num, indx, &d);
+
+    // for every equation, construct the rhs and solve the system
+    double *rhs_left = new double[MAX_P+1];
+    double *rhs_right = new double[MAX_P+1];    
+    double *rhs = new double[MAX_P+1];
+    for (int c=0; c<n_eq; c++) {
+      fill_proj_rhs_H1(fns_num, pts_num_left,
+                       phys_u_ref_left[c], phys_dudx_ref_left[c],
+                       leg_pol_val_left, leg_pol_der_left,
+		       phys_weights_left, rhs_left); 
+      fill_proj_rhs_H1(fns_num, pts_num_right,
+                       phys_u_ref_right[c], phys_dudx_ref_right[c],
+                       leg_pol_val_right, leg_pol_der_right,
+		       phys_weights_right, rhs_right);
+      for(int i=0; i < fns_num; i++) rhs[i] = rhs_left[i] + rhs_right[i];
+      lubksb(matrix, fns_num, indx, rhs);
+      for(int m=0; m < fns_num; m++) proj_coeffs[c][m] = rhs[m];
+    }
+    delete [] matrix_left;
+    delete [] matrix_right;
+    delete [] matrix;
+    delete [] rhs_left;
+    delete [] rhs_right;
+    delete [] rhs;
   }
 
   // evaluate the projection in 'e_ref_left' for every solution component
@@ -1183,24 +1326,28 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   // get values of (original) Legendre polynomials in 'e'
   double leg_pol_val[MAX_P+1][MAX_PTS_NUM];
   double leg_pol_der[MAX_P+1][MAX_PTS_NUM];
-  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
+  int fns_num = p + 1;
+  for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
     for(int j=0; j < pts_num; j++) {  
       leg_pol_val[m][j] = legendre(m, e->x1, e->x2, phys_x[j]);
       if (norm == 1) leg_pol_der[m][j] = legendre_der(m, e->x1, e->x2, phys_x[j]);
     }
   }
 
-  // calculate the projection coefficients 
+  // calculate first part of the projection coefficients
   double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
-  for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
-    for(int c=0; c < n_eq; c++) { // loop over solution components
-      proj_coeffs[c][m] = 0;
-      for(int j=0; j < pts_num; j++) { // loop over integration points
-        proj_coeffs[c][m] +=
-          phys_u_ref[c][j] * leg_pol_val[m][j] * phys_weights[j];
-      }
-    }
-  }
+  if (norm == 0) calc_proj_coeffs_L2(n_eq, fns_num, pts_num,
+                                     phys_u_ref, 
+                                     leg_pol_val, 
+                                     phys_weights, 
+                                     proj_coeffs);
+  else calc_proj_coeffs_H1(n_eq, fns_num, pts_num,
+                           phys_u_ref, 
+                           phys_dudx_ref, 
+                           leg_pol_val, 
+                           leg_pol_der, 
+                           phys_weights, 
+                           proj_coeffs);
 
   // evaluate the projection in 'e' for every solution component
   // and every integration point
@@ -1240,11 +1387,6 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   for (int c=0; c<n_eq; c++) { // loop over solution components
     err_total += err_squared[c];
   }
-  //if (err_total < 1e-10) {
-  //    printf("candidate (0 %d -1)\n", p);
-  //    warning("in check_cand_coarse_p_fine_p: bad refinement candidate (err_total=0)");
-  //    return -1e6;
-  //}
   err = sqrt(err_total);
   int dof_orig = e->p + 1;
   int dof_new = p + 1; 
@@ -1422,8 +1564,8 @@ double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev,
 // Selects best hp-refinement from the given list (distinguishes whether 
 // the reference refinement on that element was p- or hp-refinement). 
 // Each refinement candidate is a triple of integers. First one means 
-// p-refinement (0) or hp-refinement (1). Second and/or third number are 
-// the new proposed polynomial degrees.
+// p-refinement (0) or hp-refinement (1). Second and/or second and third 
+// number are the new proposed polynomial degrees.
 int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2, 
                          int num_cand, int3 *cand_list, 
                          int ref_sol_type, int norm, 

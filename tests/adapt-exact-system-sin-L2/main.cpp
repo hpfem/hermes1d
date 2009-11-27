@@ -2,18 +2,21 @@
 
 // ********************************************************************
 
-// This example solves adaptively the Poisson equation -u'' - f = 0 
-// in an interval (A, B), equipped with Dirichlet boundary
-// conditions on both end points. Among others it shows how 
-// one can measure error wrt. exact solution (if available).
+// This test makes sure that an exact function 
+// sin() is approximated with the relative 
+// error 1e-5 with no more than 20 DOF.
+
+#define ERROR_SUCCESS                               0
+#define ERROR_FAILURE                               -1
 
 // General input:
-static int N_eq = 1;
-int N_elem = 2;                         // Number of elements
-double A = -M_PI, B = M_PI;           // Domain end points
-int P_init = 1;                         // Initial polynomal degree
+static int N_eq = 2;
+int N_elem = 3;                         // Number of elements
+double A = 0, B = 2*M_PI;               // Domain end points
+int P_init = 1;                         // Initial polynomial degree
+double K = 1.0;                         // Equation parameter
 
-// Stopping criteria for Newton
+// Error tolerance
 double TOL_NEWTON_COARSE = 1e-5;        // Coarse mesh
 double TOL_NEWTON_REF = 1e-3;           // Reference mesh
 
@@ -23,100 +26,109 @@ const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-5;        // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1e-2;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
-const int NORM = 1;                     // To measure errors:
+const int NORM = 0;                     // To measure errors:
                                         // 1... H1 norm
                                         // 0... L2 norm
 
 // Boundary conditions
-double Val_dir_left = 0;                // Dirichlet condition left
-double Val_dir_right = 0;               // Dirichlet condition right
-
-// Function f(x)
-double f(double x) {
-  return sin(x);
-  //return 2;
-}
+double Val_dir_left_0 = 0;
+double Val_dir_left_1 = K;
 
 // Exact solution:
 // When changing exact solution, do not 
 // forget to update interval accordingly
 const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
-  u[0] = sin(x);
-  dudx[0] = cos(x);
-  //u[0] = 1. - x*x;
-  //dudx[0] = -2.*x;
+  u[0] = sin(K*x);
+  dudx[0] = K*cos(K*x);
+  u[1] = K*cos(K*x);
+  dudx[1] = -K*K*sin(K*x);
 }
 
 // ********************************************************************
 
-void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref) 
-{
-  // Plot the coarse mesh solution
-  Linearizer l(mesh);
-  const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev);
-
-  // Plot the reference solution
-  Linearizer lxx(mesh_ref);
-  const char *out_filename2 = "solution_ref.gp";
-  lxx.plot_solution(out_filename2, y_prev_ref);
-
-  // Plot the coarse and reference mesh
-  const char *mesh_filename = "mesh.gp";
-  mesh->plot(mesh_filename);
-  const char *mesh_ref_filename = "mesh_ref.gp";
-  mesh_ref->plot(mesh_ref_filename);
-
-  // Plot the error estimate (difference between 
-  // coarse and reference mesh solutions)
-  const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(NORM, err_est_filename, mesh_ref, y_prev, y_prev_ref);
-
-  // Plot error wrt. exact solution (if available)
-  if (EXACT_SOL_PROVIDED) {   
-    const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(NORM, err_exact_filename, y_prev, exact_sol);
-  }
-}
-
-// ********************************************************************
-
-// bilinear form for the Jacobi matrix 
-// num...number of Gauss points in element
-// x[]...Gauss points
-// weights[]...Gauss weights for points in x[]
-// u...basis function
-// v...test function
-// u_prev...previous solution (all solution components)
-double jacobian(int num, double *x, double *weights, 
+// Jacobi matrix block 0, 0 (equation 0, solution component 0)
+// Note: u_prev[c][i] contains the values of solution component c 
+// in integration point x[i]. similarly for du_prevdx.
+double jacobian_0_0(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
                 void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += dudx[i]*dvdx[i]*weights[i];
+    val += dudx[i]*v[i]*weights[i];
   }
   return val;
 };
 
-// (nonlinear) form for the residual vector
-// num...number of Gauss points in element
-// x[]...Gauss points
-// weights[]...Gauss weights for points in x[]
-// u...approximate solution
-// v...test function
-// u_prev...previous solution (all solution components)
-double residual(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],  
+// Jacobi matrix block 0, 1 (equation 0, solution component 1)
+double jacobian_0_1(int num, double *x, double *weights, 
+                double *u, double *dudx, double *v, double *dvdx, 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                void *user_data)
+{
+  double val = 0;
+  for(int i = 0; i<num; i++) {
+    val += -u[i]*v[i]*weights[i];
+  }
+  return val;
+};
+
+// Jacobi matrix block 1, 0 (equation 1, solution component 0)
+double jacobian_1_0(int num, double *x, double *weights, 
+                double *u, double *dudx, double *v, double *dvdx, 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                void *user_data)
+{
+  double val = 0;
+  for(int i = 0; i<num; i++) {
+    val += K*K*u[i]*v[i]*weights[i];
+  }
+  return val;
+};
+
+// Jacobi matrix block 1, 1 (equation 1, solution component 1)
+double jacobian_1_1(int num, double *x, double *weights, 
+                double *u, double *dudx, double *v, double *dvdx, 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                void *user_data)
+{
+  double val = 0;
+  for(int i = 0; i<num; i++) {
+    val += dudx[i]*v[i]*weights[i];
+  }
+  return val;
+};
+
+// Residual part 0 (equation 0) 
+double residual_0(int num, double *x, double *weights, 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
                 double *v, double *dvdx, void *user_data)
 {
   double val = 0;
   for(int i = 0; i<num; i++) {
-    val += (du_prevdx[0][i]*dvdx[i] - f(x[i])*v[i])*weights[i];
+    val += (du_prevdx[0][i] - u_prev[1][i])*v[i]*weights[i];
+  }
+  return val;
+};
+
+// Residual part 1 (equation 1)
+double residual_1(int num, double *x, double *weights, 
+                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double *v, double *dvdx, void *user_data)
+{
+  double val = 0;
+  for(int i = 0; i<num; i++) {
+    val += (K*K*u_prev[0][i] + du_prevdx[1][i])*v[i]*weights[i];
   }
   return val;
 };
@@ -134,7 +146,7 @@ int main() {
   DiscreteProblem *dp = NULL;       // discrete problem (coarse mesh)
   DiscreteProblem *dp_ref = NULL;   // discrete problem (reference mesh)
 
-  // Convergence graph wrt. the number of degrees of freedom
+  // convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
   graph.set_log_y();
   graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
@@ -143,15 +155,19 @@ int main() {
 
   // Create coarse mesh, set Dirichlet BC, enumerate basis functions
   mesh = new Mesh(A, B, N_elem, P_init, N_eq);
-  mesh->set_bc_left_dirichlet(0, Val_dir_left);
-  mesh->set_bc_right_dirichlet(0, Val_dir_right);
+  mesh->set_bc_left_dirichlet(0, Val_dir_left_0);
+  mesh->set_bc_left_dirichlet(1, Val_dir_left_1);
   int N_dof = mesh->assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
   // Create discrete problem on coarse mesh
   dp = new DiscreteProblem(mesh);
-  dp->add_matrix_form(0, 0, jacobian);
-  dp->add_vector_form(0, residual);
+  dp->add_matrix_form(0, 0, jacobian_0_0);
+  dp->add_matrix_form(0, 1, jacobian_0_1);
+  dp->add_matrix_form(1, 0, jacobian_1_0);
+  dp->add_matrix_form(1, 1, jacobian_1_1);
+  dp->add_vector_form(0, residual_0);
+  dp->add_vector_form(1, residual_1);
 
   // Main adaptivity loop
   int adapt_iterations = 1;
@@ -179,7 +195,7 @@ int main() {
       for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
     }
 
-    // Obtain coarse mesh solution via Newton's method
+    // Obtain coarse mesh solution via Newton's iteration
     int newton_iterations = 0;
     while (1) {
       // Erase the matrix:
@@ -195,7 +211,7 @@ int main() {
 
       // If residual norm less than TOL_NEWTON_COARSE, quit
       // latest solution is in y_prev
-      printf("Residual norm (coarse): %.15f\n", res_norm);
+      printf("Residual norm: %.15f\n", res_norm);
       if(res_norm < TOL_NEWTON_COARSE) break;
 
       // Change sign of vector res
@@ -208,13 +224,10 @@ int main() {
       for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
       newton_iterations++;
-      printf("Finished coarse mesh Newton iteration: %d\n", newton_iterations);
+      printf("Finished coarse Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
-    for(int i=0; i<N_dof; i++) {
-      y_prev[i] += res[i];
-      //printf("y_prev[%d] = %g\n", i, y_prev[i]);
-    }
+    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
     // Create reference mesh
     printf("Creating reference mesh.\n");
@@ -242,19 +255,19 @@ int main() {
     int N_dof_ref = mesh_ref->assign_dofs();
     
     // Register weak forms
-    if (dp_ref != NULL) delete dp_ref;
-    dp_ref = new DiscreteProblem(mesh_ref);
-    dp_ref->add_matrix_form(0, 0, jacobian);
-    dp_ref->add_vector_form(0, residual);
+    DiscreteProblem dp_ref(mesh_ref);
+    dp_ref.add_matrix_form(0, 0, jacobian_0_0);
+    dp_ref.add_matrix_form(0, 1, jacobian_0_1);
+    dp_ref.add_matrix_form(1, 0, jacobian_1_0);
+    dp_ref.add_matrix_form(1, 1, jacobian_1_1);
+    dp_ref.add_vector_form(0, residual_0);
+    dp_ref.add_vector_form(1, residual_1);
 
     // (Re)allocate Jacobi matrix mat_ref and vectors 
     // y_prev_ref and res_ref on reference mesh
-    if (mat_ref != NULL) delete mat_ref;
-    mat_ref = new CooMatrix(N_dof_ref);
-    if (res_ref != NULL) delete res_ref;
-    res_ref = new double[N_dof_ref];
-    if (y_prev_ref != NULL) delete y_prev_ref;
+    Matrix *mat_ref = new CooMatrix(N_dof_ref);
     y_prev_ref = new double[N_dof_ref];
+    double *res_ref = new double[N_dof_ref];
 
     // transfer previous reference solution onto the new 
     // reference mesh
@@ -272,16 +285,16 @@ int main() {
       mat_ref->zero();
 
       // Construct residual vector
-      dp_ref->assemble_matrix_and_vector(mat_ref, res_ref, y_prev_ref); 
+      dp_ref.assemble_matrix_and_vector(mat_ref, res_ref, y_prev_ref); 
 
-      // Calculate norm of residual vector
+      // Calculate L2 norm of residual vector
       double res_ref_norm = 0;
       for(int i=0; i<N_dof_ref; i++) res_ref_norm += res_ref[i]*res_ref[i];
       res_ref_norm = sqrt(res_ref_norm);
 
       // If residual norm less than TOL_NEWTON_REF, quit
       // latest solution is in y_prev
-      printf("Residual norm (ref): %.15f\n", res_ref_norm);
+      printf("ref: Residual L2 norm: %.15f\n", res_ref_norm);
       if(res_ref_norm < TOL_NEWTON_REF) break;
 
       // Change sign of vector res_ref
@@ -294,13 +307,10 @@ int main() {
       for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
       newton_iterations_ref++;
-      printf("Finished fine mesh Newton iteration: %d\n", newton_iterations_ref);
+      printf("Finished coarse Newton iteration: %d\n", newton_iterations_ref);
     }
     // Update y_prev_ref by the increment stored in res
-    for(int i=0; i<N_dof_ref; i++) {
-      y_prev_ref[i] += res_ref[i];
-      //printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
-    }
+    for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
     // Estimate element errors (squared)
     double err_est_squared_array[MAX_ELEM_NUM]; 
@@ -338,7 +348,10 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 2) break;
+    //if (adapt_iterations == 6) break;
+
+    // extra code for this test:
+    if (N_dof > 45) return ERROR_FAILURE;
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
@@ -348,31 +361,6 @@ int main() {
     adapt_iterations++;
   };
 
-  // Plot meshes, results, and errors
-  plotting(mesh, mesh_ref, y_prev, y_prev_ref);
-
-  // Save convergence graph
-  graph.save("conv_dof.gp");
-
-  printf("Done.\n");
-  return 1;
+  return ERROR_SUCCESS;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
