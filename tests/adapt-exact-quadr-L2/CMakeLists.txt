@@ -1,4 +1,4 @@
-project(adapt-exact-quadr)
+project(adapt-exact-quadr-L2)
 
 enable_language(Fortran)
 find_package(UMFPACK REQUIRED)
@@ -8,4 +8,4 @@ add_executable(${PROJECT_NAME} main.cpp)
 include (../../examples/CMake.common)
 
 set(BIN ${PROJECT_BINARY_DIR}/${PROJECT_NAME})
-add_test(adapt-exact-quadr ${BIN})
+add_test(adapt-exact-quadr-L2 ${BIN})

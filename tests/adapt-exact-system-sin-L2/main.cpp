@@ -4,7 +4,7 @@
 
 // This test makes sure that an exact function 
 // sin() is approximated with the relative 
-// error 1e-5 with no more than 20 DOF.
+// error 1e-5 with no more than 60 DOF.
 
 #define ERROR_SUCCESS                               0
 #define ERROR_FAILURE                               -1
@@ -351,7 +351,7 @@ int main() {
     //if (adapt_iterations == 6) break;
 
     // extra code for this test:
-    if (N_dof > 45) return ERROR_FAILURE;
+    if (N_dof > 60) return ERROR_FAILURE;
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
@@ -361,6 +361,7 @@ int main() {
     adapt_iterations++;
   };
 
+  printf("Success!\n");
   return ERROR_SUCCESS;
 
 }
