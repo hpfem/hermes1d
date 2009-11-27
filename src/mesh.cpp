@@ -994,3 +994,10 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref,
   }
 }
 
+void Mesh::update(Mesh *mesh_coarse) 
+{
+
+
+
+
+}

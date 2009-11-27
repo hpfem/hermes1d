@@ -124,6 +124,7 @@ class Mesh {
         void adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref, 
                    double *y_prev, double *y_prev_ref, 
                    double *err_squared_array);
+        void update(Mesh *mesh_coarse); 
         Mesh *replicate(); 
         void plot(const char* filename); // plots the mesh and polynomial degrees of elements
         void plot_element_error_p(int norm, FILE *f, Element *p, Element *e_ref, 
