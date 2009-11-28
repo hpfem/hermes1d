@@ -327,10 +327,13 @@ int main() {
     // debug
     //if (adapt_iterations == 4) break;
 
-    // Refine elements in the id_array list whose id_array >= 0
+    // Refine coarse mesh elements whose id_array >= 0. 
+    // Returns updated reference mesh that contains the previous
+    // reference solution. The coefficient vector 'y_prev_ref',
+    // and N_dor and N_dof_ref are updated as well. Coarse mesh 
+    // solution becomes undefined. 
     mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
-                y_prev_ref, err_est_squared_array);
-    N_dof = mesh->assign_dofs();
+                y_prev_ref, N_dof, N_dof_ref, err_est_squared_array);
 
     adapt_iterations++;
   };

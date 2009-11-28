@@ -912,7 +912,7 @@ void Mesh::plot_error_exact(int norm, const char *filename,
 // reference solution. The coefficient vector 'y_prev_ref' is 
 // prolonged and updated as well.
 void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref, 
-                 double *y_prev, double* &y_prev_ref, 
+                 double *y_prev, double* &y_prev_ref, int &n_dof, int &n_dof_ref,
                  double *err_squared_array) 
 {
   // Find element with largest error
@@ -1077,8 +1077,8 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
       }    
     }
   }
-  int new_n_dof = this->assign_dofs();
-  printf("Coarse mesh refined (%d DOF)\n", new_n_dof);
+  int n_dof_new = this->assign_dofs();
+  printf("Coarse mesh refined (%d DOF)\n", n_dof_new);
 
   // At this point local refinements of 'this' are finished, and 
   // 'mesh_ref_new' is the corresponding refinement of 'mesh_ref. 
@@ -1086,7 +1086,8 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
   // and transfer the reference solution from mesh_ref to mesh_ref_new.
   int n_dof_ref_new = mesh_ref_new->assign_dofs();
   double *y_prev_ref_new = new double[n_dof_ref_new];
-  printf("Reference mesh updated (%d DOF)\n", n_dof_ref_new);
+  printf("Reference mesh updated (%d elem, %d DOF)\n", 
+	 mesh_ref_new->get_n_active_elem(), n_dof_ref_new);
 
   // Transfer reference solution from the previous reference mesh to 
   // the new one 
@@ -1100,5 +1101,10 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
   // Delete y_prev_ref and rename y_prev_ref_new to y_prev_ref.
   delete [] y_prev_ref;
   y_prev_ref = y_prev_ref_new;
+
+  // returning the new N_dof and N_dof_ref
+  n_dof = n_dof_new;
+  n_dof_ref = n_dof_ref_new;
+  
 }
 

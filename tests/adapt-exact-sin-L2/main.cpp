@@ -308,8 +308,7 @@ int main() {
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
-                y_prev_ref, err_est_squared_array);
-    N_dof = mesh->assign_dofs();
+                y_prev_ref, N_dof, N_dof_ref, err_est_squared_array);
 
     adapt_iterations++;
   };
