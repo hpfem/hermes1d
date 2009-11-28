@@ -131,8 +131,7 @@ int main() {
   double *y_prev_ref = NULL;        // vector of unknown coefficients (reference mesh)
   double *res = NULL;               // residual vector (coarse mesh)
   double *res_ref = NULL;           // residual vector (reference mesh)
-  DiscreteProblem *dp = NULL;       // discrete problem (coarse mesh)
-  DiscreteProblem *dp_ref = NULL;   // discrete problem (reference mesh)
+  DiscreteProblem *dp = NULL;       // discrete problem
 
   // Convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
@@ -231,12 +230,6 @@ int main() {
   int N_dof_ref = mesh_ref->assign_dofs();
   printf("Reference mesh created (%d DOF).\n", N_dof_ref);
 
-  // Register weak forms
-  if (dp_ref != NULL) delete dp_ref;
-  dp_ref = new DiscreteProblem();
-  dp_ref->add_matrix_form(0, 0, jacobian);
-  dp_ref->add_vector_form(0, residual);
-
   // Allocate vector y_prev_ref for reference mesh
   if (y_prev_ref != NULL) delete y_prev_ref;
   y_prev_ref = new double[N_dof_ref];
@@ -264,7 +257,7 @@ int main() {
       mat_ref->zero();
 
       // Construct residual vector
-      dp_ref->assemble_matrix_and_vector(mesh_ref, mat_ref, res_ref, y_prev_ref); 
+      dp->assemble_matrix_and_vector(mesh_ref, mat_ref, res_ref, y_prev_ref); 
 
       // Calculate norm of residual vector
       double res_ref_norm = 0;

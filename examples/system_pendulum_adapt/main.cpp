@@ -39,7 +39,7 @@ const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-2;        // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1e-3;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 const int NORM = 0;                     // To measure errors:
                                         // 1... H1 norm
@@ -185,8 +185,7 @@ int main() {
   double *y_prev_ref = NULL;        // vector of unknown coefficients (reference mesh)
   double *res = NULL;               // residual vector (coarse mesh)
   double *res_ref = NULL;           // residual vector (reference mesh)
-  DiscreteProblem *dp = NULL;       // discrete problem (coarse mesh)
-  DiscreteProblem *dp_ref = NULL;   // discrete problem (reference mesh)
+  DiscreteProblem *dp = NULL;       // discrete problem
 
   // convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
@@ -202,7 +201,7 @@ int main() {
   printf("N_dof = %d\n", N_dof);
 
   // Create discrete problem on coarse mesh
-  dp = new DiscreteProblem(mesh);
+  dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian_0_0);
   dp->add_matrix_form(0, 1, jacobian_0_1);
   dp->add_matrix_form(1, 0, jacobian_1_0);
@@ -243,7 +242,7 @@ int main() {
       mat->zero();
 
       // Construct residual vector
-      dp->assemble_matrix_and_vector(mat, res, y_prev); 
+      dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
 
       // Calculate norm of residual vector
       double res_norm = 0;
@@ -295,16 +294,6 @@ int main() {
     // Enumerate DOF in the reference mesh
     int N_dof_ref = mesh_ref->assign_dofs();
 
-    // Register weak forms
-    // Register weak forms
-    DiscreteProblem dp_ref(mesh_ref);
-    dp_ref.add_matrix_form(0, 0, jacobian_0_0);
-    dp_ref.add_matrix_form(0, 1, jacobian_0_1);
-    dp_ref.add_matrix_form(1, 0, jacobian_1_0);
-    dp_ref.add_matrix_form(1, 1, jacobian_1_1);
-    dp_ref.add_vector_form(0, residual_0);
-    dp_ref.add_vector_form(1, residual_1);
-
     // (Re)allocate Jacobi matrix mat_ref and vectors 
     // y_prev_ref and res_ref on reference mesh
     if (mat_ref != NULL) delete mat_ref;
@@ -330,7 +319,7 @@ int main() {
       mat_ref->zero();
 
       // Construct residual vector
-      dp_ref.assemble_matrix_and_vector(mat_ref, res_ref, y_prev_ref); 
+      dp->assemble_matrix_and_vector(mesh_ref, mat_ref, res_ref, y_prev_ref); 
 
       // Calculate norm of residual vector
       double res_ref_norm = 0;
@@ -376,7 +365,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    if (adapt_iterations == 7) break;
+    //if (adapt_iterations == 7) break;
 
     // Refine elements in the id_array list whose id_array >= 0
     mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 

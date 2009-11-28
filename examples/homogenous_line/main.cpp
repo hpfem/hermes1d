@@ -297,37 +297,37 @@ double jacobian_surf_right_I_Im(double x, double u, double dudx,
 /******************************************************************************/
 int main() {
     // create mesh
-    Mesh mesh(A, B, N_elem, P_init, N_eq);
-    mesh.set_bc_left_dirichlet(0, Val_dir_left_1);
-    mesh.set_bc_left_dirichlet(1, Val_dir_left_2);
-    mesh.set_bc_left_dirichlet(2, Val_dir_left_3);
-    mesh.set_bc_left_dirichlet(3, Val_dir_left_4);
-    int N_dof = mesh.assign_dofs();
+    Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
+    mesh->set_bc_left_dirichlet(0, Val_dir_left_1);
+    mesh->set_bc_left_dirichlet(1, Val_dir_left_2);
+    mesh->set_bc_left_dirichlet(2, Val_dir_left_3);
+    mesh->set_bc_left_dirichlet(3, Val_dir_left_4);
+    int N_dof = mesh->assign_dofs();
     printf("N_dof = %d\n", N_dof);
 
     // register weak forms
-    DiscreteProblem dp(&mesh);
-    dp.add_matrix_form(0, 0, jacobian_1_1);
-    dp.add_matrix_form(0, 2, jacobian_1_3);
-    dp.add_matrix_form(0, 3, jacobian_1_4);
-    dp.add_matrix_form(1, 1, jacobian_2_2);
-    dp.add_matrix_form(1, 2, jacobian_2_3);
-    dp.add_matrix_form(1, 3, jacobian_2_4);
-    dp.add_matrix_form(2, 0, jacobian_3_1);
-    dp.add_matrix_form(2, 1, jacobian_3_2);
-    dp.add_matrix_form(2, 2, jacobian_3_3);
-    dp.add_matrix_form(3, 0, jacobian_4_1);
-    dp.add_matrix_form(3, 1, jacobian_4_2);
-    dp.add_matrix_form(3, 3, jacobian_4_4);
-    dp.add_vector_form(0, residual_1);
-    dp.add_vector_form(1, residual_2);
-    dp.add_vector_form(2, residual_3);
-    dp.add_vector_form(3, residual_4);
+    DiscreteProblem *dp = new DiscreteProblem();
+    dp->add_matrix_form(0, 0, jacobian_1_1);
+    dp->add_matrix_form(0, 2, jacobian_1_3);
+    dp->add_matrix_form(0, 3, jacobian_1_4);
+    dp->add_matrix_form(1, 1, jacobian_2_2);
+    dp->add_matrix_form(1, 2, jacobian_2_3);
+    dp->add_matrix_form(1, 3, jacobian_2_4);
+    dp->add_matrix_form(2, 0, jacobian_3_1);
+    dp->add_matrix_form(2, 1, jacobian_3_2);
+    dp->add_matrix_form(2, 2, jacobian_3_3);
+    dp->add_matrix_form(3, 0, jacobian_4_1);
+    dp->add_matrix_form(3, 1, jacobian_4_2);
+    dp->add_matrix_form(3, 3, jacobian_4_4);
+    dp->add_vector_form(0, residual_1);
+    dp->add_vector_form(1, residual_2);
+    dp->add_vector_form(2, residual_3);
+    dp->add_vector_form(3, residual_4);
 
-    dp.add_matrix_form_surf(0, 0, jacobian_surf_right_U_Re, BOUNDARY_RIGHT);
-    dp.add_matrix_form_surf(0, 2, jacobian_surf_right_U_Im, BOUNDARY_RIGHT);
-    dp.add_matrix_form_surf(1, 1, jacobian_surf_right_I_Re, BOUNDARY_RIGHT);
-    dp.add_matrix_form_surf(1, 3, jacobian_surf_right_I_Im, BOUNDARY_RIGHT);
+    dp->add_matrix_form_surf(0, 0, jacobian_surf_right_U_Re, BOUNDARY_RIGHT);
+    dp->add_matrix_form_surf(0, 2, jacobian_surf_right_U_Im, BOUNDARY_RIGHT);
+    dp->add_matrix_form_surf(1, 1, jacobian_surf_right_I_Re, BOUNDARY_RIGHT);
+    dp->add_matrix_form_surf(1, 3, jacobian_surf_right_I_Im, BOUNDARY_RIGHT);
 
     // Allocate Jacobi matrix and residual
     Matrix *mat = new CooMatrix(N_dof);
@@ -351,7 +351,7 @@ int main() {
         mat->zero();
 
         // Construct residual vector
-        dp.assemble_matrix_and_vector(mat, res, y_prev);
+        dp->assemble_matrix_and_vector(mesh, mat, res, y_prev);
 
         // Calculate L2 norm of residual vector
         double res_norm = 0;
@@ -380,14 +380,9 @@ int main() {
 
 
     // plotting the coarse mesh solution
-    Linearizer l(&mesh);
+    Linearizer l(mesh);
     const char *out_filename = "solution.gp";
     l.plot_solution(out_filename, y_prev);
-
-    // plotting the reference solution
-    //Linearizer lxx(mesh_ref);
-    //const char *out_filename2 = "solution_ref.gp";
-    //lxx.plot_solution(out_filename2, y_prev_ref);
 
     printf("Done.\n");
     if (y_prev != NULL) delete[] y_prev;

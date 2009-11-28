@@ -71,22 +71,22 @@ void insert_matrix(DenseMatrix *mat, int len)
 /******************************************************************************/
 int main(int argc, char* argv[]) {
   // create mesh
-  Mesh mesh(A, B, N_elem, P_init, N_eq);
+  Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   // you can set the zero dirichlet at the right hand side
   //mesh.set_bc_right_dirichlet(0, 0);
 
   // variable for the total number of DOF 
-  int N_dof = mesh.assign_dofs();
+  int N_dof = mesh->assign_dofs();
   printf("ndofs: %d", N_dof);
 
   // register weak forms
-  DiscreteProblem dp1(&mesh);
-  dp1.add_matrix_form(0, 0, lhs);
-  DiscreteProblem dp2(&mesh);
-  dp2.add_matrix_form(0, 0, rhs);
+  DiscreteProblem *dp1 = new DiscreteProblem();
+  dp1->add_matrix_form(0, 0, lhs);
+  DiscreteProblem *dp2 = new DiscreteProblem();
+  dp2->add_matrix_form(0, 0, rhs);
 
-  DiscreteProblem dp3(&mesh);
-  dp3.add_vector_form(0, residual);
+  DiscreteProblem *dp3 = new DiscreteProblem();
+  dp3->add_vector_form(0, residual);
 
   // allocate Jacobi matrix and residual
   DenseMatrix *mat1 = new DenseMatrix(N_dof);
@@ -96,8 +96,8 @@ int main(int argc, char* argv[]) {
   // zero initial condition for the Newton's method
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
-  dp1.assemble_matrix(mat1, y_prev);
-  dp2.assemble_matrix(mat2, y_prev);
+  dp1->assemble_matrix(mesh, mat1, y_prev);
+  dp2->assemble_matrix(mesh, mat2, y_prev);
 
   printf("Importing hermes1d\n");
   // Initialize Python
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
   E = py2c_double(get_object("E"));
   printf("E=%.10f\n", E);
   E = -0.5;
-  dp3.assemble_vector(res, v);
+  dp3->assemble_vector(mesh, res, v);
   // calculate L2 norm of residual vector
   double res_norm = 0;
   for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
   printf("L2 norm of the residual: %f\n", res_norm);
 
 
-  Linearizer l(&mesh);
+  Linearizer l(mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, v);
 

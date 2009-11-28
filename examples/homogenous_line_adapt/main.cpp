@@ -343,8 +343,7 @@ int main() {
   double *y_prev_ref = NULL;        // vector of unknown coefficients (reference mesh)
   double *res = NULL;               // residual vector (coarse mesh)
   double *res_ref = NULL;           // residual vector (reference mesh)
-  DiscreteProblem *dp = NULL;       // discrete problem (coarse mesh)
-  DiscreteProblem *dp_ref = NULL;   // discrete problem (reference mesh)
+  DiscreteProblem *dp = NULL;       // discrete problem
 
   // convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
@@ -362,7 +361,7 @@ int main() {
   printf("N_dof = %d\n", N_dof);
 
   // Create discrete problem on coarse mesh
-  dp = new DiscreteProblem(mesh);
+  dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian_1_1);
   dp->add_matrix_form(0, 2, jacobian_1_3);
   dp->add_matrix_form(0, 3, jacobian_1_4);
@@ -418,7 +417,7 @@ int main() {
       mat->zero();
 
       // Construct residual vector
-      dp->assemble_matrix_and_vector(mat, res, y_prev); 
+      dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
 
       // Calculate norm of residual vector
       double res_norm = 0;
@@ -470,30 +469,6 @@ int main() {
     // Enumerate DOF in the reference mesh
     int N_dof_ref = mesh_ref->assign_dofs();
     
-    // Register weak forms
-    dp_ref = new DiscreteProblem(mesh_ref);
-    dp->add_matrix_form(0, 0, jacobian_1_1);
-    dp->add_matrix_form(0, 2, jacobian_1_3);
-    dp->add_matrix_form(0, 3, jacobian_1_4);
-    dp->add_matrix_form(1, 1, jacobian_2_2);
-    dp->add_matrix_form(1, 2, jacobian_2_3);
-    dp->add_matrix_form(1, 3, jacobian_2_4);
-    dp->add_matrix_form(2, 0, jacobian_3_1);
-    dp->add_matrix_form(2, 1, jacobian_3_2);
-    dp->add_matrix_form(2, 2, jacobian_3_3);
-    dp->add_matrix_form(3, 0, jacobian_4_1);
-    dp->add_matrix_form(3, 1, jacobian_4_2);
-    dp->add_matrix_form(3, 3, jacobian_4_4);
-    dp->add_vector_form(0, residual_1);
-    dp->add_vector_form(1, residual_2);
-    dp->add_vector_form(2, residual_3);
-    dp->add_vector_form(3, residual_4);
-
-    dp->add_matrix_form_surf(0, 0, jacobian_surf_right_U_Re, BOUNDARY_RIGHT);
-    dp->add_matrix_form_surf(0, 2, jacobian_surf_right_U_Im, BOUNDARY_RIGHT);
-    dp->add_matrix_form_surf(1, 1, jacobian_surf_right_I_Re, BOUNDARY_RIGHT);
-    dp->add_matrix_form_surf(1, 3, jacobian_surf_right_I_Im, BOUNDARY_RIGHT);
-
     // (Re)allocate Jacobi matrix mat_ref and vectors 
     // y_prev_ref and res_ref on reference mesh
     Matrix *mat_ref = new CooMatrix(N_dof_ref);
@@ -516,7 +491,7 @@ int main() {
       mat_ref->zero();
 
       // Construct residual vector
-      dp_ref->assemble_matrix_and_vector(mat_ref, res_ref, y_prev_ref); 
+      dp->assemble_matrix_and_vector(mesh_ref, mat_ref, res_ref, y_prev_ref); 
 
       // Calculate L2 norm of residual vector
       double res_ref_norm = 0;

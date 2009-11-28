@@ -63,7 +63,8 @@ const double TOL_newton = 1e-5;        // tolerance for the Newton's method
 // Include weak forms
 #include "forms.cpp"
 
-void compute_trajectory(int n_dof, DiscreteProblem *dp, Matrix *mat, 
+void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp, 
+                        Matrix *mat, 
                         double *y_prev, double *res) 
 {
   //if (PRINT) {
@@ -83,7 +84,7 @@ void compute_trajectory(int n_dof, DiscreteProblem *dp, Matrix *mat,
     mat->zero();
 
     // Construct residual vector
-    dp->assemble_matrix_and_vector(mat, res, y_prev); 
+    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
 
     // Calculate L2 norm of residual vector
     double res_norm = 0;
@@ -187,38 +188,38 @@ void set_alpha_and_zeta(int component, double ray_angle, double radius) {
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(A, B, N_elem, P_init, N_eq);
-  mesh.set_bc_left_dirichlet(0, X0_left);
-  mesh.set_bc_left_dirichlet(1, Y0_left);
-  mesh.set_bc_left_dirichlet(2, Vel_left);
-  mesh.set_bc_left_dirichlet(3, Phi_left);
-  mesh.set_bc_left_dirichlet(4, Theta_left);
+  Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
+  mesh->set_bc_left_dirichlet(0, X0_left);
+  mesh->set_bc_left_dirichlet(1, Y0_left);
+  mesh->set_bc_left_dirichlet(2, Vel_left);
+  mesh->set_bc_left_dirichlet(3, Phi_left);
+  mesh->set_bc_left_dirichlet(4, Theta_left);
 
   // enumerate shape functions and calculate
   // the number of DOF
-  int N_dof = mesh.assign_dofs();
+  int N_dof = mesh->assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
   // register weak forms
-  DiscreteProblem dp(&mesh);
-  dp.add_matrix_form(0, 0, jacobian_0_0);
-  dp.add_matrix_form(0, 2, jacobian_0_2);
-  dp.add_matrix_form(0, 3, jacobian_0_3);
-  dp.add_matrix_form(0, 4, jacobian_0_4);
-  dp.add_matrix_form(1, 1, jacobian_1_1);
-  dp.add_matrix_form(1, 2, jacobian_1_2);
-  dp.add_matrix_form(1, 3, jacobian_1_3);
-  dp.add_matrix_form(1, 4, jacobian_1_4);
-  dp.add_matrix_form(2, 2, jacobian_2_2);
-  dp.add_matrix_form(3, 3, jacobian_3_3);
-  dp.add_matrix_form(4, 2, jacobian_4_2);
-  dp.add_matrix_form(4, 3, jacobian_4_3);
-  dp.add_matrix_form(4, 4, jacobian_4_4);
-  dp.add_vector_form(0, residual_0);
-  dp.add_vector_form(1, residual_1);
-  dp.add_vector_form(2, residual_2);
-  dp.add_vector_form(3, residual_3);
-  dp.add_vector_form(4, residual_4);
+  DiscreteProblem *dp = new DiscreteProblem();
+  dp->add_matrix_form(0, 0, jacobian_0_0);
+  dp->add_matrix_form(0, 2, jacobian_0_2);
+  dp->add_matrix_form(0, 3, jacobian_0_3);
+  dp->add_matrix_form(0, 4, jacobian_0_4);
+  dp->add_matrix_form(1, 1, jacobian_1_1);
+  dp->add_matrix_form(1, 2, jacobian_1_2);
+  dp->add_matrix_form(1, 3, jacobian_1_3);
+  dp->add_matrix_form(1, 4, jacobian_1_4);
+  dp->add_matrix_form(2, 2, jacobian_2_2);
+  dp->add_matrix_form(3, 3, jacobian_3_3);
+  dp->add_matrix_form(4, 2, jacobian_4_2);
+  dp->add_matrix_form(4, 3, jacobian_4_3);
+  dp->add_matrix_form(4, 4, jacobian_4_4);
+  dp->add_vector_form(0, residual_0);
+  dp->add_vector_form(1, residual_1);
+  dp->add_vector_form(2, residual_2);
+  dp->add_vector_form(3, residual_3);
+  dp->add_vector_form(4, residual_4);
 
   // Allocate Jacobi matrix and residual
   Matrix *mat = new CooMatrix(N_dof);
@@ -251,19 +252,19 @@ int main() {
           // parameters alpha_ctrl[] and zeta_ctrl[] via the Newton's 
           // method, using the last computed trajectory as the initial 
           // condition  
-          compute_trajectory(N_dof, &dp, mat, y_prev, res);
+          compute_trajectory(mesh, N_dof, dp, mat, y_prev, res);
 
           // save trajectory to a file
           int plotting_subdivision = 10;
-          plot_trajectory_endpoint(&mesh, y_prev); 
+          plot_trajectory_endpoint(mesh, y_prev); 
 
           // save trajectory to a file
           //int plotting_subdivision = 10;
-          //plot_trajectory(&mesh, y_prev, plotting_subdivision); 
+          //plot_trajectory(mesh, y_prev, plotting_subdivision); 
 
           // save solution to a file
           //int plotting_subdivision_2 = 10;
-          //plot_solution(&mesh, y_prev, plotting_subdivision_2); 
+          //plot_solution(mesh, y_prev, plotting_subdivision_2); 
         }
       }
     }

@@ -73,15 +73,15 @@ double residual(int num, double *x, double *weights,
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(A, B, N_elem, P_init, N_eq);
-  mesh.set_bc_left_dirichlet(0, YA);
-  int N_dof = mesh.assign_dofs();
+  Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
+  mesh->set_bc_left_dirichlet(0, YA);
+  int N_dof = mesh->assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
   // register weak forms
-  DiscreteProblem dp(&mesh);
-  dp.add_matrix_form(0, 0, jacobian);
-  dp.add_vector_form(0, residual);
+  DiscreteProblem *dp = new DiscreteProblem();
+  dp->add_matrix_form(0, 0, jacobian);
+  dp->add_vector_form(0, residual);
 
   // allocate Jacobi matrix and residual
   Matrix *mat;
@@ -98,7 +98,7 @@ int main() {
     mat = new CooMatrix(N_dof);
 
     // construct residual vector
-    dp.assemble_matrix_and_vector(mat, res, y_prev); 
+    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
 
     // calculate L2 norm of residual vector
     double res_norm = 0;
@@ -123,7 +123,7 @@ int main() {
     printf("Finished Newton iteration: %d\n", newton_iterations);
   }
 
-  Linearizer l(&mesh);
+  Linearizer l(mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 

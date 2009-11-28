@@ -79,19 +79,19 @@ double residual_surf_right(double x, double u_prev[MAX_EQN_NUM],
 /******************************************************************************/
 int main() {
   // create mesh
-  Mesh mesh(A, B, N_elem, P_init, N_eq);
+  Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
 
   // boundary conditions
-  mesh.set_bc_left_dirichlet(0, Val_dir_left);
-  int N_dof = mesh.assign_dofs();
+  mesh->set_bc_left_dirichlet(0, Val_dir_left);
+  int N_dof = mesh->assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
   // register weak forms
-  DiscreteProblem dp(&mesh);
-  dp.add_matrix_form(0, 0, jacobian_vol);
-  dp.add_vector_form(0, residual_vol);
-  dp.add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
-  dp.add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
+  DiscreteProblem *dp = new DiscreteProblem();
+  dp->add_matrix_form(0, 0, jacobian_vol);
+  dp->add_vector_form(0, residual_vol);
+  dp->add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
+  dp->add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
   // allocate Jacobi matrix and residual
   Matrix *mat;
@@ -108,7 +108,7 @@ int main() {
     mat = new DenseMatrix(N_dof);
 
     // construct residual vector
-    dp.assemble_matrix_and_vector(mat, res, y_prev); 
+    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
 
     // calculate L2 norm of residual vector
     double res_norm = 0;
@@ -135,7 +135,7 @@ int main() {
     newton_iterations++;
   }
 
-  Linearizer l(&mesh);
+  Linearizer l(mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
