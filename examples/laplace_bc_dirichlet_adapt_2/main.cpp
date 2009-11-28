@@ -14,8 +14,8 @@ double A = -M_PI, B = M_PI;           // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Stopping criteria for Newton
-double TOL_NEWTON_COARSE = 1e-5;        // Coarse mesh
-double TOL_NEWTON_REF = 1e-3;           // Reference mesh
+double TOL_NEWTON_COARSE = 1e-6;        // Coarse mesh
+double TOL_NEWTON_REF = 1e-6;           // Reference mesh
 
 // Adaptivity
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
@@ -23,7 +23,7 @@ const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-5;        // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1e-10;       // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 const int NORM = 1;                     // To measure errors:
                                         // 1... H1 norm
@@ -263,11 +263,16 @@ int main() {
       double res_ref_norm = 0;
       for(int i=0; i<N_dof_ref; i++) res_ref_norm += res_ref[i]*res_ref[i];
       res_ref_norm = sqrt(res_ref_norm);
-
-      // If residual norm less than TOL_NEWTON_REF, quit
-      // latest solution is in y_prev
       printf("Residual norm (fine mesh): %.15f\n", res_ref_norm);
-      if(res_ref_norm < TOL_NEWTON_REF) break;
+
+      // If residual norm less than TOL_NEWTON_REF, break
+      // NOTE: at least one update of the reference solution is 
+      // enforced by the additional condition "&& newton_iterations_ref >= 2". 
+      // Otherwise it can (and will) happen that already the initial residual 
+      // of the reference solution is too small. Then the next adaptivity 
+      // step uses the previous reference solution, which may cause inoptimal 
+      // refinements to take place. 
+      if(res_ref_norm < TOL_NEWTON_REF && newton_iterations_ref >= 2) break;
 
       // Change sign of vector res_ref
       for(int i=0; i<N_dof_ref; i++) res_ref[i]*= -1;
@@ -385,7 +390,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 2) break;
+    //if (adapt_iterations == 4) break;
 
     // Refine coarse mesh elements whose id_array >= 0. 
     // Returns updated reference mesh that contains the previous

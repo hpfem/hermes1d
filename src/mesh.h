@@ -23,11 +23,6 @@ public:
             if (this->dof != NULL)
                 free(this->dof);
         }
-        /*
-        this->dof = NULL;
-        this->sons[0] = NULL;
-        this->sons[1] = NULL;
-        */
     }
     ~Element() {
         this->free_element();

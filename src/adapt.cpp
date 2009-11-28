@@ -15,7 +15,7 @@ int PLOT_CANDIDATE_PROJECTIONS = 0;
 
 // This is another help for debugging hp-adaptivity; All candidates
 //that are tried are printed along with their performance criterion
-int PRINT_CANDIDATES = 0;
+int PRINT_CANDIDATES = 1;
 
 // returns values of normalized Legendre polynomials on (a, b)
 double legendre(int i, double a, double b, double x) {  // x \in (a, b)
@@ -1613,9 +1613,10 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
 
     // The projection error is zero (reference 
     // solution is recovered exactly). 
-    if (fabs(err) < 1e-6) {
+    if (fabs(err) < 1e-12) {
       choice = i;
       if (PRINT_CANDIDATES) {
+        printf("  Elem (%g, %g): reference solution recovered, taking the following candidate:\n", e->x1, e->x2);
         printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d\n", 
                e->x1, e->x2, 
                cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof);
@@ -1639,15 +1640,29 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
         check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, e->p,
           bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
       }  
-      //printf("  Elem (%g, %g): dof = 0, err_orig = %g, err_new = %g\n", 
-      //       e->x1, e->x2, err_orig, err);
-      if (err < err_orig) return i;
-      else crit = -1e10;  // forget this candidate
+      if (err < err_orig) {
+        if (PRINT_CANDIDATES) {
+          printf("  Elem (%g, %g): taking special candidate with dof <= 0:\n", e->x1, e->x2);
+          printf("  Elem (%g, %g): dof = %d, err_orig = %g, err_new = %g\n", 
+		 e->x1, e->x2, dof, err_orig, err);
+        }
+        return i;
+      }
+      else {
+        crit = -1e10;  // forget this candidate
+      }
     }
 
-    // Most frequent case of neither err == 0 or dof == 0. Corresponds
-    // to steepest descent of the convergence curve on semilog scale. 
-    if (dof > 0) crit = -log(err) / sqrt(dof); 
+    // Most frequent case of neither err == 0 or dof == 0. Selected is
+    // candidate resulting into steepest descent of the convergence 
+    // curve on semilog scale. Performance of p-candidates is artificially 
+    // improved
+    if (dof > 0) {
+      // p-candidate
+      if (cand_list[i][0] == 0) crit = -log(err);  // / pow(dof, 0.3); 
+      // hp-candidate
+      else crit = -log(err) / dof; 
+    } 
 
     // debug
     if (PRINT_CANDIDATES) {

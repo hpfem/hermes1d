@@ -15,7 +15,7 @@
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
 
-const int MAX_P = 15;                  // this is the maximum polynomial degree allowed in elements
+const int MAX_P = 20;                  // this is the maximum polynomial degree allowed in elements
                                        // WARNING: projections taking place in transfer_solution()
 const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
                                        // candidates of an element

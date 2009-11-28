@@ -106,6 +106,7 @@ void Linearizer::get_xy(double *y_prev, int comp,
     Element *e;
     int counter = 0;
     while ((e = I->next_active_element()) != NULL) {
+        //printf("linearizer: in element (%g, %g)\n", e->x1, e->x2);
         if (counter >= n_active_elem) {
 	  printf("n_active_elem = %d\n", n_active_elem);
 	  printf("counter = %d\n", counter);

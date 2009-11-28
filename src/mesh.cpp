@@ -199,11 +199,12 @@ void Element::get_solution_point(double x_phys,
   this->get_solution_point(x_phys, coeff, val_phys, der_phys);
 } 
 
-// copying elements including their refinement trees 
-// inactive Dirichlet DOF are replicated
-// FIXME - the recursive version is slow, improve it!
+// Copying elements including their refinement trees, 
+// inactive Dirichlet DOF are replicated.
+// FIXME - the recursive version is slow and should be improved.
 void Element::copy_sons_recursively(Element *e_trg) {
-  // if element has been refined
+  // only if element has been split in space, otherwise
+  // both sons are NULL
   if(this->sons[0] != NULL) {
     int p_left = this->sons[0]->p;
     int p_right = this->sons[1]->p;
@@ -213,6 +214,10 @@ void Element::copy_sons_recursively(Element *e_trg) {
     this->sons[0]->copy_sons_recursively(e_trg->sons[0]);
     // right son
     this->sons[1]->copy_sons_recursively(e_trg->sons[1]);
+  }
+  else {
+    e_trg->sons[0] = NULL;
+    e_trg->sons[1] = NULL;
   }
 }
 
@@ -599,31 +604,31 @@ Mesh *Mesh::replicate()
   // cannot be used since p-refinements on base mesh may have taken 
   // place)
   int p_dummy = -1; 
-  Mesh *mesh_ref = new Mesh(this->left_endpoint, this->right_endpoint, 
+  Mesh *mesh_new = new Mesh(this->left_endpoint, this->right_endpoint, 
 			    this->n_base_elem, p_dummy, this->n_eq);
 
   // copy element degrees on base mesh
   for(int i=0; i<this->n_base_elem; i++) {
-    mesh_ref->get_base_elems()[i].p = this->get_base_elems()[i].p;
+    mesh_new->get_base_elems()[i].p = this->get_base_elems()[i].p;
   }
 
   // copy number of base elements
-  mesh_ref->set_n_base_elem(this->n_base_elem);
+  mesh_new->set_n_base_elem(this->n_base_elem);
     
   // copy arrays of Dirichlet boundary conditions
   for(int c = 0; c<this->n_eq; c++) {
-    mesh_ref->bc_left_dir_values[c] = this->bc_left_dir_values[c]; 
-    mesh_ref->bc_right_dir_values[c] = this->bc_right_dir_values[c]; 
+    mesh_new->bc_left_dir_values[c] = this->bc_left_dir_values[c]; 
+    mesh_new->bc_right_dir_values[c] = this->bc_right_dir_values[c]; 
   }
 
   // copy inactive Dirichlet DOF on first and last element of base mesh
   for(int c=0; c<this->n_eq; c++) {
     if(this->base_elems[0].dof[c][0] == -1) {
-      Element *e_left = mesh_ref->get_base_elems();
+      Element *e_left = mesh_new->get_base_elems();
       e_left->dof[c][0] = -1;
     }
     if(this->base_elems[this->n_base_elem-1].dof[c][1] == -1) {
-      Element *e_right = mesh_ref->get_base_elems()+this->n_base_elem-1;
+      Element *e_right = mesh_new->get_base_elems()+this->n_base_elem-1;
       e_right->dof[c][1] = -1;
     }
   }
@@ -632,20 +637,20 @@ Mesh *Mesh::replicate()
   // this includes replication of inactive Dirichlet DOF
   for(int i=0; i<this->n_base_elem; i++) {
     Element *e_src = this->base_elems + i;
-    Element *e_trg = mesh_ref->get_base_elems() + i;
+    Element *e_trg = mesh_new->get_base_elems() + i;
     e_src->copy_sons_recursively(e_trg);
   }
 
   // copy number of base elements
-  mesh_ref->set_n_active_elem(this->n_active_elem);
+  mesh_new->set_n_active_elem(this->n_active_elem);
 
   // enumerate DOF in the reference mesh
-  mesh_ref->assign_dofs();
+  mesh_new->assign_dofs();
 
   // enumerate elements in reference mesh
-  mesh_ref->assign_elem_ids();
+  mesh_new->assign_elem_ids();
 
-  return mesh_ref;
+  return mesh_new;
 }
 
 void Mesh::plot(const char* filename) 
@@ -1039,6 +1044,7 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
           int new_p_left = cand_list[choice][1];
           int new_p_right = cand_list[choice][2];
 	  e_ref_new_left->refine(1, new_p_left + 1, new_p_right + 1);
+          mesh_ref_new->n_active_elem++;
         }
       }
       else { // ref. refinement was hp-refinement, so also futute
@@ -1055,7 +1061,9 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
           int new_p_left = cand_list[choice][1];
           int new_p_right = cand_list[choice][2];
 	  e_ref_new_left->refine(1, new_p_left + 1, new_p_left + 1);
+          mesh_ref_new->n_active_elem++;
 	  e_ref_new_right->refine(1, new_p_right + 1, new_p_right + 1);
+          mesh_ref_new->n_active_elem++;
        }
       }
     }
@@ -1080,7 +1088,7 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
   double *y_prev_ref_new = new double[n_dof_ref_new];
   printf("Reference mesh updated (%d DOF)\n", n_dof_ref_new);
 
-  // Transfer reference solution from the previous referenc emesh to 
+  // Transfer reference solution from the previous reference mesh to 
   // the new one 
   transfer_solution(mesh_ref, mesh_ref_new, y_prev_ref, y_prev_ref_new);
   printf("Last reference solution copied to new reference mesh.\n");

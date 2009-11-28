@@ -17,8 +17,8 @@ int P_init = 1;                         // Initial polynomial degree
 double K = 1.0;                         // Equation parameter
 
 // Error tolerance
-double TOL_NEWTON_COARSE = 1e-5;        // Coarse mesh
-double TOL_NEWTON_REF = 1e-3;           // Reference mesh
+double TOL_NEWTON_COARSE = 1e-6;        // Coarse mesh
+double TOL_NEWTON_REF = 1e-6;           // Reference mesh
 
 // Adaptivity
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
@@ -26,7 +26,7 @@ const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-2;        // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1e-1;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 const int NORM = 1;                     // To measure errors:
                                         // 1... H1 norm
@@ -205,8 +205,6 @@ int main() {
   while(1) {
  
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
-    printf("------ Newton iteration on coarse mesh ----\n"); 
-    printf("N_dof = %d\n", N_dof);
 
     // (Re)allocate Jacobi matrix and vectors y_prev and res
     if (mat != NULL) delete mat;
@@ -227,7 +225,7 @@ int main() {
     }
 
     // Obtain coarse mesh solution via Newton's iteration
-    int newton_iterations = 0;
+    int newton_iterations = 1;
     while (1) {
       // Erase the matrix:
       mat->zero();
@@ -242,7 +240,7 @@ int main() {
 
       // If residual norm less than TOL_NEWTON_COARSE, quit
       // latest solution is in y_prev
-      printf("Residual norm: %.15f\n", res_norm);
+      printf("Residual norm (coarse mesh): %.15f\n", res_norm);
       if(res_norm < TOL_NEWTON_COARSE) break;
 
       // Change sign of vector res
@@ -255,13 +253,12 @@ int main() {
       for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
       newton_iterations++;
-      printf("Finished coarse Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+    printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
 
     // Create reference mesh
-    printf("Creating reference mesh.\n");
     if (mesh_ref != NULL) {
       // Adjust the reference mesh according to refinements 
       // that were done in coarse mesh.
@@ -281,10 +278,10 @@ int main() {
     int num_to_ref = mesh->get_n_active_elem();
     //mesh_ref->reference_refinement(0, 2);
     mesh_ref->reference_refinement(start_elem_id, num_to_ref);
-
     // Enumerate DOF in the reference mesh
     int N_dof_ref = mesh_ref->assign_dofs();
-    
+    printf("Reference mesh created (%d DOF).\n", N_dof_ref);
+
     // (Re)allocate Jacobi matrix mat_ref and vectors 
     // y_prev_ref and res_ref on reference mesh
     Matrix *mat_ref = new CooMatrix(N_dof_ref);
@@ -297,11 +294,8 @@ int main() {
     printf("Transfering solution to reference mesh.\n");
     transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref);
 
-    printf("--- Newton iteration on reference mesh ----\n"); 
-    printf("N_dof_ref = %d\n", N_dof_ref);
-
     // Obtain reference solution via Newton's method
-    int newton_iterations_ref = 0;
+    int newton_iterations_ref = 1;
     while(1) {
       // Zero the matrix:
       mat_ref->zero();
@@ -316,7 +310,7 @@ int main() {
 
       // If residual norm less than TOL_NEWTON_REF, quit
       // latest solution is in y_prev
-      printf("ref: Residual L2 norm: %.15f\n", res_ref_norm);
+      printf("Residual norm (fine mesh): %.15f\n", res_ref_norm);
       if(res_ref_norm < TOL_NEWTON_REF) break;
 
       // Change sign of vector res_ref
@@ -329,10 +323,10 @@ int main() {
       for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
       newton_iterations_ref++;
-      printf("Finished coarse Newton iteration: %d\n", newton_iterations_ref);
     }
     // Update y_prev_ref by the increment stored in res
     for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
+    printf("Finished fine mesh Newton loop (%d iter).\n", newton_iterations_ref);
 
     // Estimate element errors (squared)
     double err_est_squared_array[MAX_ELEM_NUM]; 
