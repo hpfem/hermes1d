@@ -122,8 +122,8 @@ class Mesh {
         void refine_single_elem(int id, int3 cand);
         void refine_elems(int elem_num, int *id_array, int3 *cand_array);
         void reference_refinement(int start_elem_id, int elem_num);
-        void adapt(int norm, int adapt_type, double threshold, Mesh *mesh_ref, 
-                   double *y_prev, double *y_prev_ref, 
+        void adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref, 
+                   double *y_prev, double* &y_prev_ref, 
                    double *err_squared_array);
         Mesh *replicate(); 
         void plot(const char* filename); // plots the mesh and polynomial degrees of elements

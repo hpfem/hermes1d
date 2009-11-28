@@ -201,8 +201,14 @@ class CooMatrix : public Matrix {
                 this->list_last->next = t;
                 this->list_last = this->list_last->next;
             }
-            if (m > this->size-1) error("m is bigger than size");
-            if (n > this->size-1) error("n is bigger than size");
+            if (m > this->size-1) {
+              printf("m = %d, n = %d, this->size = %d\n", m, n, this->size);
+              error("m is bigger than size");
+            }
+            if (n > this->size-1) {
+              printf("m = %d, n = %d, this->size = %d\n", m, n, this->size);
+              error("n is bigger than size");
+            }
         }
         virtual double get(int m, int n) {
             double v=0;

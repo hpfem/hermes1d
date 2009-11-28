@@ -36,27 +36,22 @@ typedef double (*vector_form_surf) (double x, double *u_prev,
 class DiscreteProblem {
 
 public:
-    DiscreteProblem(Mesh *mesh);
-
     void add_matrix_form(int i, int j, matrix_form fn);
     void add_vector_form(int i, vector_form fn);
     void add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index);
     void add_vector_form_surf(int i, vector_form_surf fn, int bdy_index);
     // c is solution component
-    void process_vol_forms(Matrix *mat, double *res, 
+    void process_vol_forms(Mesh *mesh, Matrix *mat, double *res, 
                            double *y_prev, int matrix_flag);
     // c is solution component
-    void process_surf_forms(Matrix *mat, double *res, double *y_prev, 
+    void process_surf_forms(Mesh *mesh, Matrix *mat, double *res, double *y_prev, 
                             int matrix_flag, int bdy_index);
-    void assemble(Matrix *mat, double *res, double *y_prev, int matrix_flag);
-    void assemble_matrix_and_vector(Matrix *mat, double *res, double *y_prev); 
-    void assemble_matrix(Matrix *mat, double *y_prev);
-    void assemble_vector(double *res, double *y_prev);
+    void assemble(Mesh *mesh, Matrix *mat, double *res, double *y_prev, int matrix_flag);
+    void assemble_matrix_and_vector(Mesh *mesh, Matrix *mat, double *res, double *y_prev); 
+    void assemble_matrix(Mesh *mesh, Matrix *mat, double *y_prev);
+    void assemble_vector(Mesh *mesh, double *res, double *y_prev);
 
 private:
-    int n_eq;
-    Mesh *mesh;
-
 	struct MatrixFormVol {
 		int i, j;
 		matrix_form fn;

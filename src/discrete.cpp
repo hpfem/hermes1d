@@ -5,11 +5,6 @@
 
 #include "discrete.h"
 
-DiscreteProblem::DiscreteProblem(Mesh *mesh)
-{
-    this->mesh = mesh;
-}
-
 void DiscreteProblem::add_matrix_form(int i, int j, matrix_form fn)
 {
     MatrixFormVol form = {i, j, fn};
@@ -35,12 +30,12 @@ void DiscreteProblem::add_vector_form_surf(int i, vector_form_surf fn, int bdy_i
 }
 
 // process volumetric weak forms
-void DiscreteProblem::process_vol_forms(Matrix *mat, double *res, 
+void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res, 
 					double *y_prev, int matrix_flag) {
-  int n_eq = this->mesh->get_n_eq();
-  Element *elems = this->mesh->get_base_elems();
-  int n_elem = this->mesh->get_n_base_elem();
-  Iterator *I = new Iterator(this->mesh);
+  int n_eq = mesh->get_n_eq();
+  Element *elems = mesh->get_base_elems();
+  int n_elem = mesh->get_n_base_elem();
+  Iterator *I = new Iterator(mesh);
 
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
@@ -73,7 +68,7 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
     // for every solution component
     e->get_solution(phys_pts, pts_num, 
                     phys_u_prev, phys_du_prevdx, y_prev, 
-                    this->mesh->bc_left_dir_values, this->mesh->bc_right_dir_values); 
+                    mesh->bc_left_dir_values, mesh->bc_right_dir_values); 
 
     // volumetric bilinear forms
     if(matrix_flag == 0 || matrix_flag == 1) 
@@ -88,6 +83,7 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
 	for(int i=0; i<e->p + 1; i++) {
 	  // if i-th test function is active
 	  int pos_i = e->dof[c_i][i]; // row in matrix
+          //printf("elem (%g, %g): pos_i = %d\n", e->x1, e->x2, pos_i);
 	  if(pos_i != -1) {
 	    // transform i-th test function to element 'm'
 	    element_shapefn(e->x1, e->x2,  
@@ -162,10 +158,10 @@ void DiscreteProblem::process_vol_forms(Matrix *mat, double *res,
 }
 
 // process boundary weak forms
-void DiscreteProblem::process_surf_forms(Matrix *mat, double *res, 
+void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res, 
 					 double *y_prev, int matrix_flag, 
                                          int bdy_index) {
-  Iterator *I = new Iterator(this->mesh);
+  Iterator *I = new Iterator(mesh);
   Element *e; 
 
   // evaluate previous solution and its derivative at the end point
@@ -178,18 +174,18 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
   if(bdy_index == BOUNDARY_LEFT) {
     e = I->first_active_element(); 
     x_ref = -1; // left end of reference element
-    x_phys = this->mesh->get_left_endpoint();
+    x_phys = mesh->get_left_endpoint();
   }
   else {
     e = I->last_active_element(); 
     x_ref = 1;  // right end of reference element
-    x_phys = this->mesh->get_right_endpoint();
+    x_phys = mesh->get_right_endpoint();
   }
 
   // get solution value and derivative at the boundary point
   e->get_solution_point(x_phys, phys_u_prev, phys_du_prevdx,
-                        y_prev, this->mesh->bc_left_dir_values,
-                        this->mesh->bc_right_dir_values); 
+                        y_prev, mesh->bc_left_dir_values,
+                        mesh->bc_right_dir_values); 
 
   // surface bilinear forms
   if(matrix_flag == 0 || matrix_flag == 1) {
@@ -270,26 +266,26 @@ void DiscreteProblem::process_surf_forms(Matrix *mat, double *res,
 // matrix_flag == 2... assembling residual vector only
 // NOTE: Simultaneous assembling of the Jacobi matrix and residual
 // vector is more efficient than if they are assembled separately
-void DiscreteProblem::assemble(Matrix *mat, double *res, 
+void DiscreteProblem::assemble(Mesh *mesh, Matrix *mat, double *res, 
               double *y_prev, int matrix_flag) {
   // number of equations in the system
-  int n_eq = this->mesh->get_n_eq();
+  int n_eq = mesh->get_n_eq();
 
   // total number of unknowns
-  int n_dof = this->mesh->get_n_dof();
+  int n_dof = mesh->get_n_dof();
 
   // erase residual vector
   if(matrix_flag == 0 || matrix_flag == 2) 
     for(int i=0; i<n_dof; i++) res[i] = 0;
 
   // process volumetric weak forms via an element loop
-  process_vol_forms(mat, res, y_prev, matrix_flag);
+  process_vol_forms(mesh, mat, res, y_prev, matrix_flag);
 
   // process surface weak forms for the left boundary
-  process_surf_forms(mat, res, y_prev, matrix_flag, BOUNDARY_LEFT);
+  process_surf_forms(mesh, mat, res, y_prev, matrix_flag, BOUNDARY_LEFT);
 
   // process surface weak forms for the right boundary
-  process_surf_forms(mat, res, y_prev, matrix_flag, BOUNDARY_RIGHT);
+  process_surf_forms(mesh, mat, res, y_prev, matrix_flag, BOUNDARY_RIGHT);
 
   // DEBUG: print Jacobi matrix
   if(DEBUG && (matrix_flag == 0 || matrix_flag == 1)) {
@@ -312,20 +308,21 @@ void DiscreteProblem::assemble(Matrix *mat, double *res,
 } 
 
 // construct both the Jacobi matrix and the residual vector
-void DiscreteProblem::assemble_matrix_and_vector(Matrix *mat, double *res, double *y_prev) {
-  assemble(mat, res, y_prev, 0);
+void DiscreteProblem::assemble_matrix_and_vector(Mesh *mesh, 
+                      Matrix *mat, double *res, double *y_prev) {
+  assemble(mesh, mat, res, y_prev, 0);
 } 
 
 // construct Jacobi matrix only
-void DiscreteProblem::assemble_matrix(Matrix *mat, double *y_prev) {
+void DiscreteProblem::assemble_matrix(Mesh *mesh, Matrix *mat, double *y_prev) {
   double *void_res = NULL;
-  assemble(mat, void_res, y_prev, 1);
+  assemble(mesh, mat, void_res, y_prev, 1);
 } 
 
 // construct residual vector only
-void DiscreteProblem::assemble_vector(double *res, double *y_prev) {
+void DiscreteProblem::assemble_vector(Mesh *mesh, double *res, double *y_prev) {
   Matrix *void_mat = NULL;
-  assemble(void_mat, res, y_prev, 2);
+  assemble(mesh, void_mat, res, y_prev, 2);
 } 
 
 

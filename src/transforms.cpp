@@ -235,8 +235,8 @@ void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev,
         while ((e = I->next_active_element()) != NULL) {
             e_ref = I_ref->next_active_element();
             if (e->level == e_ref->level)
-                transform_element_unrefined(comp, y_prev, y_prev_ref, e,
-                    e_ref);
+                transform_element_unrefined(comp, y_prev, 
+                                            y_prev_ref, e, e_ref);
             else {
                 e_ref_left = e_ref;
                 e_ref_right = I_ref->next_active_element();
