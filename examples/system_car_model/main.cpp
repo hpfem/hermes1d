@@ -76,7 +76,7 @@ void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp,
 
 
   // Newton's iteration
-  int newton_iterations = 0;
+  int newton_iterations = 1;
               
   // Newton's loop
   while (1) {
@@ -103,11 +103,11 @@ void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp,
     solve_linear_system_umfpack((CooMatrix*)mat, res);
 
     newton_iterations++;
-    if (PRINT) printf("Finished Newton iteration: %d\n", newton_iterations);
 
     // Update y_prev by new solution which is in res
     for(int i=0; i<n_dof; i++) y_prev[i] += res[i];
   } // end of Newton's loop
+  printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
 }
 
 void plot_trajectory(Mesh *mesh, double *y_prev, int subdivision) 

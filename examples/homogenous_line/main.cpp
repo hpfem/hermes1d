@@ -345,7 +345,7 @@ int main() {
     printf("------------- Newton's iterations on coarse mesh -------------- \n");
 
     // Newton's loop on coarse mesh
-    int newton_iterations = 0;
+    int newton_iterations = 1;
     while (1) {
         /// Erase the matrix:
         mat->zero();
@@ -360,7 +360,7 @@ int main() {
 
         // If residual norm less than TOL_NEWTON_COARSE, quit
         // latest solution is in y_prev
-        printf("Residual L2 norm: %.15f\n", res_norm);
+        printf("Residual norm (coarse mesh): %.15f\n", res_norm);
         if(res_norm < TOL_NEWTON_COARSE) break;
 
         // Change sign of vector res
@@ -373,11 +373,10 @@ int main() {
         for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
         newton_iterations++;
-        printf("Finished coarse Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-
+    printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
 
     // plotting the coarse mesh solution
     Linearizer l(mesh);

@@ -268,7 +268,7 @@ int main() {
     printf("------------- Newton's iterations on coarse mesh -------------- \n"); 
 
     // Newton's loop on coarse mesh
-    int newton_iterations = 0;
+    int newton_iterations = 1;
     while (1) {
       /// Erase the matrix:
       mat->zero();
@@ -296,10 +296,10 @@ int main() {
       for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
       newton_iterations++;
-      printf("Finished coarse Newton iteration: %d\n", newton_iterations);
     }
     // Update y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+    printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
   } // end of the damping loop
 
   // plotting the coarse mesh solution

@@ -150,7 +150,7 @@ int main() {
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Newton's loop
-  int newton_iterations = 0;
+  int newton_iterations = 1;
   while (1) {
     // zero the matrix:
     mat = new CooMatrix(N_dof);
@@ -162,7 +162,7 @@ int main() {
     double res_norm = 0;
     for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
     res_norm = sqrt(res_norm);
-    printf("Residual L2 norm: %g\n", res_norm);
+    printf("Residual norm (coarse mesh): %.15f\n", res_norm);
 
     // if residual norm less than TOL, quit
     // latest solution is in y_prev
@@ -178,8 +178,8 @@ int main() {
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
     newton_iterations++;
-    printf("Finished Newton iteration: %d\n", newton_iterations);
   }
+  printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
 
   Linearizer l(mesh);
   const char *out_filename = "solution.gp";
