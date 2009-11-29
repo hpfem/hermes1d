@@ -64,7 +64,6 @@ const double TOL_newton = 1e-5;        // tolerance for the Newton's method
 #include "forms.cpp"
 
 void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp, 
-                        Matrix *mat, 
                         double *y_prev, double *res) 
 {
   //if (PRINT) {
@@ -79,9 +78,11 @@ void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp,
   int newton_iterations = 1;
               
   // Newton's loop
+  CooMatrix *mat = NULL;
   while (1) {
-    // Erase the matrix:
-    mat->zero();
+    // Reset the matrix:
+    if (mat != NULL) delete mat;
+    mat = new CooMatrix();
 
     // Construct residual vector
     dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
@@ -107,7 +108,8 @@ void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp,
     // Update y_prev by new solution which is in res
     for(int i=0; i<n_dof; i++) y_prev[i] += res[i];
   } // end of Newton's loop
-  printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
+  //printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
+  if (mat != NULL) delete mat;
 }
 
 void plot_trajectory(Mesh *mesh, double *y_prev, int subdivision) 
@@ -221,10 +223,11 @@ int main() {
   dp->add_vector_form(3, residual_3);
   dp->add_vector_form(4, residual_4);
 
-  // Allocate Jacobi matrix and residual
-  Matrix *mat = new CooMatrix(N_dof);
-  double *y_prev = new double[N_dof];
+  // Allocate vectors res and y_prev
   double *res = new double[N_dof];
+  double *y_prev = new double[N_dof];
+  if (res == NULL || y_prev == NULL)
+    error("res or y_prev could not be allocated in main().");
 
   // At the very beginning, set zero initial 
   // condition for the Newton's method
@@ -252,7 +255,7 @@ int main() {
           // parameters alpha_ctrl[] and zeta_ctrl[] via the Newton's 
           // method, using the last computed trajectory as the initial 
           // condition  
-          compute_trajectory(mesh, N_dof, dp, mat, y_prev, res);
+          compute_trajectory(mesh, N_dof, dp, y_prev, res);
 
           // save trajectory to a file
           int plotting_subdivision = 10;
@@ -273,6 +276,5 @@ int main() {
   printf("Done.\n");
   if (y_prev != NULL) delete[] y_prev;
   if (res != NULL) delete[] res;
-  if (mat != NULL) delete mat;
   return 1;
 }

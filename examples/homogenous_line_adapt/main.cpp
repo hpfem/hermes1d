@@ -335,24 +335,8 @@ double jacobian_surf_right_I_Im(double x, double u, double dudx,
 
 /******************************************************************************/
 int main() {
-  Mesh *mesh = NULL;                // coarse mesh 
-  Mesh *mesh_ref = NULL;            // reference mesh
-  Matrix *mat = NULL;               // Jacobi matrix (coarse mesh)
-  Matrix *mat_ref = NULL;           // Jacobi matrix (reference mesh)
-  double *y_prev = NULL;            // vector of unknown coefficients (coarse mesh)
-  double *y_prev_ref = NULL;        // vector of unknown coefficients (reference mesh)
-  double *res = NULL;               // residual vector (coarse mesh)
-  double *res_ref = NULL;           // residual vector (reference mesh)
-  DiscreteProblem *dp = NULL;       // discrete problem
-
-  // convergence graph wrt. the number of degrees of freedom
-  GnuplotGraph graph;
-  graph.set_log_y();
-  graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
-  graph.add_row("error estimate", "k", "--");
-
   // Create coarse mesh, set Dirichlet BC, enumerate basis functions
-  mesh = new Mesh(A, B, N_elem, P_init, N_eq);
+  Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, Val_dir_left_1);
   mesh->set_bc_left_dirichlet(1, Val_dir_left_2);
   mesh->set_bc_left_dirichlet(2, Val_dir_left_3);
@@ -361,7 +345,7 @@ int main() {
   printf("N_dof = %d\n", N_dof);
 
   // Create discrete problem on coarse mesh
-  dp = new DiscreteProblem();
+  DiscreteProblem *dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian_1_1);
   dp->add_matrix_form(0, 2, jacobian_1_3);
   dp->add_matrix_form(0, 3, jacobian_1_4);
@@ -378,174 +362,225 @@ int main() {
   dp->add_vector_form(1, residual_2);
   dp->add_vector_form(2, residual_3);
   dp->add_vector_form(3, residual_4);
-
   dp->add_matrix_form_surf(0, 0, jacobian_surf_right_U_Re, BOUNDARY_RIGHT);
   dp->add_matrix_form_surf(0, 2, jacobian_surf_right_U_Im, BOUNDARY_RIGHT);
   dp->add_matrix_form_surf(1, 1, jacobian_surf_right_I_Re, BOUNDARY_RIGHT);
   dp->add_matrix_form_surf(1, 3, jacobian_surf_right_I_Im, BOUNDARY_RIGHT);
 
+  // Allocate vectors res and y_prev
+  double *res = new double[N_dof];
+  double *y_prev = new double[N_dof];
+  if (res == NULL || y_prev == NULL)
+    error("res or y_prev could not be allocated in main().");
+
+  // Set y_prev zero
+  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
+
+  // Obtain initial coarse mesh solution via Newton's method
+  int newton_iterations = 1;
+  CooMatrix *mat = NULL;
+  while (1) {
+    // Reset the matrix:
+    if (mat != NULL) delete mat;
+    mat = new CooMatrix();
+
+    // Construct residual vector
+    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
+
+    // Calculate norm of residual vector
+    double res_norm = 0;
+    for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
+    res_norm = sqrt(res_norm);
+
+    // If residual norm less than TOL_NEWTON_COARSE, quit
+    // latest solution is in y_prev
+    printf("Residual norm (coarse): %.15f\n", res_norm);
+    if(res_norm < TOL_NEWTON_COARSE) break;
+
+    // Change sign of vector res
+    for(int i=0; i<N_dof; i++) res[i]*= -1;
+
+    // Solve the matrix system
+    solve_linear_system_umfpack((CooMatrix*)mat, res);
+
+    // Update y_prev by new solution which is in res
+    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+
+    newton_iterations++;
+  }
+  printf("Finished initial coarse mesh Newton loop (%d iter).\n", newton_iterations);
+
+  // Create initial fine mesh
+  // Perform refinements in the fine mesh
+  // Refines 'num_to_ref' elements starting with element 'start_elem_id'
+  // For now, refine entire mesh uniformly in 'h' and 'p'
+  Mesh *mesh_ref = mesh->replicate();
+  int start_elem_id = 0; 
+  int num_to_ref = mesh->get_n_active_elem();
+  mesh_ref->reference_refinement(start_elem_id, num_to_ref);
+  int N_dof_ref = mesh_ref->assign_dofs();
+  printf("Fine mesh created (%d DOF).\n", N_dof_ref);
+
+  // Allocate vectors y_prev_ref and res_ref
+  double *y_prev_ref = new double[N_dof_ref];
+  double *res_ref = new double[N_dof_ref];
+  if (y_prev_ref == NULL || res_ref == NULL) 
+    error("y_prev_ref or res_ref could not be allocated in main().");
+
+  // Transfer coarse mesh solution to the fine mesh
+  transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref);
+  printf("Coarse mesh solution copied to fine mesh.\n");
+
+  // Convergence graph wrt. the number of degrees of freedom
+  GnuplotGraph graph;
+  graph.set_log_y();
+  graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
+  graph.add_row("exact error", "k", "-", "o");
+  graph.add_row("error estimate", "k", "--");
+
   // Main adaptivity loop
   int adapt_iterations = 1;
   while(1) {
- 
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
 
-    // (Re)allocate Jacobi matrix and vectors y_prev and res
-    if (mat != NULL) delete mat;
-    mat = new CooMatrix(N_dof);
-    if (res != NULL) delete res;
-    res = new double[N_dof];
-    if (y_prev != NULL) {
-      delete y_prev;
-      y_prev = new double[N_dof];
-      // FIXME: y_prev should be defined here as the projection
-      // of y_prev_ref onto the coarse mesh!
-      for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
-    }
-    else {
-      // initially y_prev is seto to zero vector
-      y_prev = new double[N_dof];
-      for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
-    }
+    // Reallocate vector res_ref on fine mesh
+    if (res_ref != NULL) delete res_ref;
+    res_ref = new double[N_dof_ref];
 
-    // Obtain coarse mesh solution via Newton's iteration
-    int newton_iterations = 0;
-    while (1) {
-      // Erase the matrix:
-      mat->zero();
-
-      // Construct residual vector
-      dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
-
-      // Calculate norm of residual vector
-      double res_norm = 0;
-      for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
-      res_norm = sqrt(res_norm);
-
-      // If residual norm less than TOL_NEWTON_COARSE, quit
-      // latest solution is in y_prev
-      printf("Residual norm (coarse): %.15f\n", res_norm);
-      if(res_norm < TOL_NEWTON_COARSE) break;
-
-      // Change sign of vector res
-      for(int i=0; i<N_dof; i++) res[i]*= -1;
-
-      // Solve the matrix system
-      solve_linear_system_umfpack((CooMatrix*)mat, res);
-
-      // Update y_prev by new solution which is in res
-      for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-
-      newton_iterations++;
-    }
-    // Update y_prev by new solution which is in res
-    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-    printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
-
-    // Create reference mesh
-    printf("Creating reference mesh.\n");
-    if (mesh_ref != NULL) {
-      // Adjust the reference mesh according to refinements 
-      // that were done in coarse mesh.
-      // FIXME: the deletion and replication below is tamporary
-      delete mesh_ref;
-      printf("Reference mesh deleted.\n");
-      mesh_ref = mesh->replicate();
-    }
-    else {
-      // First time: replicate the mesh
-      mesh_ref = mesh->replicate();
-    }
-
-    // Perform refinements in the reference mesh
-    // Refines 'num_to_ref' elements starting with element 'start_elem_id'
-    // For now, refine entire mesh uniformly in 'h' and 'p'
-    int start_elem_id = 0; 
-    int num_to_ref = mesh->get_n_active_elem();
-    //mesh_ref->reference_refinement(0, 2);
-    mesh_ref->reference_refinement(start_elem_id, num_to_ref);
-
-    // Enumerate DOF in the reference mesh
-    int N_dof_ref = mesh_ref->assign_dofs();
-    
-    // (Re)allocate Jacobi matrix mat_ref and vectors 
-    // y_prev_ref and res_ref on reference mesh
-    Matrix *mat_ref = new CooMatrix(N_dof_ref);
-    y_prev_ref = new double[N_dof_ref];
-    double *res_ref = new double[N_dof_ref];
-
-    // transfer previous reference solution onto the new 
-    // reference mesh
-    // FIXME: so far the new coarse mesh solution is used
-    transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref);
-    printf("Coarse mesh solution copied to reference mesh.\n");
-
-    // Obtain reference solution via Newton's method
-    int newton_iterations_ref = 0;
+    // Obtain fine mesh solution via Newton's method
+    // Initial condition is the coarse mesh solution (in the first 
+    // adaptivity step) and then the last fine mesh solution.
+    int newton_iterations_ref = 1;
+    CooMatrix *mat_ref = NULL;
     while(1) {
-      // Zero the matrix:
-      mat_ref->zero();
+      // Reset the matrix:
+      if (mat_ref != NULL) delete mat_ref;
+      mat_ref = new CooMatrix();
 
       // Construct residual vector
       dp->assemble_matrix_and_vector(mesh_ref, mat_ref, res_ref, y_prev_ref); 
 
-      // Calculate L2 norm of residual vector
+      // Calculate norm of residual vector
       double res_ref_norm = 0;
       for(int i=0; i<N_dof_ref; i++) res_ref_norm += res_ref[i]*res_ref[i];
       res_ref_norm = sqrt(res_ref_norm);
-
-      // If residual norm less than TOL_NEWTON_REF, quit
-      // latest solution is in y_prev
       printf("Residual norm (fine mesh): %.15f\n", res_ref_norm);
-      if(res_ref_norm < TOL_NEWTON_REF) break;
+
+      // If residual norm less than TOL_NEWTON_REF, break
+      // NOTE: at least one update of the fine mesh solution is 
+      // enforced by the additional condition "&& newton_iterations_ref >= 2". 
+      // Otherwise it can (and will) happen that already the initial residual 
+      // of the fine mesh solution is too small. Then the next adaptivity 
+      // step uses the previous fine mesn solution, which may cause inoptimal 
+      // refinements to take place. 
+      if(res_ref_norm < TOL_NEWTON_REF && newton_iterations_ref >= 2) break;
 
       // Change sign of vector res_ref
       for(int i=0; i<N_dof_ref; i++) res_ref[i]*= -1;
 
-      // Solve the matrix system
+      // Solve the matrix system. 
       solve_linear_system_umfpack((CooMatrix*)mat_ref, res_ref);
 
-      // Update y_prev by new solution which is in res
+      // Update y_prev_ref by the increment 'res_ref'
       for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
 
       newton_iterations_ref++;
     }
-    // Update y_prev_ref by the increment stored in res
-    for(int i=0; i<N_dof_ref; i++) y_prev_ref[i] += res_ref[i];
-    printf("Finished fine mesh Newton loop (%d iter).\n", newton_iterations_ref);
+    printf("Finished fine mesh Newton loop (%d iter).\n", 
+           newton_iterations_ref);
 
-    // Estimate element errors (squared)
+    // Starting with second adaptivity step, obtain new coarse 
+    // mesh solution via Newton's method. Initial condition is 
+    // the last coarse mesh solution.
+    if (adapt_iterations > 1) {
+      if (res != NULL) delete res;
+      res = new double[N_dof];
+      if (res == NULL) error("mat or res could not be allocated.");
+
+      // Obtain coarse mesh solution via Newton's method
+      int newton_iterations = 1;
+      while (1) {
+        // Reset the matrix:
+        if (mat != NULL) delete mat;
+        mat = new CooMatrix();
+
+        // Construct residual vector
+        dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
+
+        // Calculate norm of residual vector
+        double res_norm = 0;
+        for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
+        res_norm = sqrt(res_norm);
+
+        // If residual norm less than TOL_NEWTON_COARSE, quit
+        // latest solution is in y_prev
+        printf("Residual norm (coarse mesh): %.15f\n", res_norm);
+        if(res_norm < TOL_NEWTON_COARSE && newton_iterations >= 2) break;
+
+        // Change sign of vector res
+        for(int i=0; i<N_dof; i++) res[i]*= -1;
+
+        // Solve the matrix system
+        solve_linear_system_umfpack((CooMatrix*)mat, res);
+
+        // Update y_prev by new solution which is in res
+        for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
+
+        newton_iterations++;
+      }
+      printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
+    }
+
+    // In the next step, estimate element errors (squared) based on 
+    // the difference between the fine mesh and coarse mesh solutions. 
     double err_est_squared_array[MAX_ELEM_NUM]; 
-    double err_est_total = calc_elem_est_errors_squared(NORM, 
-                                 mesh, mesh_ref, y_prev, 
+    double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
                                  y_prev_ref, err_est_squared_array);
 
-    // Calculate the norm of the reference solution
+    // Calculate the norm of the fine mesh solution
     double ref_sol_norm = calc_approx_sol_norm(NORM, mesh_ref, y_prev_ref);
 
     // Calculate an estimate of the global relative error
     double err_est_rel = err_est_total/ref_sol_norm;
     printf("Relative error (est) = %g %%\n", 100.*err_est_rel);
 
+    // If exact solution available, also calculate exact error
+    if (EXACT_SOL_PROVIDED) {
+      // Calculate element errors wrt. exact solution (squared)
+      int order = 20; // heuristic parameter
+      double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
+     
+      // Calculate the norm of the exact solution
+      // (using a fine subdivision and high-order quadrature)
+      int subdivision = 500; // heuristic parameter
+      double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
+                                                  subdivision, order);
+      // Calculate an estimate of the global relative error
+      double err_exact_rel = err_exact_total/exact_sol_norm;
+      printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
+      graph.add_values(0, N_dof, 100 * err_exact_rel);
+    }
+
     // add entry to DOF convergence graph
-    graph.add_values(0, N_dof, 100 * err_est_rel);
+    graph.add_values(1, N_dof, 100 * err_est_rel);
 
     // Decide whether the relative error is sufficiently small
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    if (adapt_iterations == 1) break;
+    //if (adapt_iterations == 2) break;
 
-    // Refine coarse mesh elements whose id_array >= 0. 
-    // Returns updated reference mesh that contains the previous
-    // reference solution. The coefficient vector 'y_prev_ref',
-    // and N_dor and N_dof_ref are updated as well. Coarse mesh 
-    // solution becomes undefined. 
-    mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
-                y_prev_ref, N_dof, N_dof_ref, err_est_squared_array);
+    // Refine coarse mesh elements whose id_array >= 0, and 
+    // adjust the fine mesh accordingly.  
+    // Returns updated coarse and fine meshes, with the last 
+    // coarse and fine mesh solutions on them, respectively. 
+    // The coefficient vectors and numbers of degrees of freedom 
+    // on both meshes are also updated. 
+    adapt(NORM, ADAPT_TYPE, THRESHOLD, err_est_squared_array,
+          mesh, mesh_ref, y_prev, y_prev_ref, N_dof, N_dof_ref);
 
     adapt_iterations++;
-  };
+  }
 
   // Plot meshes, results, and errors
   plotting(mesh, mesh_ref, y_prev, y_prev_ref);
@@ -555,4 +590,5 @@ int main() {
 
   printf("Done.\n");
   return 1;
+
 }

@@ -144,10 +144,9 @@ public:
     virtual int get_size() = 0;
     virtual void add(int m, int n, double v) = 0;
     virtual double get(int m, int n) = 0;
-    virtual void zero() = 0;
+    virtual void reset() = 0;
     virtual void copy_into(Matrix *m) = 0;
     virtual void print() = 0;
-    virtual void set_size(int s) = 0;
 };
 
 class Triple {
@@ -167,48 +166,56 @@ class Triple {
 
 class CooMatrix : public Matrix {
     public:
+        CooMatrix() {
+            this->size = 0;
+            this->list = NULL;
+            this->list_last = NULL;
+        }
         CooMatrix(int size) {
             this->size = size;
             this->list = NULL;
             this->list_last = NULL;
-            this->zero();
         }
         ~CooMatrix() {
             this->free_data();
+            this->list = NULL;
+            this->list_last = NULL;
+            this->size = 0;
         }
         void free_data() {
 	  Triple *t = this->list;
-            while (t != NULL) {
-                Triple *t_old = t;
-                t = t->next;
-                delete t_old;
-            }
+          while (t != NULL) {
+            Triple *t_old = t;
+            t = t->next;
+            delete t_old;
+          }
         }
-        virtual void zero() {
-            if (this->list != NULL)
-                this->free_data();
-            this->list = NULL;
-            this->list_last = NULL;
+        virtual void reset() {
+          error("the function matrix->reset() segfaults sometimes, do not use it.");
+          if (DEBUG_MATRIX) {
+    	    printf("Matrix_reset\n");
+          }
+	  this->free_data();
+          this->list = NULL;
+          this->list_last = NULL;
+          this->size = 0;
         }
         virtual void add(int m, int n, double v) {
-            Triple *t = new Triple(m, n, v);
-            if (this->list == NULL) {
-                this->list = t;
-                this->list_last = this->list;
-            } else {
-                this->list_last->next = t;
-                this->list_last = this->list_last->next;
-            }
-            if (m > this->size-1) {
-              printf("matrix.h: m = %d, n = %d, this->size = %d\n", 
-                     m, n, this->size);
-              error("m is bigger than size");
-            }
-            if (n > this->size-1) {
-              printf("matrix.h: m = %d, n = %d, this->size = %d\n", 
-                     m, n, this->size);
-              error("n is bigger than size");
-            }
+          // adjusting size if necessary
+          if (m+1 > this->size) this->size = m+1;
+          if (n+1 > this->size) this->size = n+1;
+          // debug
+          if (DEBUG_MATRIX) {
+  	    printf("Matrix_add %d %d %g -> size = %d\n", m, n, v, this->size);
+          }
+          Triple *t = new Triple(m, n, v);
+          if (this->list == NULL) {
+              this->list = t;
+              this->list_last = t;
+          } else {
+              this->list_last->next = t;
+              this->list_last = this->list_last->next;
+          }
         }
         virtual double get(int m, int n) {
             double v=0;
@@ -228,7 +235,7 @@ class CooMatrix : public Matrix {
         }
 
         virtual void copy_into(Matrix *m) {
-            m->zero();
+            m->reset();
             Triple *t = this->list;
             while (t != NULL) {
                 m->add(t->i, t->j, t->v);
@@ -239,13 +246,10 @@ class CooMatrix : public Matrix {
         virtual void print() {
             Triple *t = this->list;
             while (t != NULL) {
-                printf("(%d, %d): %f\n", t->i, t->j, t->v);
+                printf("Matrix_print (%d, %d): %f\n", t->i, t->j, t->v);
                 t = t->next;
             }
         }
-
-        virtual void set_size(int s) { size = s;}
-
 
     private:
         int size;
@@ -264,7 +268,7 @@ class DenseMatrix : public Matrix {
         DenseMatrix(int size) {
             this->mat = new_matrix<double>(size, size);
             this->size = size;
-            this->zero();
+            this->reset();
         }
         DenseMatrix(Matrix *m) {
             this->mat = new_matrix<double>(m->get_size(), m->get_size());
@@ -277,7 +281,7 @@ class DenseMatrix : public Matrix {
         ~DenseMatrix() {
             delete[] this->mat;
         }
-        virtual void zero() {
+        virtual void reset() {
             // erase matrix
             for(int i = 0; i < this->size; i++)
                 for(int j = 0; j < this->size; j++)
@@ -295,7 +299,7 @@ class DenseMatrix : public Matrix {
             return this->size;
         }
         virtual void copy_into(Matrix *m) {
-            m->zero();
+            m->reset();
             for (int i = 0; i < this->size; i++)
                 for (int j = 0; j < this->size; j++) {
                     double v = this->get(i, j);
@@ -324,8 +328,6 @@ class DenseMatrix : public Matrix {
         double **get_mat() {
             return this->mat;
         }
-
-        virtual void set_size(int s) { size = s;}
 
     private:
         int size;
@@ -376,7 +378,7 @@ class CSRMatrix : public Matrix {
             }
         }
 
-        virtual void zero() {
+        virtual void reset() {
             error("Not implemented.");
         }
         virtual void add(int m, int n, double v) {
@@ -405,8 +407,6 @@ class CSRMatrix : public Matrix {
             }
             printf("\n");
         }
-
-        virtual void set_size(int s) { size = s;}
 
         int *get_IA() {
             return this->IA;

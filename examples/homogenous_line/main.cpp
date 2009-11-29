@@ -37,14 +37,13 @@ double A = 0, B = l;        // domain end points
 int P_init = 2;             // initial polynomal degree
 
 // Error tolerance
-double TOL_NEWTON_COARSE = 1e-2;  // tolerance for the Newton's method on basic mesh
-double TOL_NEWTON_REF = 1e-2;     // tolerance for the Newton's method on reference mesh
+double TOL_NEWTON = 1e-2;   // tolerance for the Newton's method on basic mesh
 
 // Boundary conditions
-double Val_dir_left_1 = 1;       // real part of the voltage at the beginnig of the line
-double Val_dir_left_2 = 0;       // imaginary part of the voltage at the beginnig of the line
-double Val_dir_left_3 = 0;       // real part of the voltage at the beginnig of the line
-double Val_dir_left_4 = 0;       // imaginary part of the voltage at the beginnig of the line
+double Val_dir_left_1 = 1;  // real part of the voltage at the beginnig of the line
+double Val_dir_left_2 = 0;  // imaginary part of the voltage at the beginnig of the line
+double Val_dir_left_3 = 0;  // real part of the voltage at the beginnig of the line
+double Val_dir_left_4 = 0;  // imaginary part of the voltage at the beginnig of the line
 
 //At the end of the line is an indirect boundary condition U(l) = I(l)*Zl see below
 
@@ -323,32 +322,27 @@ int main() {
     dp->add_vector_form(1, residual_2);
     dp->add_vector_form(2, residual_3);
     dp->add_vector_form(3, residual_4);
-
     dp->add_matrix_form_surf(0, 0, jacobian_surf_right_U_Re, BOUNDARY_RIGHT);
     dp->add_matrix_form_surf(0, 2, jacobian_surf_right_U_Im, BOUNDARY_RIGHT);
     dp->add_matrix_form_surf(1, 1, jacobian_surf_right_I_Re, BOUNDARY_RIGHT);
     dp->add_matrix_form_surf(1, 3, jacobian_surf_right_I_Im, BOUNDARY_RIGHT);
 
-    // Allocate Jacobi matrix and residual
-    Matrix *mat = new CooMatrix(N_dof);
-    double *y_prev = new double[N_dof];
+    // Allocate vectors res and y_prev
     double *res = new double[N_dof];
+    double *y_prev = new double[N_dof];
+    if (res == NULL || y_prev == NULL)
+      error("res or y_prev could not be allocated in main().");
 
     // Set zero initial condition for the Newton's method
-    // on the coarse mesh
     for(int i=0; i<N_dof; i++) y_prev[i] = 0;
 
-    Mesh *mesh_ref;
-    double *y_prev_ref;
-
-
-    printf("------------- Newton's iterations on coarse mesh -------------- \n");
-
-    // Newton's loop on coarse mesh
+    // Newton's loop
     int newton_iterations = 1;
+    CooMatrix *mat = NULL;
     while (1) {
-        /// Erase the matrix:
-        mat->zero();
+        // Reset the matrix:
+        if (mat != NULL) delete mat;
+        mat = new CooMatrix();
 
         // Construct residual vector
         dp->assemble_matrix_and_vector(mesh, mat, res, y_prev);
@@ -358,10 +352,10 @@ int main() {
         for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
         res_norm = sqrt(res_norm);
 
-        // If residual norm less than TOL_NEWTON_COARSE, quit
+        // If residual norm less than TOL_NEWTON
         // latest solution is in y_prev
-        printf("Residual norm (coarse mesh): %.15f\n", res_norm);
-        if(res_norm < TOL_NEWTON_COARSE) break;
+        printf("Residual norm: %.15f\n", res_norm);
+        if(res_norm < TOL_NEWTON) break;
 
         // Change sign of vector res
         for(int i=0; i<N_dof; i++) res[i]*= -1;
@@ -374,11 +368,9 @@ int main() {
 
         newton_iterations++;
     }
-    // Update y_prev by new solution which is in res
-    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-    printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
+    printf("Finished Newton loop (%d iter).\n", newton_iterations);
 
-    // plotting the coarse mesh solution
+    // plotting the solution
     Linearizer l(mesh);
     const char *out_filename = "solution.gp";
     l.plot_solution(out_filename, y_prev);
@@ -386,6 +378,5 @@ int main() {
     printf("Done.\n");
     if (y_prev != NULL) delete[] y_prev;
     if (res != NULL) delete[] res;
-    if (mat != NULL) delete mat;
     return 1;
 }

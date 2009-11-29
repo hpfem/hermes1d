@@ -6,7 +6,11 @@
 #ifndef __HERMES1D_COMMON_H
 #define __HERMES1D_COMMON_H
 
+// print general debug information
 #define DEBUG 0
+
+// printf debug information about the stiffness/Jacobi matrix
+#define DEBUG_MATRIX 0
 
 #include <stdexcept>
 #include <stdlib.h>

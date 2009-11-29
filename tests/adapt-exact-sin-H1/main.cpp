@@ -152,8 +152,9 @@ int main() {
     // Obtain coarse mesh solution via Newton's method
     int newton_iterations = 0;
     while (1) {
-      // Erase the matrix:
-      mat->zero();
+      // Reset the matrix:
+      if (mat != NULL) delete mat;
+      mat = new CooMatrix();
 
       // Construct residual vector
       dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
@@ -179,11 +180,6 @@ int main() {
 
       newton_iterations++;
       printf("Finished coarse mesh Newton iteration: %d\n", newton_iterations);
-    }
-    // Update y_prev by new solution which is in res
-    for(int i=0; i<N_dof; i++) {
-      y_prev[i] += res[i];
-      //printf("y_prev[%d] = %g\n", i, y_prev[i]);
     }
 
     // Create reference mesh
@@ -232,8 +228,9 @@ int main() {
     // Obtain reference solution via Newton's method
     int newton_iterations_ref = 0;
     while(1) {
-      // Zero the matrix:
-      mat_ref->zero();
+      // Reset the matrix:
+      if (mat_ref != NULL) delete mat_ref;
+      mat_ref = new CooMatrix();
 
       // Construct residual vector
       dp->assemble_matrix_and_vector(mesh_ref, mat_ref, res_ref, y_prev_ref); 
@@ -259,11 +256,6 @@ int main() {
 
       newton_iterations_ref++;
       printf("Finished fine mesh Newton iteration: %d\n", newton_iterations_ref);
-    }
-    // Update y_prev by the increment stored in res
-    for(int i=0; i<N_dof_ref; i++) {
-      y_prev_ref[i] += res_ref[i];
-      //printf("y_prev_ref[%d] = %g\n", i, y_prev_ref[i]);
     }
 
     // Estimate element errors (squared)
@@ -306,8 +298,8 @@ int main() {
     if (N_dof > 20) return ERROR_FAILURE;
 
     // Refine elements in the id_array list whose id_array >= 0
-    mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
-                y_prev_ref, N_dof, N_dof_ref, err_est_squared_array);
+    adapt(NORM, ADAPT_TYPE, THRESHOLD, err_est_squared_array,
+          mesh, mesh_ref, y_prev, y_prev_ref, N_dof, N_dof_ref);
 
     adapt_iterations++;
   };

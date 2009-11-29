@@ -17,7 +17,7 @@ const int P_init = 1;                   // Initial polynomal degree
 
 // Stopping criteria for Newton
 const double TOL_NEWTON_COARSE = 1e-6;  // Coarse mesh
-const double TOL_NEWTON_REF = 1e-6;     // Reference mesh
+const double TOL_NEWTON_REF = 1e-6;     // Fine mesh
 
 // Adaptivity
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
@@ -25,8 +25,8 @@ const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-8;        // Tolerance for the relative error between 
-                                        // the coarse mesh and reference solutions
+const double TOL_ERR_REL = 1e-4;        // Tolerance for the relative error between 
+                                        // the coarse and fine mesh solutions
 const int NORM = 0;                     // To measure errors:
                                         // 1... H1 norm
                                         // 0... L2 norm
@@ -59,19 +59,19 @@ void plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double *y_prev_ref)
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
-  // Plot the reference solution
+  // Plot the fine mesh solution
   Linearizer lxx(mesh_ref);
   const char *out_filename2 = "solution_ref.gp";
   lxx.plot_solution(out_filename2, y_prev_ref);
 
-  // Plot the coarse and reference meshes
+  // Plot the coarse and fine meshes
   const char *mesh_filename = "mesh.gp";
   mesh->plot(mesh_filename);
   const char *mesh_ref_filename = "mesh_ref.gp";
   mesh_ref->plot(mesh_ref_filename);
 
   // Plot the error estimate (difference between 
-  // coarse and reference mesh solutions)
+  // coarse and fine mesh solutions)
   const char *err_est_filename = "error_est.gp";
   mesh->plot_error_est(NORM, err_est_filename, mesh_ref, y_prev, y_prev_ref);
 
@@ -125,49 +125,33 @@ double residual(int num, double *x, double *weights,
 
 /******************************************************************************/
 int main() {
-  Mesh *mesh = NULL;                // coarse mesh 
-  Mesh *mesh_ref = NULL;            // fine mesh
-  Matrix *mat = NULL;               // Jacobi matrix (coarse mesh)
-  Matrix *mat_ref = NULL;           // Jacobi matrix (fine mesh)
-  double *y_prev = NULL;            // vector of unknown coefficients (coarse mesh)
-  double *y_prev_ref = NULL;        // vector of unknown coefficients (fine mesh)
-  double *res = NULL;               // residual vector (coarse mesh)
-  double *res_ref = NULL;           // residual vector (fine mesh)
-  DiscreteProblem *dp = NULL;       // discrete problem
-
-  // Convergence graph wrt. the number of degrees of freedom
-  GnuplotGraph graph;
-  graph.set_log_y();
-  graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
-  graph.add_row("exact error", "k", "-", "o");
-  graph.add_row("error estimate", "k", "--");
-
   // Create coarse mesh, set Dirichlet BC, enumerate basis functions
-  mesh = new Mesh(A, B, N_elem, P_init, N_eq);
+  Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, YA);
   int N_dof = mesh->assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
   // Create discrete problem on coarse mesh
-  dp = new DiscreteProblem();
+  DiscreteProblem *dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian);
   dp->add_vector_form(0, residual);
 
-  // Allocate Jacobi matrix mat and vectors res and y_prev
-  mat = new CooMatrix(N_dof);
-  res = new double[N_dof];
-  y_prev = new double[N_dof];
-  if (mat == NULL || res == NULL || y_prev == NULL)
-    error("mat, res or y_prev could not be allocated.");
+  // Allocate vectors res and y_prev
+  double *res = new double[N_dof];
+  double *y_prev = new double[N_dof];
+  if (res == NULL || y_prev == NULL)
+    error("res or y_prev could not be allocated in main().");
 
-  // Set y_prev to zero vector
+  // Set y_prev zero
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Obtain initial coarse mesh solution via Newton's method
   int newton_iterations = 1;
+  CooMatrix *mat = NULL;
   while (1) {
-    // Erase the matrix:
-    mat->zero();
+    // Reset the matrix:
+    if (mat != NULL) delete mat;
+    mat = new CooMatrix();
 
     // Construct residual vector
     dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
@@ -195,57 +179,52 @@ int main() {
   }
   printf("Finished initial coarse mesh Newton loop (%d iter).\n", newton_iterations);
 
-  // Create initial reference mesh
-  // Replicate the coarse mesh
-  mesh_ref = mesh->replicate();
-  // Perform refinements in the reference mesh
+  // Create initial fine mesh
+  // Perform refinements in the fine mesh
   // Refines 'num_to_ref' elements starting with element 'start_elem_id'
   // For now, refine entire mesh uniformly in 'h' and 'p'
+  Mesh *mesh_ref = mesh->replicate();
   int start_elem_id = 0; 
   int num_to_ref = mesh->get_n_active_elem();
   mesh_ref->reference_refinement(start_elem_id, num_to_ref);
-  // Enumerate DOF in the reference mesh
   int N_dof_ref = mesh_ref->assign_dofs();
-  printf("Reference mesh created (%d DOF).\n", N_dof_ref);
+  printf("Fine mesh created (%d DOF).\n", N_dof_ref);
 
-  // Allocate vector y_prev_ref for reference mesh
-  y_prev_ref = new double[N_dof_ref];
+  // Allocate vectors y_prev_ref and res_ref
+  double *y_prev_ref = new double[N_dof_ref];
+  double *res_ref = new double[N_dof_ref];
+  if (y_prev_ref == NULL || res_ref == NULL) 
+    error("y_prev_ref or res_ref could not be allocated in main().");
 
-  // Transfer coarse mesh solution to the reference mesh
+  // Transfer coarse mesh solution to the fine mesh
   transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref);
-  printf("Coarse mesh solution copied to reference mesh.\n");
+  printf("Coarse mesh solution copied to fine mesh.\n");
 
-  // debug
-  // Plot the reference solution and mesh
-  //Linearizer lb(mesh_ref);
-  //const char *out_filenameb = "solution_ref.gp";
-  //lb.plot_solution(out_filenameb, y_prev_ref);
-  //const char *mesh_ref_filename = "mesh_ref.gp";
-  //mesh_ref->plot(mesh_ref_filename);
-  //exit(0);
+  // Convergence graph wrt. the number of degrees of freedom
+  GnuplotGraph graph;
+  graph.set_log_y();
+  graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
+  graph.add_row("exact error", "k", "-", "o");
+  graph.add_row("error estimate", "k", "--");
 
   // Main adaptivity loop
   int adapt_iterations = 1;
   while(1) {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
 
-    // (Re)allocate Jacobi matrix mat_ref and vector 
-    // res_ref on reference mesh
-    if (mat_ref != NULL) {
-      mat_ref->zero();
-      mat_ref->set_size(N_dof_ref);
-    }
-    else mat_ref = new CooMatrix(N_dof_ref);
+    // Reallocate vector res_ref on fine mesh
     if (res_ref != NULL) delete res_ref;
     res_ref = new double[N_dof_ref];
 
-    // Obtain reference solution via Newton's method
+    // Obtain fine mesh solution via Newton's method
     // Initial condition is the coarse mesh solution (in the first 
     // adaptivity step) and then the last fine mesh solution.
     int newton_iterations_ref = 1;
+    CooMatrix *mat_ref = NULL;
     while(1) {
-      // Zero the matrix:
-      mat_ref->zero();
+      // Reset the matrix:
+      if (mat_ref != NULL) delete mat_ref;
+      mat_ref = new CooMatrix();
 
       // Construct residual vector
       dp->assemble_matrix_and_vector(mesh_ref, mat_ref, res_ref, y_prev_ref); 
@@ -257,11 +236,11 @@ int main() {
       printf("Residual norm (fine mesh): %.15f\n", res_ref_norm);
 
       // If residual norm less than TOL_NEWTON_REF, break
-      // NOTE: at least one update of the reference solution is 
+      // NOTE: at least one update of the fine mesh solution is 
       // enforced by the additional condition "&& newton_iterations_ref >= 2". 
       // Otherwise it can (and will) happen that already the initial residual 
-      // of the reference solution is too small. Then the next adaptivity 
-      // step uses the previous reference solution, which may cause inoptimal 
+      // of the fine mesh solution is too small. Then the next adaptivity 
+      // step uses the previous fine mesn solution, which may cause inoptimal 
       // refinements to take place. 
       if(res_ref_norm < TOL_NEWTON_REF && newton_iterations_ref >= 2) break;
 
@@ -283,8 +262,6 @@ int main() {
     // mesh solution via Newton's method. Initial condition is 
     // the last coarse mesh solution.
     if (adapt_iterations > 1) {
-      mat->zero(); 
-      mat->set_size(N_dof); 
       if (res != NULL) delete res;
       res = new double[N_dof];
       if (res == NULL) error("mat or res could not be allocated.");
@@ -292,43 +269,32 @@ int main() {
       // Obtain coarse mesh solution via Newton's method
       int newton_iterations = 1;
       while (1) {
-	printf("alive 0\n");
-       
-        // Erase the matrix:
-        mat->print();
-	printf("alive 0b\n");
-        printf("N_dof = %d\n", N_dof);
-        mat->zero();
-	printf("alive 1\n");
+        // Reset the matrix:
+        if (mat != NULL) delete mat;
+        mat = new CooMatrix();
 
         // Construct residual vector
         dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
-	printf("alive 2\n");
 
         // Calculate norm of residual vector
         double res_norm = 0;
         for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
         res_norm = sqrt(res_norm);
-	printf("alive 3\n");
 
         // If residual norm less than TOL_NEWTON_COARSE, quit
         // latest solution is in y_prev
         printf("Residual norm (coarse mesh): %.15f\n", res_norm);
         if(res_norm < TOL_NEWTON_COARSE && newton_iterations >= 2) break;
-	printf("alive 4\n");
 
         // Change sign of vector res
         for(int i=0; i<N_dof; i++) res[i]*= -1;
 
-	printf("alive 5\n");
         // Solve the matrix system
         solve_linear_system_umfpack((CooMatrix*)mat, res);
 
-	printf("alive 6\n");
         // Update y_prev by new solution which is in res
         for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
-	printf("alive 7\n");
         newton_iterations++;
       }
       printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
@@ -340,7 +306,7 @@ int main() {
     double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
                                  y_prev_ref, err_est_squared_array);
 
-    // Calculate the norm of the reference solution
+    // Calculate the norm of the fine mesh solution
     double ref_sol_norm = calc_approx_sol_norm(NORM, mesh_ref, y_prev_ref);
 
     // Calculate an estimate of the global relative error
@@ -371,37 +337,16 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    if (adapt_iterations == 2) break;
-
-    // debug
-    // Plot the reference solution
-    //Linearizer la(mesh_ref);
-    //const char *out_filenamea = "solution_ref.gp";
-    //la.plot_solution(out_filenamea, y_prev_ref);
-    //const char *mesh_filename = "mesh.gp";
-    //mesh->plot(mesh_filename);
-    //const char *mesh_ref_filename = "mesh_ref.gp";
-    //mesh_ref->plot(mesh_ref_filename);
+    //if (adapt_iterations == 2) break;
 
     // Refine coarse mesh elements whose id_array >= 0, and 
-    // adjust the reference mesh accordingly.  
-    // Returns updated coarse and reference meshes, with the last 
-    // coarse and reference mesh solutions on them, respectively. 
+    // adjust the fine mesh accordingly.  
+    // Returns updated coarse and fine meshes, with the last 
+    // coarse and fine mesh solutions on them, respectively. 
     // The coefficient vectors and numbers of degrees of freedom 
     // on both meshes are also updated. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, err_est_squared_array,
           mesh, mesh_ref, y_prev, y_prev_ref, N_dof, N_dof_ref);
-
-    // debug
-    // Plot the reference solution and mesh
-    //Linearizer lb(mesh_ref);
-    //const char *out_filenameb = "solution_ref_new.gp";
-    //lb.plot_solution(out_filenameb, y_prev_ref);
-    //const char *mesh_filename_new = "mesh_new.gp";
-    //mesh->plot(mesh_filename_new);
-    //const char *mesh_ref_filename_new = "mesh_ref_new.gp";
-    //mesh_ref->plot(mesh_ref_filename_new);
-    //exit(0);
 
     adapt_iterations++;
   }

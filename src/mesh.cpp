@@ -917,7 +917,7 @@ void Mesh::plot_error_exact(int norm, const char *filename,
 void adapt(int norm, int adapt_type, double threshold, 
            double *err_squared_array,
            Mesh* &mesh, Mesh* &mesh_ref, 
-           double *y_prev, double* &y_prev_ref, 
+           double * &y_prev, double* &y_prev_ref, 
            int &n_dof, int &n_dof_ref) 
 {
   int n_elem = mesh->get_n_active_elem();
@@ -1021,12 +1021,14 @@ void adapt(int norm, int adapt_type, double threshold,
                                       mesh->bc_left_dir_values,
 			              mesh->bc_right_dir_values);
       }
+
+      // Next we perform the refinement defined by cand_list[choice]
       // e_new_last... element in mesh_new that will be refined,
       // e_ref_left... corresponding element in fine mesh (if reference 
-      //               refinement was p-refinement. In this case 
+      //               refinement was p-refinement). In this case 
       //               e_ref_right == NULL
       // e_ref_left, e_ref_right... corresponding pair of elements 
-      // in the fine mesh if reference refinement was hp-refinement
+      //               in the fine mesh if reference refinement was hp-refinement
       Element *e_new_last = e_new;
       // moving pointers 'e' and 'e_new' to the next position in coarse meshes
       // and 'e_ref' and 'e_ref_new' to the next position in fine meshes 
@@ -1040,7 +1042,7 @@ void adapt(int norm, int adapt_type, double threshold,
              e_new_last->x1, e_new_last->x2, cand_list[choice][0], 
              cand_list[choice][1], cand_list[choice][2]);
       if(cand_list[choice][0] == 1) mesh_new->n_active_elem++; 
-      // perform corresponding refinement(s) in the fine mesh
+      // perform corresponding refinement(s) in the new fine mesh
       if (e_new_last->level == e_ref_left->level) { // ref. refinement of 'e_last' was 
                                                     // p-refinement so also future ref. 
                                                     // refinements will be p-refinements
@@ -1057,7 +1059,7 @@ void adapt(int norm, int adapt_type, double threshold,
           mesh_ref_new->n_active_elem++;
         }
       }
-      else { // ref. refinement was hp-refinement, so also futute
+      else { // ref. refinement was hp-refinement, so also future
              // ref. refinements will be hp-refinements
         if (cand_list[choice][0] == 0) { // e_new_last is being p-refined, thus also 
                                          // e_ref_new_left and e_ref_new_right  

@@ -89,8 +89,8 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
         // backup of projectionmatrix
         Matrix *mat_left = new DenseMatrix(n);
         Matrix *mat_right = new DenseMatrix(n);
-        mat_left->zero();
-        mat_right->zero();
+        mat_left->reset();
+        mat_right->reset();
         for (int r=0; r < n; r++) {
 	    for (int s=0; s < n; s++) {
                 mat_left->add(r, s, proj_matrix[r][s]);
@@ -146,10 +146,6 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
 			       *e, Element *e_ref_left, Element *e_ref_right, 
                                double *bc_left_dir_values, double *bc_right_dir_values)
 {
-  printf("Transforming element (%g, %g)\n", e->x1, e->x2);
-  if (e_ref_left->p != e_ref_right->p)
-      error("internal error in transform_element: the \
-            left and right elements must have the same order.");
   int fns_num_ref = e_ref_left->p + 1;
 
   if (DEBUG_SOLUTION_TRANSFER){
@@ -172,10 +168,13 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
   for (int i=2; i < fns_num; i++)
       y_prev_loc[i] = y_prev[e->dof[comp][i]];  
   //debug
-  for (int i=0; i < fns_num; i++)
-      printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
-  printf("\n");
-      
+  if (DEBUG_SOLUTION_TRANSFER) {
+    for (int i=0; i < fns_num; i++) {
+        printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
+    }
+    printf("\n");
+  }
+  
   if (trans_matrices_initialized == 0) {
     fill_trans_matrices(trans_matrix_left, trans_matrix_right);
     trans_matrices_initialized = 1;
@@ -188,9 +187,12 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
   }
   for (int i=fns_num; i < fns_num_ref; i++) y_prev_loc_trans_left[i] = 0; 
   //debug
-  for (int i=0; i < fns_num_ref; i++)
+  if (DEBUG_SOLUTION_TRANSFER) {
+    for (int i=0; i < fns_num_ref; i++) {
       printf("y_prev_loc_trans_left[%d] = %f\n", i, y_prev_loc_trans_left[i]);
-  printf("\n");
+    }
+    printf("\n");
+  }
 
   // transform coefficients on the right son
   for (int i=0; i < fns_num; i++) {
@@ -200,9 +202,12 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
   }
   for (int i=fns_num; i < fns_num_ref; i++) y_prev_loc_trans_right[i] = 0; 
   //debug
-  for (int i=0; i < fns_num_ref; i++)
+  if (DEBUG_SOLUTION_TRANSFER) {
+    for (int i=0; i < fns_num_ref; i++) {
       printf("y_prev_loc_trans_right[%d] = %f\n", i, y_prev_loc_trans_right[i]);
-  printf("\n");
+    }
+    printf("\n");
+  }
 
   // Copying computed coefficients into the elements e_ref_left and e_ref_right.
   // low-order part left:
