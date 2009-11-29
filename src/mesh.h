@@ -92,9 +92,6 @@ class Mesh {
         int get_n_active_elem() {
             return this->n_active_elem;
         }
-        void set_n_active_elem(int n_active_elem) {
-            this->n_active_elem = n_active_elem;
-        }
         int get_n_dof() {
             return this->n_dof;
         }
@@ -117,9 +114,6 @@ class Mesh {
         void refine_single_elem(int id, int3 cand);
         void refine_elems(int elem_num, int *id_array, int3 *cand_array);
         void reference_refinement(int start_elem_id, int elem_num);
-        void adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref, 
-                   double *y_prev, double* &y_prev_ref, int &n_dof, int &n_dof_ref,
-                   double *err_squared_array);
         Mesh *replicate(); 
         void plot(const char* filename); // plots the mesh and polynomial degrees of elements
         void plot_element_error_p(int norm, FILE *f, Element *p, Element *e_ref, 
@@ -142,12 +136,12 @@ class Mesh {
         int assign_elem_ids();
         double bc_left_dir_values[MAX_EQN_NUM];  // values for the Dirichlet condition left
         double bc_right_dir_values[MAX_EQN_NUM]; // values for the Dirichlet condition right
+        int n_active_elem;
 
     private:
         double left_endpoint, right_endpoint;
         int n_eq;
         int n_base_elem;
-        int n_active_elem;
         int n_dof;
         Element *base_elems;
 
@@ -156,5 +150,17 @@ class Mesh {
 // transforms point 'x_phys' from element (x1, x2) to (-1, 1)
 double inverse_map(double x1, double x2, double x_phys);
 
+
+// Refine coarse mesh elements whose id_array >= 0, and 
+// adjust the reference mesh accordingly.  
+// Returns updated coarse and reference meshes, with the last 
+// coarse and reference mesh solutions on them, respectively. 
+// The coefficient vectors and numbers of degrees of freedom 
+// on both meshes are also updated. 
+void adapt(int norm, int adapt_type, double threshold, 
+           double *err_squared_array,
+           Mesh* &mesh, Mesh* &mesh_ref, 
+           double *y_prev, double* &y_prev_ref, 
+           int &n_dof, int &n_dof_ref);
 
 #endif

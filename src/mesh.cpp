@@ -7,6 +7,7 @@
 #include "iterator.h"
 #include "adapt.h"
 #include "transforms.h"
+#include "linearizer.h"
 
 // debug - prints element dof arrays in assign_dofs()
 int DEBUG_ELEM_DOF = 0;
@@ -642,7 +643,7 @@ Mesh *Mesh::replicate()
   }
 
   // copy number of base elements
-  mesh_new->set_n_active_elem(this->n_active_elem);
+  mesh_new->n_active_elem = this->n_active_elem;
 
   // enumerate DOF in the reference mesh
   mesh_new->assign_dofs();
@@ -907,17 +908,23 @@ void Mesh::plot_error_exact(int norm, const char *filename,
   printf("Exact solution error written to %s.\n", final_filename);
 }
 
-// Refine all coarse mesh element whose id_array >= 0.
-// Returns updated reference mesh that contains the previous
-// reference solution. The coefficient vector 'y_prev_ref' is 
-// prolonged and updated as well.
-void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref, 
-                 double *y_prev, double* &y_prev_ref, int &n_dof, int &n_dof_ref,
-                 double *err_squared_array) 
+// Refine coarse mesh elements whose id_array >= 0, and 
+// adjust the reference mesh accordingly.  
+// Returns updated coarse and reference meshes, with the last 
+// coarse and reference mesh solutions on them, respectively. 
+// The coefficient vectors and numbers of degrees of freedom 
+// on both meshes are also updated. 
+void adapt(int norm, int adapt_type, double threshold, 
+           double *err_squared_array,
+           Mesh* &mesh, Mesh* &mesh_ref, 
+           double *y_prev, double* &y_prev_ref, 
+           int &n_dof, int &n_dof_ref) 
 {
+  int n_elem = mesh->get_n_active_elem();
+
   // Find element with largest error
   double max_elem_error = 0;
-  for(int i=0; i < this->get_n_active_elem(); i++) {
+  for(int i=0; i < n_elem; i++) {
     double elem_error = sqrt(err_squared_array[i]);
     if (elem_error > max_elem_error) {
       max_elem_error = elem_error;
@@ -926,7 +933,7 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
 
   // Create auxiliary array of element indices
   int id_array[MAX_ELEM_NUM];
-  for(int i=0; i < this->get_n_active_elem(); i++) {
+  for(int i=0; i < n_elem; i++) {
    if(sqrt(err_squared_array[i]) < threshold*max_elem_error) id_array[i] = -1; 
    else id_array[i] = i;
   }
@@ -944,9 +951,7 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
   int num_to_adapt = 0;
 
   // Create list of elements to be refined, in increasing order
-  //for (int i=0; i<this->get_n_active_elem(); i++) 
-  //    printf("id_array[%d] = %d\n", i, id_array[i]);
-  for (int i=0; i < this->get_n_active_elem(); i++) {
+  for (int i=0; i < n_elem; i++) {
     if (id_array[i] >= 0) {
       adapt_list[num_to_adapt] = id_array[i];
       num_to_adapt++;
@@ -958,18 +963,22 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
   //for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
   //printf("\n");
 
-  // Replicate mesh_ref -> mesh_ref_new
+  // Replicate the coarse and fine meshes. The original meshes become
+  // backup and refinements will only be done in the new ones.
+  Mesh *mesh_new = mesh->replicate();
   Mesh *mesh_ref_new = mesh_ref->replicate();
 
-  // Simultaneous traversal of 'this', 'mesh_ref' and 'mesh_ref_new'.
-  // For each element in 'this', create a list of refinement 
+  // Simultaneous traversal of all meshes.
+  // For each element in 'mesh_new', create a list of refinement 
   // candidates and select the one that best resembles the reference 
-  // solution on 'mesh_ref'. While elements in 'this' are refined, 
-  // corresponding refinements are also done in 'mesh_ref_new'
-  Iterator *I = new Iterator(this);
+  // solution on 'mesh_ref_new'. While elements in 'mesh_new' are refined, 
+  // corresponding refinements are also done in 'mesh_ref_new'.
+  Iterator *I = new Iterator(mesh);
+  Iterator *I_new = new Iterator(mesh_new);
   Iterator *I_ref = new Iterator(mesh_ref);
   Iterator *I_ref_new = new Iterator(mesh_ref_new);
   Element *e = I->next_active_element();
+  Element *e_new = I_new->next_active_element();
   Element *e_ref = I_ref->next_active_element();
   Element *e_ref_new = I_ref_new->next_active_element();
   int counter = 0;
@@ -992,12 +1001,12 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
         e_ref_new_right = NULL;
         int num_cand = e->create_cand_list(adapt_type, e_ref->p, -1, cand_list);
         // debug:
-        e->print_cand_list(num_cand, cand_list);
+        //e->print_cand_list(num_cand, cand_list);
         // reference element was p-refined
         choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
                                       0, norm, y_prev_ref, 
-                                      this->bc_left_dir_values,
-	  		              this->bc_right_dir_values);
+                                      mesh->bc_left_dir_values,
+	  		              mesh->bc_right_dir_values);
       }
       else { // element 'e' was refined in space for reference solution
         e_ref_left = e_ref;
@@ -1009,37 +1018,38 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
         // reference element was hp-refined
         choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
                                       num_cand, cand_list, 1, norm, y_prev_ref, 
-                                      this->bc_left_dir_values,
-			              this->bc_right_dir_values);
+                                      mesh->bc_left_dir_values,
+			              mesh->bc_right_dir_values);
       }
-      // e_last... element in coarse mesh that will be refined,
+      // e_new_last... element in mesh_new that will be refined,
       // e_ref_left... corresponding element in fine mesh (if reference 
       //               refinement was p-refinement. In this case 
       //               e_ref_right == NULL
       // e_ref_left, e_ref_right... corresponding pair of elements 
       // in the fine mesh if reference refinement was hp-refinement
-      Element *e_last = e;
-      // moving pointer 'e' to the next element in coarse mesh
-      // and 'e_ref' to the next element in fine mesh 
+      Element *e_new_last = e_new;
+      // moving pointers 'e' and 'e_new' to the next position in coarse meshes
+      // and 'e_ref' and 'e_ref_new' to the next position in fine meshes 
       e = I->next_active_element();
+      e_new = I_new->next_active_element();
       e_ref = I_ref->next_active_element();
       e_ref_new = I_ref_new->next_active_element();
-      // perform the refinement of element e_last
-      e_last->refine(cand_list[choice]);
+      // perform the refinement of element e_new_last
+      e_new_last->refine(cand_list[choice]);
       printf("  Refined element (%g, %g), cand = (%d %d %d)\n", 
-             e_last->x1, e_last->x2, cand_list[choice][0], 
+             e_new_last->x1, e_new_last->x2, cand_list[choice][0], 
              cand_list[choice][1], cand_list[choice][2]);
-      if(cand_list[choice][0] == 1) this->n_active_elem++; 
+      if(cand_list[choice][0] == 1) mesh_new->n_active_elem++; 
       // perform corresponding refinement(s) in the fine mesh
-      if (e_last->level == e_ref_left->level) { // ref. refinement of 'e_last' was 
-                                                // p-refinement so also future ref. 
-                                                // refinements will be p-refinements
+      if (e_new_last->level == e_ref_left->level) { // ref. refinement of 'e_last' was 
+                                                    // p-refinement so also future ref. 
+                                                    // refinements will be p-refinements
         if (cand_list[choice][0] == 0) { // e_last is being p-refined, thus also
                                          // e_ref_new_left needs to be p-refined
           int new_p = cand_list[choice][1];
 	  e_ref_new_left->refine(0, new_p + 1, -1);
         }
-        else { // e_last is being split, thus e_ref_new_left needs to be 
+        else { // e_new_last is being split, thus e_ref_new_left needs to be 
                // split as well
           int new_p_left = cand_list[choice][1];
           int new_p_right = cand_list[choice][2];
@@ -1049,15 +1059,15 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
       }
       else { // ref. refinement was hp-refinement, so also futute
              // ref. refinements will be hp-refinements
-        if (cand_list[choice][0] == 0) { // e_last is being p-refined, thus also 
+        if (cand_list[choice][0] == 0) { // e_new_last is being p-refined, thus also 
                                          // e_ref_new_left and e_ref_new_right  
                                          // will just be p-refined
           int new_p = cand_list[choice][1];
 	  e_ref_new_left->refine(0, new_p + 1, -1);
 	  e_ref_new_right->refine(0, new_p + 1, -1);
         }
-        else { // e_last is being hp-refined, so we need to split both e_ref_new_left
-               // and e_ref_new_right
+        else { // e_new_last is being hp-refined, so we need to 
+               // split both e_ref_new_left and e_ref_new_right
           int new_p_left = cand_list[choice][1];
           int new_p_right = cand_list[choice][2];
 	  e_ref_new_left->refine(1, new_p_left + 1, new_p_left + 1);
@@ -1069,6 +1079,7 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
     }
     else {
       e = I->next_active_element();
+      e_new = I_new->next_active_element();
       e_ref = I_ref->next_active_element();
       e_ref_new = I_ref_new->next_active_element();
       if (e->level != e_ref->level) { 
@@ -1077,34 +1088,37 @@ void Mesh::adapt(int norm, int adapt_type, double threshold, Mesh* &mesh_ref,
       }    
     }
   }
-  int n_dof_new = this->assign_dofs();
-  printf("Coarse mesh refined (%d DOF)\n", n_dof_new);
-
-  // At this point local refinements of 'this' are finished, and 
-  // 'mesh_ref_new' is the corresponding refinement of 'mesh_ref. 
-  // Thus in the next step we need to assign dofs in mesh_ref_new 
-  // and transfer the reference solution from mesh_ref to mesh_ref_new.
+  // enumerate dofs in both new meshes
+  int n_dof_new = mesh_new->assign_dofs();
   int n_dof_ref_new = mesh_ref_new->assign_dofs();
+  printf("Coarse mesh refined (%d elem, %d DOF)\n", 
+         mesh_new->get_n_active_elem(), n_dof_new);
+  printf("Fine mesh updated (%d elem, %d DOF)\n", 
+  	 mesh_ref_new->get_n_active_elem(), n_dof_ref_new);
+
+  // Transfer last coarse and fine mesh solutions to the new coarse and 
+  // fine meshes, respectively. 
+  double *y_prev_new = new double[n_dof_new];
   double *y_prev_ref_new = new double[n_dof_ref_new];
-  printf("Reference mesh updated (%d elem, %d DOF)\n", 
-	 mesh_ref_new->get_n_active_elem(), n_dof_ref_new);
-
-  // Transfer reference solution from the previous reference mesh to 
-  // the new one 
+  transfer_solution(mesh, mesh_new, y_prev, y_prev_new);
+  printf("Last coarse mesh solution copied to new coarse mesh.\n");
   transfer_solution(mesh_ref, mesh_ref_new, y_prev_ref, y_prev_ref_new);
-  printf("Last reference solution copied to new reference mesh.\n");
+  printf("Last fine mesh solution copied to new fine mesh.\n");
 
-  // Delete old reference mesh and rename 'mesh_ref_new' to 'mesh_ref'
+  // Delete old meshes and copy the new ones in place of them
+  delete mesh;
   delete mesh_ref;
+  mesh = mesh_new;
   mesh_ref = mesh_ref_new;
 
-  // Delete y_prev_ref and rename y_prev_ref_new to y_prev_ref.
+  // Do the same with the coefficients vectors.
+  delete [] y_prev;
   delete [] y_prev_ref;
+  y_prev = y_prev_new;
   y_prev_ref = y_prev_ref_new;
 
-  // returning the new N_dof and N_dof_ref
+  // Last adjust the number of dofs in each mesh
   n_dof = n_dof_new;
   n_dof_ref = n_dof_ref_new;
-  
 }
 

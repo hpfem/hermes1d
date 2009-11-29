@@ -147,7 +147,7 @@ int main() {
   mesh->set_bc_left_dirichlet(0, YA);
   int N_dof = mesh->assign_dofs();
 
-  // Create discrete problem on coarse mesh
+  // Create discrete problem
   dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian);
   dp->add_vector_form(0, residual);
@@ -322,15 +322,16 @@ int main() {
     if(err_est_rel < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 4) break;
+    if (adapt_iterations == 2) break;
 
-    // Refine coarse mesh elements whose id_array >= 0. 
-    // Returns updated reference mesh that contains the previous
-    // reference solution. The coefficient vector 'y_prev_ref',
-    // and N_dor and N_dof_ref are updated as well. Coarse mesh 
-    // solution becomes undefined. 
-    mesh->adapt(NORM, ADAPT_TYPE, THRESHOLD, mesh_ref, y_prev, 
-                y_prev_ref, N_dof, N_dof_ref, err_est_squared_array);
+    // Refine coarse mesh elements whose id_array >= 0, and 
+    // adjust the reference mesh accordingly.  
+    // Returns updated coarse and reference meshes, with the last 
+    // coarse and reference mesh solutions on them, respectively. 
+    // The coefficient vectors and numbers of degrees of freedom 
+    // on both meshes are also updated. 
+    adapt(NORM, ADAPT_TYPE, THRESHOLD, err_est_squared_array,
+          mesh, mesh_ref, y_prev, y_prev_ref, N_dof, N_dof_ref);
 
     adapt_iterations++;
   };

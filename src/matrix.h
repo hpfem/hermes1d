@@ -100,9 +100,6 @@ void lubksb(double** a, int n, int* indx, T* b)
   }
 }
 
-
-
-
 /// Given a positive-definite symmetric matrix a[n][n], this routine constructs its Cholesky
 /// decomposition, A = L*L^T . On input, only the upper triangle of a need be given; it is not
 /// modified. The Cholesky factor L is returned in the lower triangle of a, except for its diagonal
@@ -150,6 +147,7 @@ public:
     virtual void zero() = 0;
     virtual void copy_into(Matrix *m) = 0;
     virtual void print() = 0;
+    virtual void set_size(int s) = 0;
 };
 
 class Triple {
@@ -179,7 +177,7 @@ class CooMatrix : public Matrix {
             this->free_data();
         }
         void free_data() {
-            Triple *t = this->list;
+	  Triple *t = this->list;
             while (t != NULL) {
                 Triple *t_old = t;
                 t = t->next;
@@ -245,6 +243,9 @@ class CooMatrix : public Matrix {
                 t = t->next;
             }
         }
+
+        virtual void set_size(int s) { size = s;}
+
 
     private:
         int size;
@@ -324,6 +325,8 @@ class DenseMatrix : public Matrix {
             return this->mat;
         }
 
+        virtual void set_size(int s) { size = s;}
+
     private:
         int size;
         double **mat;
@@ -402,6 +405,8 @@ class CSRMatrix : public Matrix {
             }
             printf("\n");
         }
+
+        virtual void set_size(int s) { size = s;}
 
         int *get_IA() {
             return this->IA;
