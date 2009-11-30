@@ -4,6 +4,7 @@
 // Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
 #include "discrete.h"
+#include "solver_umfpack.h"
 
 void DiscreteProblem::add_matrix_form(int i, int j, matrix_form fn)
 {
@@ -320,12 +321,60 @@ void DiscreteProblem::assemble_matrix(Mesh *mesh, Matrix *mat, double *y_prev) {
 } 
 
 // construct residual vector only
-void DiscreteProblem::assemble_vector(Mesh *mesh, double *res, double *y_prev) {
+void DiscreteProblem::assemble_vector(Mesh *mesh, double *res, 
+                                      double *y_prev) {
   Matrix *void_mat = NULL;
   assemble(mesh, void_mat, res, y_prev, 2);
 } 
 
+// Newton's iteration
+int newton(DiscreteProblem *dp, Mesh *mesh, double *y_prev, double tol, int &iter_num) 
+{
+  iter_num = 1;
+  int n_dof = mesh->get_n_dof();
+  double *res = new double[n_dof];
+  if (res == NULL)
+    error("res could not be allocated in newton().");
 
+  CooMatrix *mat = NULL;
+  while (1) {
+    // Reset the matrix:
+    if (mat != NULL) delete mat;
+    mat = new CooMatrix();
+
+    // construct residual vector
+    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
+
+    // calculate L2 norm of residual vector
+    double res_norm = 0;
+    for(int i=0; i<n_dof; i++) res_norm += res[i]*res[i];
+    res_norm = sqrt(res_norm);
+
+    // if residual norm less than 'tol', quit
+    // latest solution is in y_prev
+    printf("Residual norm: %.15f\n", res_norm);
+    if(res_norm < tol) break;
+
+    // changing sign of vector res
+    for(int i=0; i<n_dof; i++) res[i]*= -1;
+
+    // solving the matrix system
+    //solve_linear_system_umfpack((CooMatrix*)mat, res);
+    solve_linear_system_umfpack((CooMatrix*)mat, res);
+
+    // updating y_prev by new solution which is in res
+    for(int i=0; i<n_dof; i++) y_prev[i] += res[i];
+
+    iter_num++;
+    if (iter_num >= MAX_NEWTON_ITER_NUM) 
+      return 0; // no success
+  }
+  if (mat != NULL) delete mat;
+  if (res != NULL) delete [] res;
+
+  // finished successfully
+  return 1;
+}
 
 
 

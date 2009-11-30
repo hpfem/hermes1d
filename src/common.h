@@ -21,6 +21,8 @@
 
 const int MAX_P = 40;                  // this is the maximum polynomial degree allowed in elements
                                        // WARNING: projections taking place in transfer_solution()
+const int MAX_NEWTON_ITER_NUM = 100;   // maximum allowed number of Newton's iterations
+
 const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
                                        // candidates of an element
 

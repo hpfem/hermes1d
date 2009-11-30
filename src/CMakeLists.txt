@@ -4,6 +4,8 @@ set(SRC
     quad_std.cpp transforms.cpp adapt.cpp graph.cpp h1_polys.cpp
     )
 
+include_directories(${UMFPACK_INCLUDE_DIR} ${AMD_INCLUDE_DIR})
+
 add_library(${HERMES_BIN} SHARED ${SRC})
 if(DEBUG)
     set_target_properties(hermes1d-debug PROPERTIES COMPILE_FLAGS
