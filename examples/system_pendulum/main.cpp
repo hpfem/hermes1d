@@ -141,19 +141,22 @@ int main() {
   dp->add_vector_form(0, residual_0);
   dp->add_vector_form(1, residual_1);
 
-  // allocate Jacobi matrix and residual
-  Matrix *mat;
-  double *y_prev = new double[N_dof];
+  // Allocate vectors res and y_prev
   double *res = new double[N_dof];
+  double *y_prev = new double[N_dof];
+  if (res == NULL || y_prev == NULL)
+    error("res or y_prev could not be allocated in main().");
 
   // zero initial condition for the Newton's method
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Newton's loop
   int newton_iterations = 1;
+  CooMatrix *mat = NULL;
   while (1) {
-    // zero the matrix:
-    mat = new CooMatrix(N_dof);
+    // Reset the matrix:
+    if (mat != NULL) delete mat;
+    mat = new CooMatrix();
 
     // construct residual vector
     dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 

@@ -255,8 +255,7 @@ int main() {
 
       newton_iterations_ref++;
     }
-    printf("Finished fine mesh Newton loop (%d iter).\n", 
-           newton_iterations_ref);
+    printf("Finished fine mesh Newton loop (%d iter).\n", newton_iterations_ref);
 
     // Starting with second adaptivity step, obtain new coarse 
     // mesh solution via Newton's method. Initial condition is 

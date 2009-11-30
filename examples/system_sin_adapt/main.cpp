@@ -183,7 +183,6 @@ int main() {
   dp->add_vector_form(0, residual_0);
   dp->add_vector_form(1, residual_1);
 
-
   // Allocate vectors res and y_prev
   double *res = new double[N_dof];
   double *y_prev = new double[N_dof];

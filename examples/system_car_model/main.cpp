@@ -73,11 +73,9 @@ void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp,
            zeta_ctrl[1], zeta_ctrl[2], zeta_ctrl[3]); 
     // }
 
-
-  // Newton's iteration
-  int newton_iterations = 1;
-              
+            
   // Newton's loop
+  int newton_iterations = 1;
   CooMatrix *mat = NULL;
   while (1) {
     // Reset the matrix:

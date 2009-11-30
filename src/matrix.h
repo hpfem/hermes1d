@@ -143,8 +143,8 @@ public:
     virtual ~Matrix() { }
     virtual int get_size() = 0;
     virtual void add(int m, int n, double v) = 0;
+    virtual void set_zero() = 0;
     virtual double get(int m, int n) = 0;
-    virtual void reset() = 0;
     virtual void copy_into(Matrix *m) = 0;
     virtual void print() = 0;
 };
@@ -190,15 +190,10 @@ class CooMatrix : public Matrix {
             delete t_old;
           }
         }
-        virtual void reset() {
-          error("the function matrix->reset() segfaults sometimes, do not use it.");
-          if (DEBUG_MATRIX) {
-    	    printf("Matrix_reset\n");
-          }
-	  this->free_data();
-          this->list = NULL;
-          this->list_last = NULL;
-          this->size = 0;
+        virtual void set_zero() {
+            this->free_data();
+            this->list = NULL;
+            this->list_last = NULL;
         }
         virtual void add(int m, int n, double v) {
           // adjusting size if necessary
@@ -217,6 +212,14 @@ class CooMatrix : public Matrix {
               this->list_last = this->list_last->next;
           }
         }
+        virtual void copy_into(Matrix *m) {
+            m->set_zero();
+            Triple *t = this->list;
+            while (t != NULL) {
+                m->add(t->i, t->j, t->v);
+                t = t->next;
+            }
+        }
         virtual double get(int m, int n) {
             double v=0;
             Triple *t = this->list;
@@ -232,15 +235,6 @@ class CooMatrix : public Matrix {
 
         virtual int get_size() {
             return this->size;
-        }
-
-        virtual void copy_into(Matrix *m) {
-            m->reset();
-            Triple *t = this->list;
-            while (t != NULL) {
-                m->add(t->i, t->j, t->v);
-                t = t->next;
-            }
         }
 
         virtual void print() {
@@ -268,7 +262,9 @@ class DenseMatrix : public Matrix {
         DenseMatrix(int size) {
             this->mat = new_matrix<double>(size, size);
             this->size = size;
-            this->reset();
+            for (int i = 0; i<size; i++)
+              for (int j = 0; j<size; j++) this->mat[i][j] = 0;
+              
         }
         DenseMatrix(Matrix *m) {
             this->mat = new_matrix<double>(m->get_size(), m->get_size());
@@ -277,19 +273,18 @@ class DenseMatrix : public Matrix {
             this->size = m->get_size();
             //this->size = size;
             m->copy_into(this);
+
         }
         ~DenseMatrix() {
             delete[] this->mat;
         }
-        virtual void reset() {
-            // erase matrix
-            for(int i = 0; i < this->size; i++)
-                for(int j = 0; j < this->size; j++)
-                    this->mat[i][j] = 0;
-        }
         virtual void add(int m, int n, double v) {
             this->mat[m][n] += v;
             //printf("calling add: %d %d %f\n", m, n, v);
+        }
+        virtual void set_zero() {
+            for (int i = 0; i<size; i++)
+              for (int j = 0; j<size; j++) this->mat[i][j] = 0;
         }
         virtual double get(int m, int n) {
             return this->mat[m][n];
@@ -299,7 +294,7 @@ class DenseMatrix : public Matrix {
             return this->size;
         }
         virtual void copy_into(Matrix *m) {
-            m->reset();
+	    m->set_zero();
             for (int i = 0; i < this->size; i++)
                 for (int j = 0; j < this->size; j++) {
                     double v = this->get(i, j);
@@ -339,11 +334,11 @@ class CSRMatrix : public Matrix {
     public:
         CSRMatrix(CooMatrix *m) {
             DenseMatrix *dmat = new DenseMatrix(m);
-            this->copy_from_dense_matrix(dmat);
+            this->add_from_dense_matrix(dmat);
             delete dmat;
         }
         CSRMatrix(DenseMatrix *m) {
-            this->copy_from_dense_matrix(m);
+            this->add_from_dense_matrix(m);
         }
         ~CSRMatrix() {
             delete[] this->A;
@@ -351,7 +346,7 @@ class CSRMatrix : public Matrix {
             delete[] this->JA;
         }
 
-        void copy_from_dense_matrix(DenseMatrix *m) {
+        void add_from_dense_matrix(DenseMatrix *m) {
             this->size = m->get_size();
             this->nnz = 0;
             for(int i = 0; i < this->size; i++)
@@ -378,21 +373,21 @@ class CSRMatrix : public Matrix {
             }
         }
 
-        virtual void reset() {
-            error("Not implemented.");
-        }
         virtual void add(int m, int n, double v) {
-            error("Not implemented.");
+            error("CSR matrix add() not implemented.");
+        }
+        virtual void set_zero() {
+            error("CSR matrix set_zero() not implemented.");
         }
         virtual double get(int m, int n) {
-            error("Not implemented.");
+            error("CSR matrix get() not implemented.");
         }
 
         virtual int get_size() {
             return this->size;
         }
         virtual void copy_into(Matrix *m) {
-            error("Not implemented.");
+            error("CSR matrix copy_into() not implemented.");
         }
 
         virtual void print() {

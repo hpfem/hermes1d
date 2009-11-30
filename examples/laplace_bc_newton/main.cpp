@@ -93,19 +93,22 @@ int main() {
   dp->add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
   dp->add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
-  // allocate Jacobi matrix and residual
-  Matrix *mat;
-  double *y_prev = new double[N_dof];
+  // Allocate vectors res and y_prev
   double *res = new double[N_dof];
+  double *y_prev = new double[N_dof];
+  if (res == NULL || y_prev == NULL)
+    error("res or y_prev could not be allocated in main().");
 
   // zero initial condition for the Newton's method
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
-  int newton_iterations = 1;
   // Newton's loop
+  int newton_iterations = 1;
+  CooMatrix *mat = NULL;
   while (1) {
-    // zero the matrix:
-    mat = new DenseMatrix(N_dof);
+    // Reset the matrix:
+    if (mat != NULL) delete mat;
+    mat = new CooMatrix();
 
     // construct residual vector
     dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
@@ -132,6 +135,7 @@ int main() {
     // updating y_prev by new solution which is in res
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
     printf("Finished Newton iteration: %d\n", newton_iterations);
+
     newton_iterations++;
   }
 

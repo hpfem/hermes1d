@@ -89,8 +89,8 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
         // backup of projectionmatrix
         Matrix *mat_left = new DenseMatrix(n);
         Matrix *mat_right = new DenseMatrix(n);
-        mat_left->reset();
-        mat_right->reset();
+        mat_left->set_zero();
+        mat_right->set_zero();
         for (int r=0; r < n; r++) {
 	    for (int s=0; s < n; s++) {
                 mat_left->add(r, s, proj_matrix[r][s]);

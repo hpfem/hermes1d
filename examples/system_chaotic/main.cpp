@@ -257,8 +257,6 @@ int main() {
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Damping loop
-  Mesh *mesh_ref;
-  double *y_prev_ref;
   for(int damp_step = 1; damp_step < DAMPING_STEPS+1; damp_step++) {
     DAMPING = sin(damp_step*(1./DAMPING_STEPS)*M_PI/2.);
 

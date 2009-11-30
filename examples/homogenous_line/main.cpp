@@ -1,8 +1,6 @@
 #include "hermes1d.h"
 #include "solver_umfpack.h"
 
-#define PI 3.141592653
-
 // ********************************************************************
 // This example shows solution of harmonic steady state on the homoegenous transmision line.
 // Wave propagation is described by two linear differencial equation with complex coefficients.
@@ -22,7 +20,7 @@ double C=10e-12;              // capacitance [F/m]
 double G=1e-9;                // conductance [S/m]
 double R=1e-3;                // resistance [Ohm/m]
 double l=10 ;                  // length of the line [m]
-double omega=2*PI*3e8;        //
+double omega=2*M_PI*3e8;        //
 double Zl=60;                  // load impedance[Ohm]
 
 //double Val_newton_alpha_U_Re=-R/Zl;

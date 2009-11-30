@@ -1,8 +1,9 @@
 #include "hermes1d.h"
 
 // ********************************************************************
-// This example shows solution of harmonic steady state on the homoegenous transmision line.
-// Wave propagation is described by two linear differencial equation with complex coefficients.
+// This example shows solution of harmonic steady state on the homogeneous 
+// transmision line. Wave propagation is described by two linear 
+// differential equation with complex coefficients.
 // dU(x)/dx = -(R+j\omega L)I(x)
 // dI(x)/dx = -(G+j\omega C)U(x)
 // These equations are rewrited into four equations with real coefficients
@@ -486,8 +487,7 @@ int main() {
 
       newton_iterations_ref++;
     }
-    printf("Finished fine mesh Newton loop (%d iter).\n", 
-           newton_iterations_ref);
+    printf("Finished fine mesh Newton loop (%d iter).\n", newton_iterations_ref);
 
     // Starting with second adaptivity step, obtain new coarse 
     // mesh solution via Newton's method. Initial condition is 
