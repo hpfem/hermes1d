@@ -66,7 +66,7 @@ int main() {
   dp->add_matrix_form(0, 0, jacobian);
   dp->add_vector_form(0, residual);
 
-  // Allocate vectors res and y_prev
+  // Allocate vector y_prev
   double *y_prev = new double[N_dof];
   if (y_prev == NULL) error("y_prev could not be allocated in main().");
 
@@ -91,11 +91,10 @@ int main() {
   int N_dof_ref = mesh_ref->assign_dofs();
   printf("Fine mesh created (%d DOF).\n", N_dof_ref);
 
-  // Allocate vectors y_prev_ref and res_ref
+  // Allocate vector y_prev_ref
   double *y_prev_ref = new double[N_dof_ref];
-  double *res_ref = new double[N_dof_ref];
-  if (y_prev_ref == NULL || res_ref == NULL) 
-    error("y_prev_ref or res_ref could not be allocated in main().");
+  if (y_prev_ref == NULL) 
+    error("y_prev_ref could not be allocated in main().");
 
   // Transfer coarse mesh solution to the fine mesh
   transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref);
