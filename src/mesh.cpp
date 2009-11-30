@@ -1124,3 +1124,34 @@ void adapt(int norm, int adapt_type, double threshold,
   n_dof_ref = n_dof_ref_new;
 }
 
+void adapt_plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, 
+              double *y_prev_ref, int norm, int exact_sol_provided, 
+              exact_sol_type exact_sol) 
+{
+  // Plot the coarse mesh solution
+  Linearizer l(mesh);
+  const char *out_filename = "solution.gp";
+  l.plot_solution(out_filename, y_prev);
+
+  // Plot the fine mesh solution
+  Linearizer lxx(mesh_ref);
+  const char *out_filename2 = "solution_ref.gp";
+  lxx.plot_solution(out_filename2, y_prev_ref);
+
+  // Plot the coarse and fine meshes
+  const char *mesh_filename = "mesh.gp";
+  mesh->plot(mesh_filename);
+  const char *mesh_ref_filename = "mesh_ref.gp";
+  mesh_ref->plot(mesh_ref_filename);
+
+  // Plot the error estimate (difference between 
+  // coarse and fine mesh solutions)
+  const char *err_est_filename = "error_est.gp";
+  mesh->plot_error_est(norm, err_est_filename, mesh_ref, y_prev, y_prev_ref);
+
+  // Plot error wrt. exact solution (if available)
+  if (exact_sol_provided) {   
+    const char *err_exact_filename = "error_exact.gp";
+    mesh->plot_error_exact(norm, err_exact_filename, y_prev, exact_sol);
+  }
+}

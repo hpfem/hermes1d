@@ -163,4 +163,9 @@ void adapt(int norm, int adapt_type, double threshold,
            double * &y_prev, double* &y_prev_ref, 
            int &n_dof, int &n_dof_ref);
 
+void adapt_plotting(Mesh *mesh, Mesh *mesh_ref, 
+              double *y_prev, double *y_prev_ref,
+              int norm, int exact_sol_provided, 
+              exact_sol_type exact_sol); 
+
 #endif
