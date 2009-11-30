@@ -18,16 +18,17 @@ double A = 0, B = 20;       // domain end points
 int P_init = 2;             // initial polynomal degree
 
 // Damping parameter
-int DAMPING_STEPS = 20;          // This is the number of damping steps. The entire problem
-                                 // will be run repeatedly, with the DAMPING parameter 
-                                 // increased from 0 to 1 in DAMPING_STEPS. Every time, 
-                                 // the last result will be used as an initial condition for the 
-                                 // new computation.   
-double DAMPING;                  // DAMPING is an artificial parameter used to reduce the strength 
-                                 // of the nonlinearity. (The nonlinearity is multiplied with it.)
+int DAMPING_STEPS = 20;  // Number of damping steps. The entire problem
+                         // will be run repeatedly, with the DAMPING parameter 
+                         // increased from 0 to 1 in DAMPING_STEPS. Every time, 
+                         // the last result is used as initial cond. for the 
+                         // new computation.   
+double DAMPING;          // DAMPING is an artificial param. used to 
+                         // reduce the strength of the nonlinearity. 
+                         // (The nonlinearity is multiplied with it.)
 
 // Error tolerance
-double TOL_NEWTON = 1e-5;        // tolerance for the Newton's method 
+double TOL_NEWTON = 1e-5;// tolerance for the Newton's method 
 
 // Boundary conditions
 double Val_dir_left_1 = 1;
@@ -35,189 +36,8 @@ double Val_dir_left_2 = 0;
 double Val_dir_left_3 = 0;
 double Val_dir_left_4 = 0;
 
-// ********************************************************************
-
-double jacobian_1_1(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (dudx[i] - DAMPING*(1 - u_prev[1][i]*u_prev[1][i])*u[i])*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_1_2(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (DAMPING*2*u_prev[0][i]*u_prev[1][i] + 1)*u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_2_1(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_2_2(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_2_3(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_3_2(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_3_3(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_3_4(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_4_3(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += -u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-double jacobian_4_4(int num, double *x, double *weights,
-                double *u, double *dudx, double *v, double *dvdx,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-double residual_1(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (du_prevdx[0][i] - DAMPING*(1 - u_prev[1][i]*u_prev[1][i])*u_prev[0][i]
-	    + u_prev[1][i])*v[i]*weights[i];
-  }
-  return val;
-};
-
-double residual_2(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (du_prevdx[1][i] - u_prev[0][i] + u_prev[2][i])*v[i]*weights[i];
-  }
-  return val;
-};
-
-double residual_3(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (du_prevdx[2][i] - u_prev[1][i] + u_prev[3][i])*v[i]*weights[i];
-  }
-  return val;
-};
-
-
-double residual_4(int num, double *x, double *weights,
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (du_prevdx[3][i] - u_prev[2][i])*v[i]*weights[i];
-  }
-  return val;
-};
+// Weak forms for Jacobi matrix and residual
+#include "forms.cpp"
 
 /******************************************************************************/
 int main() {
@@ -247,11 +67,9 @@ int main() {
   dp->add_vector_form(2, residual_3);
   dp->add_vector_form(3, residual_4);
 
-  // Allocate vectors res and y_prev
-  double *res = new double[N_dof];
+  // Allocate vector y_prev
   double *y_prev = new double[N_dof];
-  if (res == NULL || y_prev == NULL)
-    error("res or y_prev could not be allocated in main().");
+  if (y_prev == NULL) error("res or y_prev could not be allocated in main().");
 
   // Set y_prev zero
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
@@ -263,47 +81,18 @@ int main() {
     printf("Damping: %g\n", DAMPING);
 
     // Newton's loop
-    int newton_iterations = 1;
-    CooMatrix *mat = NULL;
-    while (1) {
-      // Reset the matrix:
-      if (mat != NULL) delete mat;
-      mat = new CooMatrix();
+    int success, iter_num;
+    success = newton(dp, mesh, y_prev, TOL_NEWTON, iter_num);
+    if (!success) error("Newton's method did not converge."); 
+    printf("Finished Newton's iteration (%d iter).\n", iter_num);
+  }
 
-      // Construct residual vector
-      dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
-
-      // Calculate L2 norm of residual vector
-      double res_norm = 0;
-      for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
-      res_norm = sqrt(res_norm);
-
-      // If residual norm less than TOL_NEWTON, quit
-      // latest solution is in y_prev
-      printf("Residual L2 norm: %.15f\n", res_norm);
-      if(res_norm < TOL_NEWTON) break;
-
-      // Change sign of vector res
-      for(int i=0; i<N_dof; i++) res[i]*= -1;
-
-      // Solve the matrix system
-      solve_linear_system_umfpack((CooMatrix*)mat, res);
-
-      // Update y_prev by new solution which is in res
-      for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-
-      newton_iterations++;
-    }
-    printf("Finished Newton loop (%d iter).\n", newton_iterations);
-  } // end of the damping loop
-
-  // plotting the solution
+  // Plot the solution
   Linearizer l(mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
   printf("Done.\n");
-  if (y_prev != NULL) delete[] y_prev;
-  if (res != NULL) delete[] res;
+  delete[] y_prev;
   return 1;
 }

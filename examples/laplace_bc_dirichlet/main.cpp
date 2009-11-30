@@ -18,7 +18,7 @@ double Val_dir_left = 1;                // Dirichlet condition left
 double Val_dir_right = 1;               // Dirichlet condition right
 
 // Tolerance for the Newton's method
-double TOL = 1e-5;
+double TOL_NEWTON = 1e-5;
 
 // Function f(x)
 double f(double x) {
@@ -26,46 +26,8 @@ double f(double x) {
   //return 1;
 }
 
-// ********************************************************************
-
-// bilinear form for the Jacobi matrix 
-// num...number of Gauss points in element
-// x[]...Gauss points
-// weights[]...Gauss weights for points in x[]
-// u...basis function
-// v...test function
-// u_prev...previous solution (all solution components)
-double jacobian(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i]*dvdx[i]*weights[i];
-  }
-  return val;
-};
-
-// (nonlinear) form for the residual vector
-// num...number of Gauss points in element
-// x[]...Gauss points
-// weights[]...Gauss weights for points in x[]
-// u...approximate solution
-// v...test function
-// u_prev...previous solution (all solution components)
-double residual(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],  
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (du_prevdx[0][i]*dvdx[i] - f(x[i])*v[i])*weights[i];
-  }
-  return val;
-};
+// Weak forms for Jacobi matrix and residual
+#include "forms.cpp"
 
 /******************************************************************************/
 int main() {
@@ -81,53 +43,25 @@ int main() {
   dp->add_matrix_form(0, 0, jacobian);
   dp->add_vector_form(0, residual);
 
-  // Allocate vectors res and y_prev
-  double *res = new double[N_dof];
+  // Allocate vector y_prev
   double *y_prev = new double[N_dof];
-  if (res == NULL || y_prev == NULL)
-    error("res or y_prev could not be allocated in main().");
+  if (y_prev == NULL) error("res or y_prev could not be allocated in main().");
 
-  // zero initial condition for the Newton's method
+  // Set zero initial condition for the Newton's method
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Newton's loop
-  int newton_iterations = 1;
-  CooMatrix *mat = NULL;
-  while (1) {
-    // Reset the matrix:
-    if (mat != NULL) delete mat;
-    mat = new CooMatrix();
+  int success, iter_num;
+  success = newton(dp, mesh, y_prev, TOL_NEWTON, iter_num);
+  if (!success) error("Newton's method did not converge."); 
+  printf("Finished Newton's iteration (%d iter).\n", iter_num);
 
-    // construct residual vector
-    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
-
-    // calculate L2 norm of residual vector
-    double res_norm = 0;
-    for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
-    res_norm = sqrt(res_norm);
-
-    // if residual norm less than TOL, quit
-    // latest solution is in y_prev
-    printf("Residual norm (coarse mesh): %.15f\n", res_norm);
-    if(res_norm < TOL) break;
-
-    // changing sign of vector res
-    for(int i=0; i<N_dof; i++) res[i]*= -1;
-
-    // solving the matrix system
-    solve_linear_system_umfpack((CooMatrix*)mat, res);
-
-    // updating y_prev by new solution which is in res
-    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-
-    newton_iterations++;
-  }
-  printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
-
+  // Plot the solution
   Linearizer l(mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
   printf("Done.\n");
+  delete [] y_prev;
   return 1;
 }

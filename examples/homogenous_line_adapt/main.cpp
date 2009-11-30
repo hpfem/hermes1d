@@ -219,6 +219,7 @@ int main() {
   graph.save("conv_dof.gp");
 
   printf("Done.\n");
+  delete [] y_prev;
+  delete [] y_prev_ref;
   return 1;
-
 }

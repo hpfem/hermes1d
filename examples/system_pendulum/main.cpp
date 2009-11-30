@@ -31,108 +31,25 @@ int P_init = 1;            // initial polynomal degree
 double k = 0.5;
 
 // Tolerance for the Newton's method
-double TOL = 1e-5;
+double TOL_NEWTON = 1e-5;
 
 // Boundary conditions
 double Init_angle = M_PI/2.;      // initial angle
 double Init_vel = 0;              // initial velocity
 
-// ********************************************************************
-
-// Jacobi matrix block 0, 0 (equation 0, solution component 0)
-// Note: u_prev[c][i] contains the values of solution component c 
-// in integration point x[i]. similarly for du_prevdx.
-double jacobian_0_0(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-// Jacobi matrix block 0, 1 (equation 0, solution component 1)
-double jacobian_0_1(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val -= u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-// Jacobi matrix block 1, 0 (equation 1, solution component 0)
-double jacobian_1_0(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += k*k * cos(u_prev[0][i])*u[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-// Jacobi matrix block 1, 1 (equation 1, solution component 1)
-double jacobian_1_1(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
-                void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += dudx[i]*v[i]*weights[i];
-  }
-  return val;
-};
-
-// Residual part 0 (equation 0)
-double residual_0(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (du_prevdx[0][i]*v[i] - u_prev[1][i]*v[i])*weights[i];
-  }
-  return val;
-};
-
-// Residual part 1 (equation 1) 
-double residual_1(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += (k*k*sin(u_prev[0][i])*v[i] + du_prevdx[1][i]*v[i])*weights[i];
-  }
-  return val;
-};
+// Weak forms for Jacobi matrix and residual
+#include "forms.cpp"
 
 /******************************************************************************/
 int main() {
-  // create mesh
+  // Create mesh
   Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, Init_angle);
   mesh->set_bc_left_dirichlet(1, Init_vel);
   int N_dof = mesh->assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
-  // register weak forms
+  // Register weak forms
   DiscreteProblem *dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian_0_0);
   dp->add_matrix_form(0, 1, jacobian_0_1);
@@ -141,53 +58,25 @@ int main() {
   dp->add_vector_form(0, residual_0);
   dp->add_vector_form(1, residual_1);
 
-  // Allocate vectors res and y_prev
-  double *res = new double[N_dof];
+  // Allocate vector y_prev
   double *y_prev = new double[N_dof];
-  if (res == NULL || y_prev == NULL)
-    error("res or y_prev could not be allocated in main().");
+  if (y_prev == NULL) error("res or y_prev could not be allocated in main().");
 
-  // zero initial condition for the Newton's method
+  // Set zero initial condition for the Newton's method
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Newton's loop
-  int newton_iterations = 1;
-  CooMatrix *mat = NULL;
-  while (1) {
-    // Reset the matrix:
-    if (mat != NULL) delete mat;
-    mat = new CooMatrix();
+  int success, iter_num;
+  success = newton(dp, mesh, y_prev, TOL_NEWTON, iter_num);
+  if (!success) error("Newton's method did not converge."); 
+  printf("Finished Newton's iteration (%d iter).\n", iter_num);
 
-    // construct residual vector
-    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
-
-    // calculate L2 norm of residual vector
-    double res_norm = 0;
-    for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
-    res_norm = sqrt(res_norm);
-    printf("Residual norm (coarse mesh): %.15f\n", res_norm);
-
-    // if residual norm less than TOL, quit
-    // latest solution is in y_prev
-    if(res_norm < TOL) break;
-
-    // changing sign of vector res
-    for(int i=0; i<N_dof; i++) res[i]*= -1;
-
-    // solving the matrix system
-    solve_linear_system_umfpack((CooMatrix*)mat, res);
-
-    // updating y_prev by new solution which is in res
-    for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
-
-    newton_iterations++;
-  }
-  printf("Finished coarse mesh Newton loop (%d iter).\n", newton_iterations);
-
+  // Plot the solution
   Linearizer l(mesh);
   const char *out_filename = "solution.gp";
   l.plot_solution(out_filename, y_prev);
 
   printf("Done.\n");
+  delete [] y_prev;
   return 1;
 }

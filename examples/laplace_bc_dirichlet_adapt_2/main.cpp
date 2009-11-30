@@ -191,7 +191,8 @@ int main() {
 
   printf("Done.\n");
   return 1;
-
+  delete [] y_prev;
+  delete [] y_prev_ref;
 }
 
 

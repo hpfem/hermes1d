@@ -33,13 +33,13 @@ double dfdy(double y, double x) {
 
 /******************************************************************************/
 int main() {
-  // create mesh
+  // Create mesh
   Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, YA);
   int N_dof = mesh->assign_dofs();
   printf("N_dof = %d\n", N_dof);
 
-  // register weak forms
+  // Register weak forms
   DiscreteProblem *dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian);
   dp->add_vector_form(0, residual);
@@ -63,5 +63,6 @@ int main() {
   l.plot_solution(out_filename, y_prev);
 
   printf("Done.\n");
+  delete [] y_prev;
   return 1;
 }
