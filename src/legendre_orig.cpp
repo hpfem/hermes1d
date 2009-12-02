@@ -59,74 +59,14 @@ int legendre_order_1d[] = {
 49,
 };
 
-// Fills an array of length MAX_P + 1 with Legendre polynomials 
-// and their derivatives at point 'x'. The polynomials are 
-// normalized in the inner product L^2(-1,1)
-extern void fill_legendre_array(double x, 
-                                double val_array[MAX_P+1],
-                                double der_array[MAX_P+1]) {
-    int max_fns_num = MAX_P + 1;
-    // first fill the array with unnormed Legendre 
-    // polynomials using the recursive formula
-    val_array[0] = 1.;
-    der_array[0] = 0;
-    val_array[1] = x;
-    der_array[1] = 1.;
-    for (int i=1; i < max_fns_num; i++) {
-      val_array[i+1]  = (2*i+1)*x*val_array[i] - i*val_array[i-1]; 
-      val_array[i+1] /= i+1; 
-      der_array[i+1]  = (2*i+1)*(val_array[i] + x*der_array[i]) 
-                        - i*der_array[i-1]; 
-      der_array[i+1] /= i+1; 
-    }
-    // normalization
-    for (int i=0; i < max_fns_num; i++) {
-      double norm_const = sqrt(2./(2.*i + 1)); 
-      val_array[i] /= norm_const;
-      der_array[i] /= norm_const;
-    }
-}
-
-// FIXME - this function is used temporarily, to see whether 
-// the recursive formula for Legendre polynomials is useful or 
-// not. 
-extern double calc_leg_pol_val(double x, int n) 
-{
-    // first fill the array with unnormed Legendre 
-    // polynomials using the recursive formula
-    double val_array[MAX_P + 1];
-    double der_array[MAX_P + 1];
-    fill_legendre_array(x, val_array, der_array);
-    return val_array[n];
-}
-
-// FIXME - this function is used temporarily, to see whether 
-// the recursive formula for Legendre polynomials is useful or 
-// not. 
-extern double calc_leg_pol_der(double x, int n) 
-{
-    // first fill the array with unnormed Legendre 
-    // polynomials using the recursive formula
-    double val_array[MAX_P + 1];
-    double der_array[MAX_P + 1];
-    fill_legendre_array(x, val_array, der_array);
-    return der_array[n];
-}
-
-
 
 static double legendre_fn_0(double _x) {
     long double x = _x;
-    long double norm_const = 1/sqrt(2);
-    long double leg_pol_val = 1;
-    return norm_const * leg_pol_val;
+    return pow(2,(1.0/2.0))/2;
 }
 
 static double legendre_fn_1(double _x) {
     long double x = _x;
-
-
-
     return x*pow(6,(1.0/2.0))/2;
 }
 

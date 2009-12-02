@@ -19,7 +19,7 @@
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
 
-const int MAX_P = 40;                  // this is the maximum polynomial degree allowed in elements
+const int MAX_P = 100;                  // this is the maximum polynomial degree allowed in elements
                                        // WARNING: projections taking place in transfer_solution()
 const int MAX_NEWTON_ITER_NUM = 100;   // maximum allowed number of Newton's iterations
 
