@@ -146,7 +146,15 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
 			       *e, Element *e_ref_left, Element *e_ref_right, 
                                double *bc_left_dir_values, double *bc_right_dir_values)
 {
-  int fns_num_ref = e_ref_left->p + 1;
+  // checking whether elements match
+  if (fabs(e->x1 - e_ref_left->x1) > 1e-10 ||
+      fabs(e->x2 - e_ref_right->x2) > 1e-10) {
+    printf("e->x1 = %g, e_ref_left->x1 = %g\n", e->x1, e_ref_left->x1); 
+    printf("e->x2 = %g, e_ref_right->x2 = %g\n", e->x2, e_ref_left->x2); 
+    error("Elements mismatched in transform_element_refined()");
+  }
+  int fns_num_ref_left = e_ref_left->p + 1;
+  int fns_num_ref_right = e_ref_right->p + 1;
 
   if (DEBUG_SOLUTION_TRANSFER){
     printf("Solution transfer from (%g, %g, p=%d) -> (%g, %g, p=%d), (%g, %g, p=%d)\n",
@@ -164,12 +172,12 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
       y_prev_loc[1] = bc_right_dir_values[comp];
   else
       y_prev_loc[1] = y_prev[e->dof[comp][1]];
-  int fns_num = e->p + 1;
-  for (int i=2; i < fns_num; i++)
+  int fns_num_coarse = e->p + 1;
+  for (int i=2; i < fns_num_coarse; i++)
       y_prev_loc[i] = y_prev[e->dof[comp][i]];  
   //debug
   if (DEBUG_SOLUTION_TRANSFER) {
-    for (int i=0; i < fns_num; i++) {
+    for (int i=0; i < fns_num_coarse; i++) {
         printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
     }
     printf("\n");
@@ -180,30 +188,31 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
     trans_matrices_initialized = 1;
   }
   // transform coefficients on the left son
-  for (int i=0; i < fns_num; i++) {
+  for (int i=0; i < fns_num_coarse; i++) {
       y_prev_loc_trans_left[i] = 0.;
-      for (int j=0; j < fns_num; j++)
+      for (int j=0; j < fns_num_coarse; j++)
           y_prev_loc_trans_left[i] += trans_matrix_left[i][j] * y_prev_loc[j];
   }
-  for (int i=fns_num; i < fns_num_ref; i++) y_prev_loc_trans_left[i] = 0; 
+  for (int i=fns_num_coarse; i < fns_num_ref_left; i++) y_prev_loc_trans_left[i] = 0; 
   //debug
   if (DEBUG_SOLUTION_TRANSFER) {
-    for (int i=0; i < fns_num_ref; i++) {
+    for (int i=0; i < fns_num_ref_left; i++) {
       printf("y_prev_loc_trans_left[%d] = %f\n", i, y_prev_loc_trans_left[i]);
     }
     printf("\n");
   }
 
   // transform coefficients on the right son
-  for (int i=0; i < fns_num; i++) {
+  for (int i=0; i < fns_num_coarse; i++) {
       y_prev_loc_trans_right[i] = 0.;
-      for (int j=0; j < fns_num; j++)
+      for (int j=0; j < fns_num_coarse; j++)
           y_prev_loc_trans_right[i] += trans_matrix_right[i][j] * y_prev_loc[j];
   }
-  for (int i=fns_num; i < fns_num_ref; i++) y_prev_loc_trans_right[i] = 0; 
+  for (int i=fns_num_coarse; i < fns_num_ref_right; i++) 
+       y_prev_loc_trans_right[i] = 0; 
   //debug
   if (DEBUG_SOLUTION_TRANSFER) {
-    for (int i=0; i < fns_num_ref; i++) {
+    for (int i=0; i < fns_num_ref_right; i++) {
       printf("y_prev_loc_trans_right[%d] = %f\n", i, y_prev_loc_trans_right[i]);
     }
     printf("\n");
@@ -218,9 +227,12 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
   y_prev_ref[e_ref_right->dof[comp][0]] = y_prev_loc_trans_right[0];
   if (e->dof[comp][1] != -1)
       y_prev_ref[e_ref_right->dof[comp][1]] = y_prev_loc_trans_right[1];
-  // higher-order part:
-  for (int p=2; p < fns_num_ref; p++) {
+  // higher-order part left:
+  for (int p=2; p < fns_num_ref_left; p++) {
       y_prev_ref[e_ref_left->dof[comp][p]] = y_prev_loc_trans_left[p];
+  }
+  // higher-order part right:
+  for (int p=2; p < fns_num_ref_right; p++) {
       y_prev_ref[e_ref_right->dof[comp][p]] = y_prev_loc_trans_right[p];
   }
 }
@@ -235,6 +247,13 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
 void transform_element_unrefined(int comp, double *y_prev, double *y_prev_ref, 
         Element *e, Element *e_ref)
 {
+  // checking whether elements match
+  if (fabs(e->x1 - e_ref->x1) > 1e-10 ||
+      fabs(e->x2 - e_ref->x2) > 1e-10) {
+    printf("e->x1 = %g, e_ref->x1 = %g\n", e->x1, e_ref->x1); 
+    printf("e->x2 = %g, e_ref->x2 = %g\n", e->x2, e_ref->x2); 
+    error("Elements mismatched in transform_element_unrefined()");
+  }
   if (DEBUG_SOLUTION_TRANSFER){
     printf("Solution transfer from (%g, %g, p=%d) -> (%g, %g, p=%d)\n",
          e->x1, e->x2, e->p, e_ref->x1, e_ref->x2, e_ref->p);
