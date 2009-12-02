@@ -3,10 +3,11 @@
 #include "legendre.h"
 #include "quad_std.h"
 
-// This test makes sure that Legendre 
-// polynomial starting with the linear 
-// one, integrated from -1 to 1 numerically, 
-// gives zero.
+// This test makes sure that all Legendre 
+// polynomials (starting with the linear 
+// one) integrated from -1 to 1 numerically
+// with all quadrature rules of same or 
+// higher order, give zero.
 
 #define ERROR_SUCCESS                               0
 #define ERROR_FAILURE                               -1
