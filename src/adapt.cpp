@@ -17,19 +17,6 @@ int PLOT_CANDIDATE_PROJECTIONS = 0;
 //that are tried are printed along with their performance criterion
 int PRINT_CANDIDATES = 0;
 
-// returns values of normalized Legendre polynomials on (a, b)
-double legendre_val_phys(int i, double a, double b, double x) {  // x \in (a, b)
-  double norm_const = sqrt(2/(b-a));
-  return norm_const*legendre_val_ref(inverse_map(a, b, x), i);
-}
-
-// returns derivatives of normalized Legendre polynomials on (a, b)
-double legendre_der_phys(int i, double a, double b, double x) {  // x \in (a, b)
-  double norm_const = sqrt(2/(b-a));
-  norm_const *= 2./(b-a); // to account for interval stretching/shortening
-  return norm_const*legendre_der_ref(inverse_map(a, b, x), i);
-}
-
 double calc_elem_norm_squared(int norm, Element *e, double *y_prev, 
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]) 
@@ -443,7 +430,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   for(int m=0; m < fns_num_left; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
       leg_pol_val_left[m][j] = legendre_val_phys(m, e_ref_left->x1, e_ref_left->x2, 
-                                  phys_x_left[j]);
+                               phys_x_left[j]);
       if (norm == 1) leg_pol_der_left[m][j] = legendre_der_phys(m, 
                                   e_ref_left->x1, e_ref_left->x2, 
                                   phys_x_left[j]);

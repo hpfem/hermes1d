@@ -147,10 +147,6 @@ class Mesh {
 
 };
 
-// transforms point 'x_phys' from element (x1, x2) to (-1, 1)
-double inverse_map(double x1, double x2, double x_phys);
-
-
 // Refine coarse mesh elements whose id_array >= 0, and 
 // adjust the reference mesh accordingly.  
 // Returns updated coarse and reference meshes, with the last 

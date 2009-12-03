@@ -29,4 +29,16 @@ extern double legendre_der_ref_tab[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
 extern void precalculate_legendre_1d();
 extern int legendre_order_1d[];
 
+// transforms point 'x_phys' from element (x1, x2) to (-1, 1)
+double inverse_map(double x1, double x2, double x_phys);
+
+// returns values of normalized Legendre polynomials on (a, b), for 
+// an arbitrary point 'x'
+double legendre_val_phys(int i, double a, double b, double x);
+
+// returns derivatives of normalized Legendre polynomials on (a, b), for
+// an arbitrary point 'x'
+double legendre_der_phys(int i, double a, double b, double x);
+
+
 #endif /* SHAPESET_LEGENDRE_H_ */

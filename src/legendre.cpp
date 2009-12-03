@@ -80,6 +80,30 @@ extern double legendre_der_ref(double x, int n)
     return der_array[n];
 }
 
+// transforms point 'x_phys' from element (x1, x2) to (-1, 1)
+double inverse_map(double x1, double x2, double x_phys) 
+{
+  double c = x1 - x2;
+  double a = -2/c;
+  double b = (x1 + x2)/c; 
+  return a*x_phys + b;
+}
+
+// returns values of normalized Legendre polynomials on (a, b), for 
+// an arbitrary point 'x'
+double legendre_val_phys(int i, double a, double b, double x) {  // x \in (a, b)
+  double norm_const = sqrt(2/(b-a));
+  return norm_const*legendre_val_ref(inverse_map(a, b, x), i);
+}
+
+// returns derivatives of normalized Legendre polynomials on (a, b), for
+// an arbitrary point 'x'
+double legendre_der_phys(int i, double a, double b, double x) {  // x \in (a, b)
+  double norm_const = sqrt(2/(b-a));
+  norm_const *= 2./(b-a); // to account for interval stretching/shortening
+  return norm_const*legendre_der_ref(inverse_map(a, b, x), i);
+}
+
 void precalculate_legendre_1d() 
 {
   fprintf(stderr, "Precalculating Legendre polynomials...");

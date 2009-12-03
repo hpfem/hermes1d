@@ -114,15 +114,6 @@ void Element::get_coeffs(double *y_prev,
   }
 }
 
-// transforms point 'x_phys' from element (x1, x2) to (-1, 1)
-double inverse_map(double x1, double x2, double x_phys) 
-{
-  double c = x1 - x2;
-  double a = -2/c;
-  double b = (x1 + x2)/c; 
-  return a*x_phys + b;
-}
-
 // Evaluate solution and its derivatives in the points 'x_phys' 
 // in the element (coeffs[][] array provided).
 void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
