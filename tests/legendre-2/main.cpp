@@ -12,7 +12,7 @@
 int main(int argc, char* argv[])
 {
   // maximum poly degree of Legendre polynomials tested
-  int max_test_poly_degree = 50; 
+  int max_test_poly_degree = 100; 
 
   // maximum allowed error
   double max_allowed_error = 1e-12;
@@ -24,12 +24,12 @@ int main(int argc, char* argv[])
       // integrating the product of Legendre polynomials of degrees 
       // 'poly_deg_1' and 'poly_deg_2'from -1 to 1 using Gauss quadratures 
       // of order poly_deg_1 + poly_deg_2
-      for (int quad_order=poly_deg_1 + poly_deg_2; 
-           quad_order<2*max_test_poly_degree; quad_order++) {
+      for (int quad_order = poly_deg_1 + poly_deg_2; 
+           quad_order < 2*max_test_poly_degree; quad_order++) {
         int num_pts = g_quad_1d_std.get_num_points(quad_order);
         double2 *quad_tab = g_quad_1d_std.get_points(quad_order);
         double val = 0;
-        for (int i=0; i<num_pts; i++) {
+        for (int i=0; i < num_pts; i++) {
           double point_i = quad_tab[i][0];
           double weight_i = quad_tab[i][1];
           val += calc_leg_pol_val(point_i, poly_deg_1) * 
@@ -38,16 +38,18 @@ int main(int argc, char* argv[])
         double val_final;
         if (poly_deg_1 == poly_deg_2) val_final = val - 1.0;
         else val_final = val;  
-        printf("poly_deg_1 = %d, poly_deg_2 = %d, quad_order = %d, val_final = %g\n", poly_deg_1, poly_deg_2, quad_order, val_final);      
+        printf("poly_deg_1 = %d, poly_deg_2 = %d, quad_order = %d, val_final = %g\n", 
+                poly_deg_1, poly_deg_2, quad_order, val_final);      
         if (fabs(val_final) > max_actual_error) {
           max_actual_error = fabs(val_final);
-          if (max_actual_error > max_allowed_error) {
-            printf("Failure!\n");
-            return ERROR_FAILURE;
-          }
         }
       }
     }
+  }
+
+  if (max_actual_error > max_allowed_error) {
+    printf("Failure!\n");
+    return ERROR_FAILURE;
   }
 
   printf("Success!\n");
