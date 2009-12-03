@@ -35,7 +35,6 @@ Quad1DStd::Quad1DStd()
   np = std_np_1d;
   ref_vert[0] = -1.0;
   ref_vert[1] = 1.0;
-  max_order = 99;
 }
 
 Quad1DStd g_quad_1d_std;

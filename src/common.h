@@ -22,6 +22,7 @@
 const int MAX_P = 100;                 // this is the max poly degree allowed in elements
                                        // WARNING: projections taking place in 
                                        // transfer_solution()
+const int MAX_QUAD_ORDER = 200;        // max order of Gaussian quadrature implemented
 const int MAX_NEWTON_ITER_NUM = 100;   // maximum allowed number of Newton's iterations
 
 const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
