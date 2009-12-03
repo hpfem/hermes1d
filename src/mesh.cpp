@@ -143,8 +143,8 @@ void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM],
     for (int i=0 ; i < pts_num; i++) {
       der_phys[c][i] = val_phys[c][i] = 0;
       for(int j=0; j<=p; j++) {
-        val_phys[c][i] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref[i]);
-        der_phys[c][i] += coeff[c][j]*lobatto_der_tab_1d[j](x_ref[i]);
+        val_phys[c][i] += coeff[c][j]*calc_lobatto_val(x_ref[i], j);
+        der_phys[c][i] += coeff[c][j]*calc_lobatto_der(x_ref[i], j);
       }
       der_phys[c][i] /= jac;
     }
@@ -181,8 +181,8 @@ void Element::get_solution_point(double x_phys,
   for(int c=0; c<dof_size; c++) {
     der[c] = val[c] = 0;
     for(int j=0; j<=p; j++) {
-      val[c] += coeff[c][j]*lobatto_fn_tab_1d[j](x_ref);
-      der[c] += coeff[c][j]*lobatto_der_tab_1d[j](x_ref);
+      val[c] += coeff[c][j]*calc_lobatto_val(x_ref, j);
+      der[c] += coeff[c][j]*calc_lobatto_der(x_ref, j);
     }
     der[c] /= jac;
   }
@@ -582,9 +582,9 @@ void element_shapefn(double a, double b,
   int pts_num = g_quad_1d_std.get_num_points(order);
   for (int i=0 ; i<pts_num; i++) {
     // change function values and derivatives to interval (a, b)
-    val[i] = lobatto_fn_tab_1d[k](ref_tab[i][0]);
+    val[i] = calc_lobatto_val(ref_tab[i][0], k);
     double jac = (b-a)/2.; 
-    der[i] = lobatto_der_tab_1d[k](ref_tab[i][0]) / jac; 
+    der[i] = calc_lobatto_der(ref_tab[i][0], k) / jac; 
   }
 };
 
@@ -593,9 +593,9 @@ void element_shapefn(double a, double b,
 void element_shapefn_point(double x_ref, double a, double b, 
 		           int k, double *val, double *der) {
     // change function values and derivatives to interval (a, b)
-    *val = lobatto_fn_tab_1d[k](x_ref);
+  *val = calc_lobatto_val(x_ref, k);
     double jac = (b-a)/2.; 
-    *der = lobatto_der_tab_1d[k](x_ref) / jac; 
+    *der = calc_lobatto_der(x_ref, k) / jac; 
 }
 
 // Replicate mesh

@@ -16,7 +16,7 @@ void Linearizer::eval_approx(Element *e, double x_ref, double *y,
   for(int c=0; c<n_eq; c++) { // loop over solution components
     val[c] = 0;
     for(int i=0; i <= e->p; i++) { // loop over shape functions
-      if(e->dof[c][i] >= 0) val[c] += y[e->dof[c][i]]*lobatto_fn_tab_1d[i](x_ref);
+      if(e->dof[c][i] >= 0) val[c] += y[e->dof[c][i]]*calc_lobatto_val(x_ref, i);
     }
   }
   double a = e->x1;

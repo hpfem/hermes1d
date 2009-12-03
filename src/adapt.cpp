@@ -20,14 +20,14 @@ int PRINT_CANDIDATES = 0;
 // returns values of normalized Legendre polynomials on (a, b)
 double legendre(int i, double a, double b, double x) {  // x \in (a, b)
   double norm_const = sqrt(2/(b-a));
-  return norm_const*legendre_fn_tab_1d[i](inverse_map(a, b, x));
+  return norm_const*calc_legendre_val(inverse_map(a, b, x), i);
 }
 
 // returns derivatives of normalized Legendre polynomials on (a, b)
 double legendre_der(int i, double a, double b, double x) {  // x \in (a, b)
   double norm_const = sqrt(2/(b-a));
   norm_const *= 2./(b-a); // to account for interval stretching/shortening
-  return norm_const*legendre_der_tab_1d[i](inverse_map(a, b, x));
+  return norm_const*calc_legendre_der(inverse_map(a, b, x), i);
 }
 
 double calc_elem_norm_squared(int norm, Element *e, double *y_prev, 

@@ -24,37 +24,36 @@ int trans_matrices_initialized = 0;
 
 double lobatto_left(int i, double x) // x \in (-1, 0)
 {
-  return lobatto_fn_tab_1d[i](map_left(x));
+  return calc_lobatto_val(map_left(x), i);
 }
 
 double lobatto_right(int i, double x) // x \in (0, 1)
 {
-  return lobatto_fn_tab_1d[i](map_right(x));
+  return calc_lobatto_val(map_right(x), i);
 }
 
 double lobatto(int i, double x) // x \in (-1, 1)
 {
-  return lobatto_fn_tab_1d[i](x);
+  return calc_lobatto_val(x, i);
 }
 
 // Fills projection matrix, i.e., the matrix of L2 products 
 // of Lobatto shape functions transformed to (-1, 0). The matrix
 // is the same for interval (0, 1).
-void fill_proj_matrix(int n, ProjMatrix *proj_matrix)
+void fill_proj_matrix(int max_fns_num, int max_order, ProjMatrix *proj_matrix)
 {
-  int order = 2*MAX_P; // two times max polyorder on reference element
-
   double phys_x[MAX_PTS_NUM];                  // quad points
   double phys_weights[MAX_PTS_NUM];            // quad weights
   int    pts_num = 0;
-  create_phys_element_quadrature(-1, 0, order, phys_x, phys_weights,
+
+  create_phys_element_quadrature(-1, 0, max_order, phys_x, phys_weights,
                                  &pts_num); 
 
   // L2 product of Lobatto shape functions transformed to (-1, 0). 
   // Obviously this is the same as L2 product of Lobatto shape 
   // functions transformed to (0, 1).
-  for (int i=0; i < n; i++) {
-    for (int j=0; j < n; j++) {
+  for (int i=0; i < max_fns_num; i++) {
+    for (int j=0; j < max_fns_num; j++) {
       double result = 0;
       for (int k=0; k < pts_num; k++ ) {
         result += phys_weights[k] * lobatto_left(i, phys_x[k]) * lobatto_left(j, phys_x[k]);
@@ -67,10 +66,11 @@ void fill_proj_matrix(int n, ProjMatrix *proj_matrix)
 void fill_trans_matrices(TransMatrix trans_matrix_left, 
                          TransMatrix trans_matrix_right)
 {
-    int order = 2*MAX_P;
+    printf("Filling transformation matrices...\n");
+    int max_order = 2*MAX_P;
+    const int max_fns_num = MAX_P + 1;
     ProjMatrix proj_matrix;
-    const int n = MAX_P + 1;
-    fill_proj_matrix(n, &proj_matrix);
+    fill_proj_matrix(max_fns_num, max_order, &proj_matrix);
 
     // prepare quadrature in (-1, 0) and (0, 1)
     double phys_x_left[MAX_PTS_NUM];                     // quad points
@@ -79,29 +79,29 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
     double phys_weights_right[MAX_PTS_NUM];              // quad weights
     int    pts_num_left = 0;
     int    pts_num_right = 0;
-    create_phys_element_quadrature(-1, 0, order, phys_x_left, phys_weights_left,
+    create_phys_element_quadrature(-1, 0, max_order, phys_x_left, phys_weights_left,
                                    &pts_num_left); 
-    create_phys_element_quadrature(0, 1, order, phys_x_right, phys_weights_right,
+    create_phys_element_quadrature(0, 1, max_order, phys_x_right, phys_weights_right,
                                    &pts_num_right); 
 
     // loop over shape functions on coarse element
-    for (int j=0; j < MAX_P; j++) {
+    for (int j=0; j < max_fns_num; j++) {
         // backup of projectionmatrix
-        Matrix *mat_left = new DenseMatrix(n);
-        Matrix *mat_right = new DenseMatrix(n);
+        Matrix *mat_left = new DenseMatrix(max_fns_num);
+        Matrix *mat_right = new DenseMatrix(max_fns_num);
         mat_left->set_zero();
         mat_right->set_zero();
-        for (int r=0; r < n; r++) {
-	    for (int s=0; s < n; s++) {
+        for (int r=0; r < max_fns_num; r++) {
+	    for (int s=0; s < max_fns_num; s++) {
                 mat_left->add(r, s, proj_matrix[r][s]);
                 mat_right->add(r, s, proj_matrix[r][s]);
             }
         }
         // fill right-hand side vectors f_left and f_right for j-th 
         // Lobatto shape function on (-1, 0) and (0, 1), respectively
-        double f_left[n];
-        double f_right[n];
-        for (int i=0; i < n; i++) {
+        double f_left[max_fns_num];
+        double f_right[max_fns_num];
+        for (int i=0; i < max_fns_num; i++) {
           f_left[i] = 0;
           f_right[i] = 0;
           for (int k=0; k < pts_num_left; k++) {
@@ -117,7 +117,7 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
         // transformation matrices
         solve_linear_system(mat_left, f_left);
         solve_linear_system(mat_right, f_right);
-        for (int i=0; i < n; i++) {
+        for (int i=0; i < max_fns_num; i++) {
             trans_matrix_left[i][j] = f_left[i];
             trans_matrix_right[i][j] = f_right[i];
         }
@@ -132,6 +132,7 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
     }
     //error("stop.");
     */
+    printf("Done.\n");
 }
 
 // Transfers solution from coarse mesh element 'e' to a pair of fine mesh elements 
@@ -182,7 +183,6 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
     }
     printf("\n");
   }
-  
   if (trans_matrices_initialized == 0) {
     fill_trans_matrices(trans_matrix_left, trans_matrix_right);
     trans_matrices_initialized = 1;
