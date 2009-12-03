@@ -14,14 +14,14 @@
 int main(int argc, char* argv[])
 {
   // maximum index of Lobatto function tested
-  int max_n = 30; //FIXME: should be 99
+  int max_test_poly_degree = MAX_P;
   int ok = 1;
 
   // maximum allowed error
   double max_allowed_error = 1e-10;
 
   // loop over polynomial degrees, starting with 1
-  for (int n=2; n<max_n; n++) {
+  for (int n=2; n<max_test_poly_degree; n++) {
     double val_left = calc_lobatto_val(-1.0, n);
     double val_right = calc_lobatto_val(1.0, n);
       

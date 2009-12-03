@@ -15,7 +15,7 @@
 int main(int argc, char* argv[])
 {
   // maximum poly degree of Legendre polynomials tested
-  int max_test_poly_degree = max(100, MAX_P);
+  int max_test_poly_degree = MAX_P;
   
   // maximum allowed error
   double max_allowed_error = 1e-12;
@@ -33,7 +33,6 @@ int main(int argc, char* argv[])
       for (int i=0; i<num_pts; i++) {
         double point_i = quad_tab[i][0];
         double weight_i = quad_tab[i][1];
-        //val += legendre_fn_tab_1d[poly_deg](point_i) * weight_i;
         val += calc_legendre_val(point_i, poly_deg) * weight_i;
       }
       printf("poly_deg = %d, quad_order = %d, integral = %g\n",

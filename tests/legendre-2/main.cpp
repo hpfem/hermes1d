@@ -12,7 +12,7 @@
 int main(int argc, char* argv[])
 {
   // maximum poly degree of Legendre polynomials tested
-  int max_test_poly_degree = 100; 
+  int max_test_poly_degree = MAX_P;
 
   // maximum allowed error
   double max_allowed_error = 1e-12;

@@ -19,9 +19,13 @@
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
 
-const int MAX_P = 100;                 // this is the max poly degree allowed in elements
+// Up to 100 is currently implemented.
+// When you change this, run tests.
+const int MAX_P = 30;                  // max poly degree allowed in elements
                                        // WARNING: projections taking place in 
                                        // transfer_solution()
+// Up to 200 is currently implemented:
+// When you change this, run tests.
 const int MAX_QUAD_ORDER = 200;        // max order of Gaussian quadrature implemented
 const int MAX_NEWTON_ITER_NUM = 100;   // maximum allowed number of Newton's iterations
 

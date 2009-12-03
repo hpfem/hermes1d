@@ -15,7 +15,7 @@
 int main(int argc, char* argv[])
 {
   // maximum poly degree of Lobatto function tested
-  int max_test_poly_degree = max(100, MAX_P);
+  int max_test_poly_degree = MAX_P;
   int ok = 1;
 
   // maximum allowed error at an integration point

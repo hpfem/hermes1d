@@ -17,8 +17,8 @@ extern void fill_legendre_array(double x,
 extern double calc_legendre_val(double x, int n);
 extern double calc_legendre_der(double x, int n);
 
-extern shape_fn_t legendre_fn_tab_1d[];
-extern shape_fn_t legendre_der_tab_1d[];
+//extern shape_fn_t legendre_fn_tab_1d[];
+//extern shape_fn_t legendre_der_tab_1d[];
 
 extern int legendre_order_1d[];
 
