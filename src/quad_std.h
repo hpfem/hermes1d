@@ -8,7 +8,6 @@
 
 #include "common.h"
 
-
 /// Quad1D is a base class for all 1D quadrature points.
 ///
 class Quad1D
@@ -40,8 +39,18 @@ class Quad1DStd : public Quad1D
   virtual void dummy_fn() {}  
 };
 
-//// 1D quadrature tables //////////////////////////////
+extern Quad1DStd g_quad_1d_std;
 
+// Gauss quadrature of order 'order' in (-1,1)
+void create_ref_element_quadrature(int order, double *x_ref, 
+                                   double *w_ref, int *pts_num);
+
+// Gauss quadrature of order 'order' in (a, b)
+void create_phys_element_quadrature(double a, double b, 
+                                    int order, double *x_phys, 
+                                    double *w_phys, int *pts_num);
+
+//// 1D quadrature tables //////////////////////////////
 
 static double2 std_pts_0_1_1d[] = 
 {
@@ -5909,16 +5918,6 @@ static int std_np_1d[] =
   sizeof(std_pts_200_201_1d) / sizeof(double2)
 };
 
-extern Quad1DStd g_quad_1d_std;
-
-// Gauss quadrature of order 'order' in (-1,1)
-void create_ref_element_quadrature(int order, double *x_ref, 
-                                   double *w_ref, int *pts_num);
-
-// Gauss quadrature of order 'order' in (a, b)
-void create_phys_element_quadrature(double a, double b, 
-                                    int order, double *x_phys, 
-                                    double *w_phys, int *pts_num);
-
 
 #endif
+

@@ -24,17 +24,17 @@ int trans_matrices_initialized = 0;
 
 double lobatto_left(int i, double x) // x \in (-1, 0)
 {
-  return calc_lobatto_val(map_left(x), i);
+  return lobatto_val_ref(map_left(x), i);
 }
 
 double lobatto_right(int i, double x) // x \in (0, 1)
 {
-  return calc_lobatto_val(map_right(x), i);
+  return lobatto_val_ref(map_right(x), i);
 }
 
 double lobatto(int i, double x) // x \in (-1, 1)
 {
-  return calc_lobatto_val(x, i);
+  return lobatto_val_ref(x, i);
 }
 
 // Fills projection matrix, i.e., the matrix of L2 products 
@@ -66,7 +66,8 @@ void fill_proj_matrix(int max_fns_num, int max_order, ProjMatrix *proj_matrix)
 void fill_trans_matrices(TransMatrix trans_matrix_left, 
                          TransMatrix trans_matrix_right)
 {
-    printf("Filling transformation matrices...\n");
+    fprintf(stderr, "Filling transformation matrices...");
+    fflush(stderr);
     int max_order = 2*MAX_P;
     const int max_fns_num = MAX_P + 1;
     ProjMatrix proj_matrix;
@@ -132,7 +133,7 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
     }
     //error("stop.");
     */
-    printf("Done.\n");
+    fprintf(stderr, "done.\n");
 }
 
 // Transfers solution from coarse mesh element 'e' to a pair of fine mesh elements 

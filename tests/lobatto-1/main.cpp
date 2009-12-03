@@ -22,8 +22,8 @@ int main(int argc, char* argv[])
 
   // loop over polynomial degrees, starting with 1
   for (int n=2; n<max_test_poly_degree; n++) {
-    double val_left = calc_lobatto_val(-1.0, n);
-    double val_right = calc_lobatto_val(1.0, n);
+    double val_left = lobatto_val_ref(-1.0, n);
+    double val_right = lobatto_val_ref(1.0, n);
       
     if (fabs(val_left) > max_allowed_error) {
       printf("n = %d, val_left = %g\n", n, val_left); 

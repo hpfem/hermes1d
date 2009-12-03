@@ -7,8 +7,8 @@
 #define _ADAPT_H_
 
 #include "common.h"
-#include "lobatto.h"
 #include "legendre.h"
+#include "lobatto.h"
 #include "mesh.h"
 #include "matrix.h"
 #include "iterator.h"

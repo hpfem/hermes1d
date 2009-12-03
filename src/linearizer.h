@@ -7,6 +7,8 @@
 #define _LINEARIZER_H_
 
 #include "common.h"
+#include "legendre.h"
+#include "lobatto.h"
 
 class Linearizer {
     public:

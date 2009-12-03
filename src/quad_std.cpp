@@ -5,6 +5,8 @@
 
 #include "quad_std.h"
 
+Quad1DStd g_quad_1d_std;
+
 // Gauss quadrature of order 'order' in (-1,1)
 void create_ref_element_quadrature(int order, double *x_ref, 
                                    double *w_ref, int *pts_num) {
@@ -37,4 +39,3 @@ Quad1DStd::Quad1DStd()
   ref_vert[1] = 1.0;
 }
 
-Quad1DStd g_quad_1d_std;

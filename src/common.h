@@ -6,15 +6,15 @@
 #ifndef __HERMES1D_COMMON_H
 #define __HERMES1D_COMMON_H
 
+#include <stdexcept>
+#include <stdlib.h>
+#include <stdio.h>
+
 // print general debug information
 #define DEBUG 0
 
 // printf debug information about the stiffness/Jacobi matrix
 #define DEBUG_MATRIX 0
-
-#include <stdexcept>
-#include <stdlib.h>
-#include <stdio.h>
 
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
@@ -27,6 +27,7 @@ const int MAX_P = 30;                  // max poly degree allowed in elements
 // Up to 200 is currently implemented:
 // When you change this, run tests.
 const int MAX_QUAD_ORDER = 200;        // max order of Gaussian quadrature implemented
+const int MAX_QUAD_PTS_NUM = 101;      // max number of quadrature points
 const int MAX_NEWTON_ITER_NUM = 100;   // maximum allowed number of Newton's iterations
 
 const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
@@ -48,24 +49,19 @@ void error(const char *msg, const char *msg1);
 void info(const char *msg, const char *msg1);
 void warning(const char *msg);
 
+// types
 typedef double scalar;
-
 typedef double double2[2];
-
 typedef int int2[2];
 typedef int int3[3];
-
 typedef double (*shape_fn_t)(double);
 
+// auxiliary functions
 void intro();
-
 void throw_exception(char *text);
-
 #define MEM_CHECK(var) if (var == NULL) { printf("Out of memory."); exit(1); }
-
 #define verbose(msg)
 #define warn(msg)
-
 double max(double a, double b);
 
 #endif

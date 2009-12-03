@@ -10,6 +10,7 @@
 
 #include "mesh.h"
 #include "quad_std.h"
+#include "legendre.h"
 #include "lobatto.h"
 #include "matrix.h"
 #include "iterator.h"
@@ -36,6 +37,7 @@ typedef double (*vector_form_surf) (double x, double *u_prev,
 class DiscreteProblem {
 
 public:
+    DiscreteProblem();
     void add_matrix_form(int i, int j, matrix_form fn);
     void add_vector_form(int i, vector_form fn);
     void add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index);

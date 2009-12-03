@@ -6,6 +6,14 @@
 #include "discrete.h"
 #include "solver_umfpack.h"
 
+DiscreteProblem::DiscreteProblem() {
+  // precalculating values and derivatives 
+  // of all polynomials at all possible 
+  // integration points
+  precalculate_legendre_1d();
+  precalculate_lobatto_1d();
+}
+
 void DiscreteProblem::add_matrix_form(int i, int j, matrix_form fn)
 {
     MatrixFormVol form = {i, j, fn};

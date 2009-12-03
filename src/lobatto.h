@@ -10,15 +10,22 @@
 
 #include "common.h"
 
-extern shape_fn_t lobatto_fn_tab_1d[];
-extern shape_fn_t lobatto_der_tab_1d[];
-
-extern int lobatto_order_1d[];
-
-void fill_lobatto_array(double x, 
+void fill_lobatto_array_ref(double x, 
 			double lobatto_array_val[MAX_P+1],
 			double lobatto_array_der[MAX_P+1]);
-double calc_lobatto_val(double x, int n);
-double calc_lobatto_der(double x, int n);
+double lobatto_val_ref(double x, int n);
+double lobatto_der_ref(double x, int n);
+
+// Precalculated values of Lobatto polynomials and their derivatives 
+// at all Gauss quadrature rules on the reference
+// interval (-1, 1). The first index runs through Gauss quadrature 
+// orders. The second index runs through the quadrature points of 
+// the corresponding rule, and the third through the values of 
+// Legendre polynomials at that point. 
+extern double lobatto_val_ref_tab[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
+extern double lobatto_der_ref_tab[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
+extern void precalculate_lobatto_1d();
+extern int lobatto_order_1d[];
+
 
 #endif /* SHAPESET_LOBATTO_H_ */

@@ -7,8 +7,8 @@
 #define _MESH_H_
 
 #include "common.h"
+#include "legendre.h"
 #include "lobatto.h"
-#include "quad_std.h"
 
 class Element {
 public:
