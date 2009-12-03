@@ -17,12 +17,12 @@
 
 typedef double (*matrix_form) (int num, double *x, double *weights,
         double *u, double *dudx, double *v, double *dvdx, 
-        double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-        double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], void *user_data);
+        double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+        double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], void *user_data);
 
 typedef double (*vector_form) (int num, double *x, double *weights,
-        double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-               double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+        double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+               double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                double *v, double *dvdx,
         void *user_data);
 

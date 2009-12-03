@@ -98,10 +98,10 @@ void Linearizer::get_xy(double *y_prev, int comp,
         error("number of equations too high in plot_solution().");
     }
     // FIXME
-    if(plotting_elem_subdivision > MAX_PTS_NUM)
+    if(plotting_elem_subdivision > MAX_PLOT_PTS_NUM)
         error("plotting_elem_subdivision too high in plot_solution().");
-    double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];
-    double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];
+    double phys_u_prev[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    double phys_du_prevdx[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
         
     Element *e;
     int counter = 0;
@@ -117,12 +117,12 @@ void Linearizer::get_xy(double *y_prev, int comp,
                       this->mesh->bc_left_dir_values,
                       this->mesh->bc_right_dir_values);
 
-        double x_phys[MAX_PTS_NUM];
+        double x_phys[MAX_PLOT_PTS_NUM];
         double h = (e->x2 - e->x1)/plotting_elem_subdivision;
 
         for (int j=0; j<plotting_elem_subdivision+1; j++)
             x_phys[j] = e->x1 + j*h;
-        e->get_solution(coeffs, plotting_elem_subdivision+1, x_phys,
+        e->get_solution_plot(coeffs, plotting_elem_subdivision+1, x_phys,
                 phys_u_prev, phys_du_prevdx);
         double a = e->x1;
         double b = e->x2;

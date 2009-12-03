@@ -35,8 +35,7 @@ const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinemen
 
 const int MAX_ELEM_NUM = 100000;       // maximum number of elements
 const int MAX_EQN_NUM = 10;            // maximum number of equations in the system
-const int MAX_PTS_NUM = 501;           // refers both to plotting subdivision 
-                                       // and Gauss quadrature points
+const int MAX_PLOT_PTS_NUM = 501;      // finest plotting subdivision 
 const int MAX_COEFFS_NUM = MAX_P + 1;  // this is the maximum number of 
                                        // polynomial coefficients
 const int MAX_STRING_LENGTH = 100;     // maximum string length 

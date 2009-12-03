@@ -50,19 +50,19 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
   while ((e = I->next_active_element()) != NULL) {
     //printf("Processing elem %d\n", m);
     // variables to store quadrature data
-    // FIXME: now maximum number of Gauss points is [MAX_EQN_NUM][MAX_PTS_NUM]0
+    // FIXME: now maximum number of Gauss points is [MAX_EQN_NUM][MAX_QUAD_PTS_NUM]0
     int    pts_num = 0;       // num of quad points
-    double phys_pts[MAX_PTS_NUM];                  // quad points
-    double phys_weights[MAX_PTS_NUM];              // quad weights
-    double phys_u[MAX_PTS_NUM];                    // basis function 
-    double phys_dudx[MAX_PTS_NUM];                 // basis function x-derivative
-    double phys_v[MAX_PTS_NUM];                    // test function
-    double phys_dvdx[MAX_PTS_NUM];                 // test function x-derivative
-    // FIXME: now maximum limit of equations is [MAX_EQN_NUM][MAX_PTS_NUM], 
-    // and number of Gauss points is limited to [MAX_EQN_NUM][MAX_PTS_NUM]0
+    double phys_pts[MAX_QUAD_PTS_NUM];                  // quad points
+    double phys_weights[MAX_QUAD_PTS_NUM];              // quad weights
+    double phys_u[MAX_QUAD_PTS_NUM];                    // basis function 
+    double phys_dudx[MAX_QUAD_PTS_NUM];                 // basis function x-derivative
+    double phys_v[MAX_QUAD_PTS_NUM];                    // test function
+    double phys_dvdx[MAX_QUAD_PTS_NUM];                 // test function x-derivative
+    // FIXME: now maximum limit of equations is [MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+    // and number of Gauss points is limited to [MAX_EQN_NUM][MAX_QUAD_PTS_NUM]0
     if(n_eq > MAX_EQN_NUM) error("number of equations too high in process_vol_forms().");
-    double phys_u_prev[MAX_EQN_NUM][MAX_PTS_NUM];     // previous solution, all components
-    double phys_du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM];  // previous solution x-derivative, all components
+    double phys_u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];     // previous solution, all components
+    double phys_du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];  // previous solution x-derivative, all components
     // decide quadrature order and set up 
     // quadrature weights and points in element m
     // FIXME: for some equations this may not be enough!
@@ -75,7 +75,7 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
     // evaluate previous solution and its derivative 
     // at all quadrature points in the element, 
     // for every solution component
-    e->get_solution(phys_pts, pts_num, 
+    e->get_solution_quad(phys_pts, pts_num, 
                     phys_u_prev, phys_du_prevdx, y_prev, 
                     mesh->bc_left_dir_values, mesh->bc_right_dir_values); 
 
@@ -174,7 +174,7 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
   Element *e; 
 
   // evaluate previous solution and its derivative at the end point
-  // FIXME: maximum number of equations limited by [MAX_EQN_NUM][MAX_PTS_NUM]
+  // FIXME: maximum number of equations limited by [MAX_EQN_NUM][MAX_QUAD_PTS_NUM]
   double phys_u_prev[MAX_EQN_NUM], 
          phys_du_prevdx[MAX_EQN_NUM]; // at the end point
 

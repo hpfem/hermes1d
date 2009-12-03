@@ -1,7 +1,7 @@
 double jacobian_1_1(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -13,8 +13,8 @@ double jacobian_1_1(int num, double *x, double *weights,
 
 double jacobian_1_3(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -26,8 +26,8 @@ double jacobian_1_3(int num, double *x, double *weights,
 
 double jacobian_1_4(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -40,8 +40,8 @@ double jacobian_1_4(int num, double *x, double *weights,
 
 double jacobian_2_2(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -53,8 +53,8 @@ double jacobian_2_2(int num, double *x, double *weights,
 
 double jacobian_2_3(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -66,8 +66,8 @@ double jacobian_2_3(int num, double *x, double *weights,
 
 double jacobian_2_4(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -80,8 +80,8 @@ double jacobian_2_4(int num, double *x, double *weights,
 
 double jacobian_3_1(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -93,8 +93,8 @@ double jacobian_3_1(int num, double *x, double *weights,
 
 double jacobian_3_2(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -106,8 +106,8 @@ double jacobian_3_2(int num, double *x, double *weights,
 
 double jacobian_3_3(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -121,8 +121,8 @@ double jacobian_3_3(int num, double *x, double *weights,
 
 double jacobian_4_1(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -134,8 +134,8 @@ double jacobian_4_1(int num, double *x, double *weights,
 
 double jacobian_4_2(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -147,8 +147,8 @@ double jacobian_4_2(int num, double *x, double *weights,
 
 double jacobian_4_4(int num, double *x, double *weights,
                     double *u, double *dudx, double *v, double *dvdx,
-                    double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                    double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                    double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                    double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                     void *user_data)
 {
     double val = 0;
@@ -161,8 +161,8 @@ double jacobian_4_4(int num, double *x, double *weights,
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 double residual_1(int num, double *x, double *weights,
-                  double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                  double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                  double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                  double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                   double *v, double *dvdx, void *user_data)
 {
     double val = 0;
@@ -173,8 +173,8 @@ double residual_1(int num, double *x, double *weights,
 };
 
 double residual_2(int num, double *x, double *weights,
-                  double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                  double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                  double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                  double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                   double *v, double *dvdx, void *user_data)
 {
     double val = 0;
@@ -185,8 +185,8 @@ double residual_2(int num, double *x, double *weights,
 };
 
 double residual_3(int num, double *x, double *weights,
-                  double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                  double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                  double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                  double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                   double *v, double *dvdx, void *user_data)
 {
     double val = 0;
@@ -198,8 +198,8 @@ double residual_3(int num, double *x, double *weights,
 
 
 double residual_4(int num, double *x, double *weights,
-                  double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                  double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM],
+                  double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                  double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                   double *v, double *dvdx, void *user_data)
 {
     double val = 0;

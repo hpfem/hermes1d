@@ -22,11 +22,11 @@ double calc_elem_norm_squared(int norm, Element *e, double *y_prev,
 			double bc_right_dir_values[MAX_EQN_NUM]) 
 {
   int n_eq = e->dof_size;
-  double phys_x[MAX_PTS_NUM];         // quad points in physical element
-  double phys_weights[MAX_PTS_NUM];   // quad weights in physical element
+  double phys_x[MAX_QUAD_PTS_NUM];         // quad points in physical element
+  double phys_weights[MAX_QUAD_PTS_NUM];   // quad weights in physical element
   // values of solution for all solution components
-  double phys_val[MAX_EQN_NUM][MAX_PTS_NUM]; 
-  double phys_der[MAX_EQN_NUM][MAX_PTS_NUM]; // not used
+  double phys_val[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]; 
+  double phys_der[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]; // not used
 
   // integration order
   int order = 2*e->p;
@@ -38,7 +38,7 @@ double calc_elem_norm_squared(int norm, Element *e, double *y_prev,
 
   // evaluate solution and its derivative 
   // at all quadrature points in 'e', for every solution component
-  e->get_solution(phys_x, pts_num, phys_val, phys_der, y_prev,
+  e->get_solution_quad(phys_x, pts_num, phys_val, phys_der, y_prev,
                   bc_left_dir_values, bc_right_dir_values);
 
   // integrate square over (-1, 1)
@@ -70,18 +70,20 @@ double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref,
   // create Gauss quadrature on 'e'
   int order = 2*e_ref->p;
   int pts_num;
-  double phys_x[MAX_PTS_NUM];          // quad points
-  double phys_weights[MAX_PTS_NUM];    // quad weights
+  double phys_x[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e->x1, e->x2, order, phys_x, phys_weights, &pts_num); 
 
   // get coarse mesh solution values and derivatives
-  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(phys_x, pts_num, phys_u, phys_dudx, y_prev, 
+  double phys_u[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e->get_solution_quad(phys_x, pts_num, phys_u, phys_dudx, y_prev, 
                   bc_left_dir_values, bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives
-  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref->get_solution(phys_x, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
+  double phys_u_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref->get_solution_quad(phys_x, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
                   bc_left_dir_values, bc_right_dir_values); 
 
   // integrate over 'e'
@@ -114,22 +116,22 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
   // create Gauss quadrature on 'e_ref_left'
   int order_left = 2*e_ref_left->p;
   int pts_num_left;
-  double phys_x_left[MAX_PTS_NUM];          // quad points
-  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  double phys_x_left[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
                                  order_left, phys_x_left, 
                                  phys_weights_left, &pts_num_left); 
 
   // get coarse mesh solution values and derivatives on 'e_ref_left'
-  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(phys_x_left, pts_num_left, phys_u_left, phys_dudx_left, y_prev, 
+  double phys_u_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e->get_solution_quad(phys_x_left, pts_num_left, phys_u_left, phys_dudx_left, y_prev, 
                   bc_left_dir_values, bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives on 'e_ref_left'
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_left->get_solution(phys_x_left, pts_num_left, 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref_left->get_solution_quad(phys_x_left, pts_num_left, 
                            phys_u_ref_left, phys_dudx_ref_left, y_prev_ref, 
                            bc_left_dir_values, bc_right_dir_values); 
 
@@ -152,23 +154,23 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
   // create Gauss quadrature on 'e_ref_right'
   int order_right = 2*e_ref_right->p;
   int pts_num_right;
-  double phys_x_right[MAX_PTS_NUM];          // quad points
-  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  double phys_x_right[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
                                  order_right, phys_x_right, 
                                  phys_weights_right, &pts_num_right); 
 
   // get coarse mesh solution values and derivatives on 'e_ref_right'
-  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(phys_x_right, pts_num_right, phys_u_right, 
+  double phys_u_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e->get_solution_quad(phys_x_right, pts_num_right, phys_u_right, 
                   phys_dudx_right, y_prev, 
                   bc_left_dir_values, bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives on 'e_ref_right'
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_right->get_solution(phys_x_right, pts_num_right, 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref_right->get_solution_quad(phys_x_right, pts_num_right, 
                             phys_u_ref_right, phys_dudx_ref_right, 
                             y_prev_ref, bc_left_dir_values, 
                             bc_right_dir_values); 
@@ -280,9 +282,9 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
 // component. The basis are the transformed Legendre 
 // which are orthonormal in L2 (norm == 0)
 void calc_proj_coeffs_L2(int n_eq, int fns_num, int pts_num,
-                         double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
-                         double pol_val[MAX_P+1][MAX_PTS_NUM],
-                         double phys_weights[MAX_PTS_NUM], 
+                         double phys_u_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                         double pol_val[MAX_P+1][MAX_QUAD_PTS_NUM],
+                         double phys_weights[MAX_QUAD_PTS_NUM], 
                          double proj_coeffs[MAX_EQN_NUM][MAX_P+1])
 {
   for(int m=0; m < fns_num; m++) {   // loop over basis functions
@@ -299,9 +301,9 @@ void calc_proj_coeffs_L2(int n_eq, int fns_num, int pts_num,
 
 // allocate and fill projection matrix
 double** get_proj_matrix_H1(int n_eq, int fns_num, int pts_num,
-                            double pol_val[MAX_P+1][MAX_PTS_NUM],
-                            double pol_der[MAX_P+1][MAX_PTS_NUM],
-                            double phys_weights[MAX_PTS_NUM]) 
+                            double pol_val[MAX_P+1][MAX_QUAD_PTS_NUM],
+                            double pol_der[MAX_P+1][MAX_QUAD_PTS_NUM],
+                            double phys_weights[MAX_QUAD_PTS_NUM]) 
 { 
   // allocate
   double** matrix = new_matrix<double>(MAX_P+1, MAX_P+1);
@@ -324,11 +326,11 @@ double** get_proj_matrix_H1(int n_eq, int fns_num, int pts_num,
 
 // allocate and fill right-hand side
 void fill_proj_rhs_H1(int fns_num, int pts_num,
-                      double phys_u_ref[MAX_PTS_NUM], 
-                      double phys_dudx_ref[MAX_PTS_NUM],
-                      double pol_val[MAX_P+1][MAX_PTS_NUM],
-                      double pol_der[MAX_P+1][MAX_PTS_NUM],
-                      double phys_weights[MAX_PTS_NUM],
+                      double phys_u_ref[MAX_QUAD_PTS_NUM], 
+                      double phys_dudx_ref[MAX_QUAD_PTS_NUM],
+                      double pol_val[MAX_P+1][MAX_QUAD_PTS_NUM],
+                      double pol_der[MAX_P+1][MAX_QUAD_PTS_NUM],
+                      double phys_weights[MAX_QUAD_PTS_NUM],
                       double *rhs) 
 {
   for(int m=0; m < fns_num; m++) {   // loop over basis functions
@@ -346,11 +348,11 @@ void fill_proj_rhs_H1(int fns_num, int pts_num,
 // component. The basis are the transformed Legendre 
 // which are NOT orthonormal in H1 (norm == 1)
 void calc_proj_coeffs_H1(int n_eq, int fns_num, int pts_num,
-                         double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
-                         double phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM],
-                         double pol_val[MAX_P+1][MAX_PTS_NUM],
-                         double pol_der[MAX_P+1][MAX_PTS_NUM],
-                         double phys_weights[MAX_PTS_NUM], 
+                         double phys_u_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                         double phys_dudx_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                         double pol_val[MAX_P+1][MAX_QUAD_PTS_NUM],
+                         double pol_der[MAX_P+1][MAX_QUAD_PTS_NUM],
+                         double phys_weights[MAX_QUAD_PTS_NUM], 
                          double proj_coeffs[MAX_EQN_NUM][MAX_P+1])
 { 
   // allocate and fill projection matrix
@@ -410,22 +412,22 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   // create Gauss quadrature on 'e_ref_left'
   int order_left = 2*max(e_ref_left->p, p_left);
   int pts_num_left;
-  double phys_x_left[MAX_PTS_NUM];          // quad points
-  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  double phys_x_left[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
                                  order_left, phys_x_left, phys_weights_left, 
                                  &pts_num_left); 
 
   // get fine mesh solution values and derivatives on 'e_ref_left'
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref_left->get_solution_quad(phys_x_left, pts_num_left, phys_u_ref_left, 
                            phys_dudx_ref_left, y_prev_ref, 
                            bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in 'e_ref_left'
-  double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
-  double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_left[MAX_P+1][MAX_QUAD_PTS_NUM];
+  double leg_pol_der_left[MAX_P+1][MAX_QUAD_PTS_NUM];
   int fns_num_left = p_left + 1;
   for(int m=0; m < fns_num_left; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
@@ -454,8 +456,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
 
   // evaluate the projection in 'e_ref_left' for every solution component
   // and every integration point
-  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double phys_dudx_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
       phys_u_left[c][j] = 0;
@@ -494,22 +496,22 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   // create Gauss quadrature on 'e_ref_right'
   int order_right = 2*max(e_ref_right->p, p_right);
   int pts_num_right;
-  double phys_x_right[MAX_PTS_NUM];          // quad points
-  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  double phys_x_right[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
                                  order_right, phys_x_right, 
                                  phys_weights_right, &pts_num_right); 
 
   // get fine mesh solution values and derivatives on 'e_ref_right'
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_right->get_solution(phys_x_right, pts_num_right, 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref_right->get_solution_quad(phys_x_right, pts_num_right, 
                             phys_u_ref_right, phys_dudx_ref_right, 
                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in 'e_ref_right'
-  double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
-  double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_right[MAX_P+1][MAX_QUAD_PTS_NUM];
+  double leg_pol_der_right[MAX_P+1][MAX_QUAD_PTS_NUM];
   int fns_num_right = p_right + 1;
   for(int m=0; m < fns_num_right; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j < pts_num_right; j++) {
@@ -537,8 +539,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
 
   // evaluate the projection in 'e_ref_right' for every solution component
   // and every integration point
-  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double phys_dudx_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_right; j++) { // loop over integration points
       phys_u_right[c][j] = 0;
@@ -587,26 +589,26 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     visit++;
     int plot_pts_num = 51;
     // values of reference solution at plotting points left
-    double plot_x_left[MAX_PTS_NUM];
+    double plot_x_left[MAX_PLOT_PTS_NUM];
     double h_left = (e_ref_left->x2 - e_ref_left->x1)/(plot_pts_num-1);
     for (int i=0; i < plot_pts_num; i++) {
       plot_x_left[i] = e_ref_left->x1 + i*h_left;
     }
-    double plot_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref_left->get_solution(plot_x_left, plot_pts_num, 
+    double plot_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    e_ref_left->get_solution_plot(plot_x_left, plot_pts_num, 
                              plot_u_ref_left, plot_dudx_ref_left, 
                              y_prev_ref, bc_left_dir_values, 
                              bc_right_dir_values); 
     // values of reference solution at plotting points right
-    double plot_x_right[MAX_PTS_NUM];
+    double plot_x_right[MAX_PLOT_PTS_NUM];
     double h_right = (e_ref_right->x2 - e_ref_right->x1)/(plot_pts_num-1);
     for (int i=0; i < plot_pts_num; i++) {
       plot_x_right[i] = e_ref_right->x1 + i*h_right;
     }
-    double plot_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref_right->get_solution(plot_x_right, plot_pts_num, 
+    double plot_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    e_ref_right->get_solution_plot(plot_x_right, plot_pts_num, 
                               plot_u_ref_right, plot_dudx_ref_right, 
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
@@ -623,7 +625,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points left
-    double plot_leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_left[MAX_P+1][MAX_PLOT_PTS_NUM];
     for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
         plot_leg_pol_val_left[m][j] = legendre_val_phys(m, e_ref_left->x1, 
@@ -631,7 +633,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
       }
     }
     // values of projection at plotting points left
-    double plot_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    double plot_u_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     for (int c=0; c<n_eq; c++) { // loop over solution components
       for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
         plot_u_left[c][j] = 0;
@@ -642,7 +644,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
       }
     }
     // values of Legendre polynomials at plotting points right
-    double plot_leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_right[MAX_P+1][MAX_PLOT_PTS_NUM];
     for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
         plot_leg_pol_val_right[m][j] = legendre_val_phys(m, e_ref_right->x1, 
@@ -650,7 +652,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
       }
     }
     // values of projection at plotting points right
-    double plot_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    double plot_u_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     for (int c=0; c<n_eq; c++) { // loop over solution components
       for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
         plot_u_right[c][j] = 0;
@@ -698,21 +700,21 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   // create Gauss quadrature on the left half
   int order_left = 2*max(e_ref->p, p_left);
   int pts_num_left;
-  double phys_x_left[MAX_PTS_NUM];          // quad points
-  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  double phys_x_left[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e->x1, (e->x1 + e->x2)/2., 
                                  order_left, phys_x_left, phys_weights_left, &pts_num_left); 
 
   // get fine mesh solution values and derivatives on the left half
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref->get_solution_quad(phys_x_left, pts_num_left, phys_u_ref_left, 
                       phys_dudx_ref_left, y_prev_ref, 
                       bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials in the left half
-  double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
-  double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_left[MAX_P+1][MAX_QUAD_PTS_NUM];
+  double leg_pol_der_left[MAX_P+1][MAX_QUAD_PTS_NUM];
   int fns_num_left = p_left + 1;
   for(int m=0; m < fns_num_left; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j<pts_num_left; j++) {  
@@ -740,8 +742,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
 
   // evaluate the projection on the left half for every solution component
   // and every integration point
-  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double phys_dudx_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int c=0; c<n_eq; c++) { // loop over solution components
     for (int j=0; j<pts_num_left; j++) { // loop over integration points
       phys_u_left[c][j] = 0;
@@ -778,21 +780,21 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   // create Gauss quadrature on the right half
   int order_right = 2*max(e_ref->p, p_right);
   int pts_num_right;
-  double phys_x_right[MAX_PTS_NUM];          // quad points
-  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  double phys_x_right[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature((e->x1 + e->x2)/2., e->x2, 
                                  order_right, phys_x_right, 
                                  phys_weights_right, &pts_num_right); 
 
   // get fine mesh solution values and derivatives on the right half
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref->get_solution(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref->get_solution_quad(phys_x_right, pts_num_right, phys_u_ref_right, phys_dudx_ref_right, 
                   y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // get values of transformed Legendre polynomials on the right half
-  double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
-  double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_right[MAX_P+1][MAX_QUAD_PTS_NUM];
+  double leg_pol_der_right[MAX_P+1][MAX_QUAD_PTS_NUM];
   int fns_num_right = p_right + 1;
   for(int m=0; m < fns_num_right; m++) { // loop over transf. Leg. polynomials
     for(int j=0; j < pts_num_right; j++) {
@@ -821,8 +823,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
 
   // evaluate the projection on the right half for every solution component
   // and every integration point
-  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double phys_dudx_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num_right; j++) { // loop over integration points
       phys_u_right[c][j] = 0;
@@ -871,24 +873,24 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     visit++;
     int plot_pts_num = 51;
     // values of reference solution at plotting points left
-    double plot_x_left[MAX_PTS_NUM];
+    double plot_x_left[MAX_PLOT_PTS_NUM];
     double h_left = ((e->x2 - e->x1)/2)/(plot_pts_num-1);
     for (int i=0; i < plot_pts_num; i++) {
       plot_x_left[i] = e->x1 + i*h_left;
     }
-    double plot_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref->get_solution(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
+    double plot_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    e_ref->get_solution_plot(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // values of reference solution at plotting points right
-    double plot_x_right[MAX_PTS_NUM];
+    double plot_x_right[MAX_PLOT_PTS_NUM];
     double h_right = ((e->x2 - e->x1)/2)/(plot_pts_num-1);
     for (int i=0; i < plot_pts_num; i++) {
       plot_x_right[i] = (e->x1 + e->x2)/2 + i*h_right;
     }
-    double plot_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref->get_solution(plot_x_right, plot_pts_num, 
+    double plot_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    e_ref->get_solution_plot(plot_x_right, plot_pts_num, 
                               plot_u_ref_right, plot_dudx_ref_right, 
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
@@ -905,7 +907,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points left
-    double plot_leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_left[MAX_P+1][MAX_PLOT_PTS_NUM];
     for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {
         plot_leg_pol_val_left[m][j] = legendre_val_phys(m, e->x1, (e->x1 + e->x2)/2,  
@@ -913,7 +915,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
       }
     }
     // values of projection at plotting points left
-    double plot_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    double plot_u_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     for (int c=0; c<n_eq; c++) { // loop over solution components
       for (int j=0; j<plot_pts_num; j++) { // loop over plotting points left
         plot_u_left[c][j] = 0;
@@ -924,7 +926,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
       }
     }
     // values of Legendre polynomials at plotting points right
-    double plot_leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_right[MAX_P+1][MAX_PLOT_PTS_NUM];
     for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
         plot_leg_pol_val_left[m][j] = legendre_val_phys(m, (e->x1 + e->x2)/2, e->x2, 
@@ -932,7 +934,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
       }
     }
     // values of projection at plotting points right
-    double plot_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    double plot_u_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     for (int c=0; c<n_eq; c++) { // loop over solution components
       for (int j=0; j<plot_pts_num; j++) { // loop over plotting points right
         plot_u_right[c][j] = 0;
@@ -976,22 +978,22 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // create Gauss quadrature on 'e_ref_left'
   int order_left = 2*max(e_ref_left->p, p);
   int pts_num_left;
-  double phys_x_left[MAX_PTS_NUM];          // quad points
-  double phys_weights_left[MAX_PTS_NUM];    // quad weights
+  double phys_x_left[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_left[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_left->x1, e_ref_left->x2, 
                                  order_left, phys_x_left, phys_weights_left, 
                                  &pts_num_left); 
 
   // get fine mesh solution values and derivatives on 'e_ref_left'
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_left->get_solution(phys_x_left, pts_num_left, phys_u_ref_left, 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref_left->get_solution_quad(phys_x_left, pts_num_left, phys_u_ref_left, 
                            phys_dudx_ref_left, y_prev_ref, 
                            bc_left_dir_values, bc_right_dir_values); 
 
   // get values of (original) Legendre polynomials in 'e_ref_left'
-  double leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
-  double leg_pol_der_left[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_left[MAX_P+1][MAX_QUAD_PTS_NUM];
+  double leg_pol_der_left[MAX_P+1][MAX_QUAD_PTS_NUM];
   int fns_num = p + 1;
   for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
     for(int j=0; j < pts_num_left; j++) {  
@@ -1005,22 +1007,22 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   // create Gauss quadrature on 'e_ref_right'
   int order_right = 2*max(e_ref_right->p, p);
   int pts_num_right;
-  double phys_x_right[MAX_PTS_NUM];          // quad points
-  double phys_weights_right[MAX_PTS_NUM];    // quad weights
+  double phys_x_right[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights_right[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e_ref_right->x1, e_ref_right->x2, 
                                  order_right, phys_x_right, 
                                  phys_weights_right, &pts_num_right); 
 
   // get fine mesh solution values and derivatives on 'e_ref_right'
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_right->get_solution(phys_x_right, pts_num_right, 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref_right->get_solution_quad(phys_x_right, pts_num_right, 
                             phys_u_ref_right, phys_dudx_ref_right, 
                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
 
   // get values of (original) Legendre polynomials in 'e_ref_right'
-  double leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
-  double leg_pol_der_right[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val_right[MAX_P+1][MAX_QUAD_PTS_NUM];
+  double leg_pol_der_right[MAX_P+1][MAX_QUAD_PTS_NUM];
   for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
     for(int j=0; j < pts_num_right; j++) {
       leg_pol_val_right[m][j] = legendre_val_phys(m, e->x1, 
@@ -1102,8 +1104,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
 
   // evaluate the projection in 'e_ref_left' for every solution component
   // and every integration point
-  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double phys_dudx_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num_left; j++) { // loop over integration points left
       phys_u_left[c][j] = 0;
@@ -1119,8 +1121,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
 
   // evaluate the projection in 'e_ref_right' for every solution component
   // and every integration point
-  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double phys_dudx_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num_right; j++) { // loop over integration points right
       phys_u_right[c][j] = 0;
@@ -1192,24 +1194,24 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     visit++;
     int plot_pts_num = 51;
     // values of reference solution at plotting points left
-    double plot_x_left[MAX_PTS_NUM];
+    double plot_x_left[MAX_PLOT_PTS_NUM];
     double h_left = (e_ref_left->x2 - e_ref_left->x1)/(plot_pts_num-1);
     for (int i=0; i < plot_pts_num; i++) {
       plot_x_left[i] = e_ref_left->x1 + i*h_left;
     }
-    double plot_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref_left->get_solution(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
+    double plot_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+           plot_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    e_ref_left->get_solution_plot(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // values of reference solution at plotting points right
-    double plot_x_right[MAX_PTS_NUM];
+    double plot_x_right[MAX_PLOT_PTS_NUM];
     double h_right = (e_ref_right->x2 - e_ref_right->x1)/(plot_pts_num-1);
     for (int i=0; i < plot_pts_num; i++) {
       plot_x_right[i] = e_ref_right->x1 + i*h_right;
     }
-    double plot_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref_right->get_solution(plot_x_right, plot_pts_num, 
+    double plot_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+           plot_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    e_ref_right->get_solution_plot(plot_x_right, plot_pts_num, 
                               plot_u_ref_right, plot_dudx_ref_right, 
                               y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution in the left and right halves
@@ -1226,7 +1228,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points left
-    double plot_leg_pol_val_left[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_left[MAX_P+1][MAX_PLOT_PTS_NUM];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j < plot_pts_num; j++) {  
         plot_leg_pol_val_left[m][j] = legendre_val_phys(m, e->x1, 
@@ -1234,7 +1236,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
       }
     }
     // values of projection at plotting points left
-    double plot_u_left[MAX_EQN_NUM][MAX_PTS_NUM];
+    double plot_u_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     for (int c=0; c < n_eq; c++) { // loop over solution components
       for (int j=0; j < plot_pts_num; j++) { // loop over plotting points left
         plot_u_left[c][j] = 0;
@@ -1245,7 +1247,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
       }
     }
     // values of Legendre polynomials at plotting points right
-    double plot_leg_pol_val_right[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val_right[MAX_P+1][MAX_PLOT_PTS_NUM];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j < plot_pts_num; j++) {  
         plot_leg_pol_val_right[m][j] = legendre_val_phys(m, e->x1, 
@@ -1253,7 +1255,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
       }
     }
     // values of projection at plotting points right
-    double plot_u_right[MAX_EQN_NUM][MAX_PTS_NUM];
+    double plot_u_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     for (int c=0; c < n_eq; c++) { // loop over solution components
       for (int j=0; j < plot_pts_num; j++) { // loop over plotting points left
         plot_u_right[c][j] = 0;
@@ -1300,19 +1302,19 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   // create Gauss quadrature on 'e'
   int order = 2*max(e->p, p);
   int pts_num;
-  double phys_x[MAX_PTS_NUM];          // quad points
-  double phys_weights[MAX_PTS_NUM];    // quad weights
+  double phys_x[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e->x1, e->x2, 
                                  order, phys_x, phys_weights, &pts_num); 
 
   // get fine mesh solution values and derivatives on 'e_ref'
-  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref->get_solution(phys_x, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
+  double phys_u_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], phys_dudx_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e_ref->get_solution_quad(phys_x, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
                       bc_left_dir_values, bc_right_dir_values); 
 
   // get values of (original) Legendre polynomials in 'e'
-  double leg_pol_val[MAX_P+1][MAX_PTS_NUM];
-  double leg_pol_der[MAX_P+1][MAX_PTS_NUM];
+  double leg_pol_val[MAX_P+1][MAX_QUAD_PTS_NUM];
+  double leg_pol_der[MAX_P+1][MAX_QUAD_PTS_NUM];
   int fns_num = p + 1;
   for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
     for(int j=0; j < pts_num; j++) {  
@@ -1338,8 +1340,8 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
 
   // evaluate the projection in 'e' for every solution component
   // and every integration point
-  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM];
-  double phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double phys_dudx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int c=0; c < n_eq; c++) { // loop over solution components
     for (int j=0; j < pts_num; j++) { // loop over integration points
       phys_u[c][j] = 0;
@@ -1387,14 +1389,14 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     visit++;
     int plot_pts_num = 51;
     // values of reference solution at plotting points
-    double plot_x[MAX_PTS_NUM];
+    double plot_x[MAX_PLOT_PTS_NUM];
     double h = (e->x2 - e->x1)/(plot_pts_num-1);
     for (int i=0; i < plot_pts_num; i++) {
       plot_x[i] = e->x1 + i*h;
     }
-    double plot_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
-           plot_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
-    e_ref->get_solution(plot_x, plot_pts_num, plot_u_ref, plot_dudx_ref, 
+    double plot_u_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+           plot_dudx_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    e_ref->get_solution_plot(plot_x, plot_pts_num, plot_u_ref, plot_dudx_ref, 
                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
     // plotting the reference solution
     char filename_refsol[255];
@@ -1407,7 +1409,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     printf("Refsol (%g, %g) written to file %s\n", e->x1, e->x2, filename_refsol);
     fclose(f_refsol);
     // values of Legendre polynomials at plotting points
-    double plot_leg_pol_val[MAX_P+1][MAX_PTS_NUM];
+    double plot_leg_pol_val[MAX_P+1][MAX_PLOT_PTS_NUM];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j < plot_pts_num; j++) {  
         plot_leg_pol_val[m][j] = legendre_val_phys(m, e->x1, 
@@ -1415,7 +1417,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
       }
     }
     // values of projection at plotting points
-    double plot_u[MAX_EQN_NUM][MAX_PTS_NUM];
+    double plot_u[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     for (int c=0; c < n_eq; c++) { // loop over solution components
       for (int j=0; j < plot_pts_num; j++) { // loop over plotting points
         plot_u[c][j] = 0;
@@ -1451,8 +1453,8 @@ double calc_exact_sol_norm(int norm, exact_sol_type exact_sol,
     double a0 = A + i*h;
     double b0 = a0 + h;
     int pts_num;
-    double x_phys[MAX_PTS_NUM];
-    double w_phys[MAX_PTS_NUM];
+    double x_phys[MAX_QUAD_PTS_NUM];
+    double w_phys[MAX_QUAD_PTS_NUM];
     create_phys_element_quadrature(a0, b0, order, x_phys, 
                                    w_phys, &pts_num);
     double val = 0;
@@ -1482,21 +1484,21 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
 {
   // create Gauss quadrature on 'e'
   int pts_num;
-  double phys_x[MAX_PTS_NUM];          // quad points
-  double phys_weights[MAX_PTS_NUM];    // quad weights
+  double phys_x[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_weights[MAX_QUAD_PTS_NUM];    // quad weights
   create_phys_element_quadrature(e->x1, e->x2, order, phys_x, 
                                  phys_weights, &pts_num); 
 
   // get coarse mesh solution values and derivatives
-  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(phys_x, pts_num, phys_u, phys_dudx, y_prev, 
+  double phys_u[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  e->get_solution_quad(phys_x, pts_num, phys_u, phys_dudx, y_prev, 
                   bc_left_dir_values, bc_right_dir_values); 
 
   // get exact solution values and derivatives
   int n_eq = e->dof_size;
-  double phys_u_exact[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_exact[MAX_EQN_NUM][MAX_PTS_NUM];
+  double phys_u_exact[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         phys_dudx_exact[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int j=0; j < pts_num; j++) {
     double phys_u_exact_pt[MAX_EQN_NUM], 
            phys_dudx_exact_pt[MAX_EQN_NUM]; 

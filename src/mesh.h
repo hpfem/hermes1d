@@ -35,13 +35,23 @@ public:
 		    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM],
                     double bc_left_dir_values[MAX_EQN_NUM],
                     double bc_right_dir_values[MAX_EQN_NUM]);
-    void get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-         int pts_num, double x_phys[MAX_PTS_NUM], 
-         double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
-         double der_phys[MAX_EQN_NUM][MAX_PTS_NUM]);
-    void get_solution(double x_phys[MAX_PTS_NUM], int pts_num,  
-                      double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
-                      double der_phys[MAX_EQN_NUM][MAX_PTS_NUM],
+    void get_solution_quad(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+         int pts_num, double x_phys[MAX_QUAD_PTS_NUM], 
+         double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+         double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]);
+    void get_solution_plot(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+         int pts_num, double x_phys[MAX_PLOT_PTS_NUM], 
+         double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM]);
+    void get_solution_quad(double x_phys[MAX_QUAD_PTS_NUM], int pts_num,  
+                      double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                      double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                      double *y_prev, 
+                      double bc_left_dir_values[MAX_EQN_NUM],
+                      double bc_right_dir_values[MAX_EQN_NUM]);
+    void get_solution_plot(double x_phys[MAX_PLOT_PTS_NUM], int pts_num,  
+                      double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+                      double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM],
                       double *y_prev, 
                       double bc_left_dir_values[MAX_EQN_NUM],
                       double bc_right_dir_values[MAX_EQN_NUM]);

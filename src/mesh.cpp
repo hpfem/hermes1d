@@ -114,19 +114,19 @@ void Element::get_coeffs(double *y_prev,
   }
 }
 
-// Evaluate solution and its derivatives in the points 'x_phys' 
+// Evaluate solution and its derivatives in quadrature points 'x_phys' 
 // in the element (coeffs[][] array provided).
-void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                           int pts_num, double x_phys[MAX_PTS_NUM], 
-                           double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
-                           double der_phys[MAX_EQN_NUM][MAX_PTS_NUM])
+void Element::get_solution_quad(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                           int pts_num, double x_phys[MAX_QUAD_PTS_NUM], 
+                           double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                           double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM])
 {
   double x1 = this->x1;
   double x2 = this->x2;
   double jac = (x2-x1)/2.; // Jacobian of reference map
   int dof_size = this->dof_size;
   int p = this->p;
-  double x_ref[MAX_PTS_NUM];
+  double x_ref[MAX_QUAD_PTS_NUM];
   // transforming points to (-1, 1)
   for (int i=0 ; i < pts_num; i++) x_ref[i] = inverse_map(x1, x2, x_phys[i]);
   // filling the values and derivatives
@@ -142,22 +142,64 @@ void Element::get_solution(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM],
   }
 } 
 
-// Evaluate solution and its derivatives in the points 'x_phys' 
+// Evaluate solution and its derivatives in plotting points 'x_phys' 
+// in the element (coeffs[][] array provided).
+void Element::get_solution_plot(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                           int pts_num, double x_phys[MAX_PLOT_PTS_NUM], 
+                           double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+                           double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM])
+{
+  double x1 = this->x1;
+  double x2 = this->x2;
+  double jac = (x2-x1)/2.; // Jacobian of reference map
+  int dof_size = this->dof_size;
+  int p = this->p;
+  double x_ref[MAX_PLOT_PTS_NUM];
+  // transforming points to (-1, 1)
+  for (int i=0 ; i < pts_num; i++) x_ref[i] = inverse_map(x1, x2, x_phys[i]);
+  // filling the values and derivatives
+  for(int c=0; c<dof_size; c++) { 
+    for (int i=0 ; i < pts_num; i++) {
+      der_phys[c][i] = val_phys[c][i] = 0;
+      for(int j=0; j<=p; j++) {
+        val_phys[c][i] += coeff[c][j]*lobatto_val_ref(x_ref[i], j);
+        der_phys[c][i] += coeff[c][j]*lobatto_der_ref(x_ref[i], j);
+      }
+      der_phys[c][i] /= jac;
+    }
+  }
+} 
+
+// Evaluate solution and its derivatives in quadrature points 'x_phys' 
 // in the element (coeffs[][] array not provided).
-void Element::get_solution(double x_phys[MAX_PTS_NUM], int pts_num,  
-                           double val_phys[MAX_EQN_NUM][MAX_PTS_NUM], 
-                           double der_phys[MAX_EQN_NUM][MAX_PTS_NUM],
+void Element::get_solution_quad(double x_phys[MAX_QUAD_PTS_NUM], int pts_num,  
+                           double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                           double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                            double *y_prev, 
                            double bc_left_dir_values[MAX_EQN_NUM],
                            double bc_right_dir_values[MAX_EQN_NUM])
 {
   double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
   this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
-  this->get_solution(coeff, pts_num, x_phys, val_phys, der_phys);
+  this->get_solution_quad(coeff, pts_num, x_phys, val_phys, der_phys);
+} 
+
+// Evaluate solution and its derivatives in plotting points 'x_phys' 
+// in the element (coeffs[][] array not provided).
+void Element::get_solution_plot(double x_phys[MAX_PLOT_PTS_NUM], int pts_num,  
+                           double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+                           double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM],
+                           double *y_prev, 
+                           double bc_left_dir_values[MAX_EQN_NUM],
+                           double bc_right_dir_values[MAX_EQN_NUM])
+{
+  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
+  this->get_solution_plot(coeff, pts_num, x_phys, val_phys, der_phys);
 } 
 
 // evaluate solution and its derivative 
-// at the point x_phys (coeffs[][] array provided)
+// at point x_phys (coeffs[][] array provided)
 void Element::get_solution_point(double x_phys,
 			         double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
                                  double val[MAX_EQN_NUM], double der[MAX_EQN_NUM])
@@ -669,30 +711,30 @@ void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref,
 {
   int n_eq = this->get_n_eq();
   int pts_num = subdivision + 1;
-  if (pts_num > MAX_PTS_NUM) {
-    printf("Try to increase MAX_PTS_NUM in common.h\n");
-    error("MAX_PTS_NUM exceeded in plot_element_error_p().");
+  if (pts_num > MAX_PLOT_PTS_NUM) {
+    printf("Try to increase MAX_PLOT_PTS_NUM in common.h\n");
+    error("MAX_PLOT_PTS_NUM exceeded in plot_element_error_p().");
   }
   double x1 = e->x1;
   double x2 = e->x2;
 
   // calculate point array
-  double x_phys[MAX_PTS_NUM];  
+  double x_phys[MAX_PLOT_PTS_NUM];  
   double h = (x2 - x1)/subdivision; 
   for (int i=0; i < pts_num; i++) {
     x_phys[i] = x1 + i*h;
   }
 
   // get coarse mesh solution values and derivatives
-  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
+  double phys_u[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         phys_dudx[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+  e->get_solution_plot(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives
-  double phys_u_ref[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(x_phys, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
+  double phys_u_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         phys_dudx_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+  e->get_solution_plot(x_phys, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   for (int i=0; i < pts_num; i++) {
@@ -721,9 +763,9 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
   // e_ref_right (right half of 'e').
   subdivision /= 2;
   int pts_num = subdivision + 1;
-  if (pts_num > MAX_PTS_NUM) {
-    printf("Try to increase MAX_PTS_NUM in common.h\n");
-    error("MAX_PTS_NUM exceeded in plot_element_error_hp().");
+  if (pts_num > MAX_PLOT_PTS_NUM) {
+    printf("Try to increase MAX_PLOT_PTS_NUM in common.h\n");
+    error("MAX_PLOT_PTS_NUM exceeded in plot_element_error_hp().");
   }
 
   // First: element e_ref_left
@@ -731,22 +773,22 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
   double x2 = e_ref_left->x2;
 
   // calculate array of x-coordinates
-  double x_phys_left[MAX_PTS_NUM];  
+  double x_phys_left[MAX_PLOT_PTS_NUM];  
   double h = (x2 - x1)/subdivision; 
   for (int i=0; i < pts_num; i++) {
     x_phys_left[i] = x1 + i*h;
   }
 
   // get coarse mesh solution values and derivatives
-  double phys_u_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(x_phys_left, pts_num, phys_u_left, phys_dudx_left, y_prev, 
+  double phys_u_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         phys_dudx_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+  e->get_solution_plot(x_phys_left, pts_num, phys_u_left, phys_dudx_left, y_prev, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives
-  double phys_u_ref_left[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_left->get_solution(x_phys_left, pts_num, phys_u_ref_left, 
+  double phys_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         phys_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+  e_ref_left->get_solution_plot(x_phys_left, pts_num, phys_u_ref_left, 
                   phys_dudx_ref_left, y_prev_ref, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
@@ -767,22 +809,22 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
   x2 = e_ref_right->x2;
 
   // calculate array of x-coordinates
-  double x_phys_right[MAX_PTS_NUM];  
+  double x_phys_right[MAX_PLOT_PTS_NUM];  
   h = (x2 - x1)/subdivision; 
   for (int i=0; i < pts_num; i++) {
     x_phys_right[i] = x1 + i*h;
   }
 
   // get coarse mesh solution values and derivatives
-  double phys_u_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(x_phys_right, pts_num, phys_u_right, phys_dudx_right, y_prev, 
+  double phys_u_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         phys_dudx_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+  e->get_solution_plot(x_phys_right, pts_num, phys_u_right, phys_dudx_right, y_prev, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   // get fine mesh solution values and derivatives
-  double phys_u_ref_right[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PTS_NUM];
-  e_ref_right->get_solution(x_phys_right, pts_num, phys_u_ref_right, 
+  double phys_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         phys_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+  e_ref_right->get_solution_plot(x_phys_right, pts_num, phys_u_ref_right, 
     phys_dudx_ref_right, y_prev_ref, this->bc_left_dir_values, 
     this->bc_right_dir_values); 
 
@@ -808,16 +850,16 @@ void Mesh::plot_element_error_exact(int norm, FILE *f, Element *e,
   double x2 = e->x2;
 
   // calculate array of x-coordinates
-  double x_phys[MAX_PTS_NUM];  
+  double x_phys[MAX_PLOT_PTS_NUM];  
   double h = (x2 - x1)/subdivision; 
   for (int i=0; i < pts_num; i++) {
     x_phys[i] = x1 + i*h;
   }
 
   // get coarse mesh solution values and derivatives
-  double phys_u[MAX_EQN_NUM][MAX_PTS_NUM], 
-         phys_dudx[MAX_EQN_NUM][MAX_PTS_NUM];
-  e->get_solution(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
+  double phys_u[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+         phys_dudx[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+  e->get_solution_plot(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
                   this->bc_left_dir_values, this->bc_right_dir_values); 
 
   for (int i=0; i < pts_num; i++) {

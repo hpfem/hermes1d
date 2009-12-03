@@ -42,8 +42,8 @@ double lobatto(int i, double x) // x \in (-1, 1)
 // is the same for interval (0, 1).
 void fill_proj_matrix(int max_fns_num, int max_order, ProjMatrix *proj_matrix)
 {
-  double phys_x[MAX_PTS_NUM];                  // quad points
-  double phys_weights[MAX_PTS_NUM];            // quad weights
+  double phys_x[MAX_QUAD_PTS_NUM];                  // quad points
+  double phys_weights[MAX_QUAD_PTS_NUM];            // quad weights
   int    pts_num = 0;
 
   create_phys_element_quadrature(-1, 0, max_order, phys_x, phys_weights,
@@ -74,10 +74,10 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
     fill_proj_matrix(max_fns_num, max_order, &proj_matrix);
 
     // prepare quadrature in (-1, 0) and (0, 1)
-    double phys_x_left[MAX_PTS_NUM];                     // quad points
-    double phys_x_right[MAX_PTS_NUM];                    // quad points
-    double phys_weights_left[MAX_PTS_NUM];               // quad weights
-    double phys_weights_right[MAX_PTS_NUM];              // quad weights
+    double phys_x_left[MAX_QUAD_PTS_NUM];                     // quad points
+    double phys_x_right[MAX_QUAD_PTS_NUM];                    // quad points
+    double phys_weights_left[MAX_QUAD_PTS_NUM];               // quad weights
+    double phys_weights_right[MAX_QUAD_PTS_NUM];              // quad weights
     int    pts_num_left = 0;
     int    pts_num_right = 0;
     create_phys_element_quadrature(-1, 0, max_order, phys_x_left, phys_weights_left,
