@@ -15,4 +15,10 @@ extern shape_fn_t lobatto_der_tab_1d[];
 
 extern int lobatto_order_1d[];
 
+void fill_lobatto_array(double x, 
+			double lobatto_array_val[MAX_P+1],
+			double lobatto_array_der[MAX_P+1]);
+double calc_lobatto_val(double x, int n);
+double calc_lobatto_der(double x, int n);
+
 #endif /* SHAPESET_LOBATTO_H_ */

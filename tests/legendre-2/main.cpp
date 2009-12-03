@@ -32,8 +32,8 @@ int main(int argc, char* argv[])
         for (int i=0; i < num_pts; i++) {
           double point_i = quad_tab[i][0];
           double weight_i = quad_tab[i][1];
-          val += calc_leg_pol_val(point_i, poly_deg_1) * 
-                 calc_leg_pol_val(point_i, poly_deg_2) * weight_i;
+          val += calc_legendre_val(point_i, poly_deg_1) * 
+                 calc_legendre_val(point_i, poly_deg_2) * weight_i;
         }
         double val_final;
         if (poly_deg_1 == poly_deg_2) val_final = val - 1.0;

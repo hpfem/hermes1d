@@ -10,11 +10,12 @@
 
 #include "common.h"
 
+extern double leg_norm_const(int n);
 extern void fill_legendre_array(double x, 
                                 double val_array[MAX_P+1],
                                 double der_array[MAX_P+1]);
-extern double calc_leg_pol_val(double x, int n);
-extern double calc_leg_pol_der(double x, int n);
+extern double calc_legendre_val(double x, int n);
+extern double calc_legendre_der(double x, int n);
 
 extern shape_fn_t legendre_fn_tab_1d[];
 extern shape_fn_t legendre_der_tab_1d[];

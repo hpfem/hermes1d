@@ -6,58 +6,25 @@
 #include "legendre.h"
 
 int legendre_order_1d[] = {
-
 0,
-1,
-2,
-3,
-4,
-5,
-6,
-7,
-8,
-9,
-10,
-11,
-12,
-13,
-14,
-15,
-16,
-17,
-18,
-19,
-20,
-21,
-22,
-23,
-24,
-25,
-26,
-27,
-28,
-29,
-30,
-31,
-32,
-33,
-34,
-35,
-36,
-37,
-38,
-39,
-40,
-41,
-42,
-43,
-44,
-45,
-46,
-47,
-48,
-49,
+ 1, 2, 3, 4, 5, 6, 7, 8, 9,10,
+11,12,13,14,15,16,17,18,19,20,
+21,22,23,24,25,26,27,28,29,30,
+31,32,33,34,35,36,37,38,39,40,
+41,42,43,44,45,46,47,48,49,50,
+51,52,53,54,55,56,57,58,59,60,
+61,62,63,64,65,66,67,68,69,70,
+71,72,73,74,75,76,77,78,79,80,
+81,82,83,84,85,86,87,88,89,90,
+91,92,93,94,95,96,97,98,99,100,
 };
+
+// Non-normalized Legendre polynomials divided by this constant 
+// become orthonormal in the L2(-1, 1) product
+double leg_norm_const(int n)
+{
+  return sqrt(2./(2.*n + 1));
+} 
 
 // Fills an array of length MAX_P + 1 with Legendre polynomials 
 // and their derivatives at point 'x'. The polynomials are 
@@ -81,16 +48,14 @@ extern void fill_legendre_array(double x,
     }
     // normalization
     for (int i=0; i < max_fns_num; i++) {
-      double norm_const = sqrt(2./(2.*i + 1)); 
-      val_array[i] /= norm_const;
-      der_array[i] /= norm_const;
+      val_array[i] /= leg_norm_const(i);
+      der_array[i] /= leg_norm_const(i);
     }
 }
 
-// FIXME - this function is used temporarily, to see whether 
-// the recursive formula for Legendre polynomials is useful or 
-// not. 
-extern double calc_leg_pol_val(double x, int n) 
+// FIXME - this function is inefficient, 
+// it fills the whole array
+extern double calc_legendre_val(double x, int n) 
 {
     // first fill the array with unnormed Legendre 
     // polynomials using the recursive formula
@@ -100,10 +65,9 @@ extern double calc_leg_pol_val(double x, int n)
     return val_array[n];
 }
 
-// FIXME - this function is used temporarily, to see whether 
-// the recursive formula for Legendre polynomials is useful or 
-// not. 
-extern double calc_leg_pol_der(double x, int n) 
+// FIXME - this function is inefficient,
+// it fills the whole array
+extern double calc_legendre_der(double x, int n) 
 {
     // first fill the array with unnormed Legendre 
     // polynomials using the recursive formula
@@ -112,8 +76,6 @@ extern double calc_leg_pol_der(double x, int n)
     fill_legendre_array(x, val_array, der_array);
     return der_array[n];
 }
-
-
 
 static double legendre_fn_0(double _x) {
     long double x = _x;
@@ -731,3 +693,4 @@ legendre_der_47,
 legendre_der_48,
 legendre_der_49,
 };
+

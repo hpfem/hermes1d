@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
         double point_i = quad_tab[i][0];
         double weight_i = quad_tab[i][1];
         //val += legendre_fn_tab_1d[poly_deg](point_i) * weight_i;
-        val += calc_leg_pol_val(point_i, poly_deg) * weight_i;
+        val += calc_legendre_val(point_i, poly_deg) * weight_i;
       }
       printf("poly_deg = %d, quad_order = %d, integral = %g\n",
              poly_deg, quad_order, val);      
