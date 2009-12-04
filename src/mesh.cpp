@@ -116,28 +116,57 @@ void Element::get_coeffs(double *y_prev,
 
 // Evaluate solution and its derivatives in quadrature points 'x_phys' 
 // in the element (coeffs[][] array provided).
-void Element::get_solution_quad(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                           int pts_num, double x_phys[MAX_QUAD_PTS_NUM], 
-                           double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                           double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM])
+void Element::get_solution_quad(int flag, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                                int quad_order, 
+                                double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+				double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM])
 {
-  double x1 = this->x1;
-  double x2 = this->x2;
-  double jac = (x2-x1)/2.; // Jacobian of reference map
+  double phys_x[MAX_QUAD_PTS_NUM];          // quad points
+  double phys_w[MAX_QUAD_PTS_NUM];          // quad weights
+  int pts_num;
+  create_phys_element_quadrature(this->x1, this->x2, 
+                                 quad_order, phys_x, phys_w, 
+                                 &pts_num); 
+
+  double jac = (this->x2 - this->x1)/2.; // Jacobian of reference map
   int dof_size = this->dof_size;
   int p = this->p;
   double x_ref[MAX_QUAD_PTS_NUM];
-  // transforming points to (-1, 1)
-  for (int i=0 ; i < pts_num; i++) x_ref[i] = inverse_map(x1, x2, x_phys[i]);
   // filling the values and derivatives
-  for(int c=0; c<dof_size; c++) { 
-    for (int i=0 ; i < pts_num; i++) {
-      der_phys[c][i] = val_phys[c][i] = 0;
-      for(int j=0; j<=p; j++) {
-        val_phys[c][i] += coeff[c][j]*lobatto_val_ref(x_ref[i], j);
-        der_phys[c][i] += coeff[c][j]*lobatto_der_ref(x_ref[i], j);
+  if (flag == 0) { // integration points in the whole element
+    for(int c=0; c<dof_size; c++) { 
+      for (int i=0 ; i < pts_num; i++) {
+        der_phys[c][i] = val_phys[c][i] = 0;
+        for(int j=0; j<=p; j++) {
+          val_phys[c][i] += coeff[c][j]*lobatto_val_ref_tab[quad_order][i][j];
+          der_phys[c][i] += coeff[c][j]*lobatto_der_ref_tab[quad_order][i][j];
+        }
+        der_phys[c][i] /= jac;
       }
-      der_phys[c][i] /= jac;
+    }
+  }
+  if (flag == -1) { // integration points in the left half of element
+    for(int c=0; c<dof_size; c++) { 
+      for (int i=0 ; i < pts_num; i++) {
+        der_phys[c][i] = val_phys[c][i] = 0;
+        for(int j=0; j<=p; j++) {
+          val_phys[c][i] += coeff[c][j]*lobatto_val_ref_tab_left[quad_order][i][j];
+          der_phys[c][i] += coeff[c][j]*lobatto_der_ref_tab_left[quad_order][i][j];
+        }
+        der_phys[c][i] /= jac;
+      }
+    }
+  }
+  if (flag == 1) { // integration points in the right half of element
+    for(int c=0; c<dof_size; c++) { 
+      for (int i=0 ; i < pts_num; i++) {
+        der_phys[c][i] = val_phys[c][i] = 0;
+        for(int j=0; j<=p; j++) {
+          val_phys[c][i] += coeff[c][j]*lobatto_val_ref_tab_right[quad_order][i][j];
+          der_phys[c][i] += coeff[c][j]*lobatto_der_ref_tab_right[quad_order][i][j];
+        }
+        der_phys[c][i] /= jac;
+      }
     }
   }
 } 
@@ -172,16 +201,57 @@ void Element::get_solution_plot(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM],
 
 // Evaluate solution and its derivatives in quadrature points 'x_phys' 
 // in the element (coeffs[][] array not provided).
-void Element::get_solution_quad(double x_phys[MAX_QUAD_PTS_NUM], int pts_num,  
-                           double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                           double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
-                           double *y_prev, 
-                           double bc_left_dir_values[MAX_EQN_NUM],
-                           double bc_right_dir_values[MAX_EQN_NUM])
+void Element::get_solution_quad(int flag, int quad_order, double *y_prev, 
+                                double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                                double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                                double bc_left_dir_values[MAX_EQN_NUM],
+                                double bc_right_dir_values[MAX_EQN_NUM])
+{
+
+  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
+  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
+  this->get_solution_quad(flag, coeff, quad_order, val_phys, der_phys);
+} 
+
+// Calculates square of the L2 or H1 norm of the solution in element
+double Element::calc_elem_norm_squared(int norm, double *y_prev, 
+                                double bc_left_dir_values[MAX_EQN_NUM],
+                                double bc_right_dir_values[MAX_EQN_NUM])
 {
   double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
   this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
-  this->get_solution_quad(coeff, pts_num, x_phys, val_phys, der_phys);
+  double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
+  int pts_num;
+  int order = 2*this->p;
+  this->get_solution_quad(0, coeff, order, val_phys, der_phys);
+
+  double phys_x[MAX_QUAD_PTS_NUM];
+  double phys_weights[MAX_QUAD_PTS_NUM];
+  create_phys_element_quadrature(this->x1, this->x2, order, phys_x, phys_weights,
+                                 &pts_num); 
+
+  // integrate square over (-1, 1)
+  int n_eq = this->dof_size;
+  double norm_squared[MAX_EQN_NUM];
+  for (int c=0; c<n_eq; c++) {
+    norm_squared[c] = 0;
+    for (int i=0; i<pts_num; i++) {
+      double val = val_phys[c][i];
+      if (norm == 1) {
+        double der;
+        der = der_phys[c][i];
+        norm_squared[c] += (val*val + der*der) * phys_weights[i];
+      }
+      else norm_squared[c] += val*val * phys_weights[i];
+    }
+  }
+
+  double elem_norm_squared = 0;
+  for (int c=0; c<n_eq; c++)  
+    elem_norm_squared += norm_squared[c];
+
+  return elem_norm_squared;
 } 
 
 // Evaluate solution and its derivatives in plotting points 'x_phys' 
@@ -224,7 +294,8 @@ void Element::get_solution_point(double x_phys,
 // evaluate solution and its derivative 
 // at the point x_phys (coeffs[][] array not provided)
 void Element::get_solution_point(double x_phys,
-				 double val_phys[MAX_EQN_NUM], double der_phys[MAX_EQN_NUM],
+				 double val_phys[MAX_EQN_NUM], 
+                                 double der_phys[MAX_EQN_NUM],
                                  double *y_prev, double *bc_left_dir_values,
                                  double *bc_right_dir_values)
 {

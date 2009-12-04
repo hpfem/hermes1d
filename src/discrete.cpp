@@ -10,8 +10,19 @@ DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
   // of all polynomials at all possible 
   // integration points
+  fprintf(stderr, "Precalculating Legendre polynomials...");
+  fflush(stderr);
   precalculate_legendre_1d();
+  precalculate_legendre_1d_left();
+  precalculate_legendre_1d_right();
+  fprintf(stderr, "done.\n");
+
+  fprintf(stderr, "Precalculating Lobatto shape functions...");
+  fflush(stderr);
   precalculate_lobatto_1d();
+  precalculate_lobatto_1d_left();
+  precalculate_lobatto_1d_right();
+  fprintf(stderr, "done.\n");
 }
 
 void DiscreteProblem::add_matrix_form(int i, int j, matrix_form fn)
@@ -51,7 +62,7 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
     //printf("Processing elem %d\n", m);
     // variables to store quadrature data
     // FIXME: now maximum number of Gauss points is [MAX_EQN_NUM][MAX_QUAD_PTS_NUM]0
-    int    pts_num = 0;       // num of quad points
+    int    pts_num;                                     // num of quad points
     double phys_pts[MAX_QUAD_PTS_NUM];                  // quad points
     double phys_weights[MAX_QUAD_PTS_NUM];              // quad weights
     double phys_u[MAX_QUAD_PTS_NUM];                    // basis function 
@@ -70,14 +81,15 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
 
     // prepare quadrature points and weights in element 'e'
     create_phys_element_quadrature(e->x1, e->x2,  
-	                           order, phys_pts, phys_weights, &pts_num); 
+                               order, phys_pts, phys_weights, &pts_num); 
 
     // evaluate previous solution and its derivative 
     // at all quadrature points in the element, 
     // for every solution component
-    e->get_solution_quad(phys_pts, pts_num, 
-                    phys_u_prev, phys_du_prevdx, y_prev, 
-                    mesh->bc_left_dir_values, mesh->bc_right_dir_values); 
+    // 0... in the entire element
+    e->get_solution_quad(0, order, y_prev, 
+                         phys_u_prev, phys_du_prevdx,
+                         mesh->bc_left_dir_values, mesh->bc_right_dir_values); 
 
     // volumetric bilinear forms
     if(matrix_flag == 0 || matrix_flag == 1) 

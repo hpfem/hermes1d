@@ -31,24 +31,26 @@ public:
     void init(double x1, double x2, int p_init, int n_eq);
     void copy_sons_recursively(Element *e_trg);
     double get_x_phys(double x_ref); // gets physical coordinate of a reference poin
+    double calc_elem_norm_squared(int norm, double *y_prev, 
+                                double bc_left_dir_values[MAX_EQN_NUM],
+                                double bc_right_dir_values[MAX_EQN_NUM]);
     void get_coeffs(double *y_prev, 
 		    double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM],
                     double bc_left_dir_values[MAX_EQN_NUM],
                     double bc_right_dir_values[MAX_EQN_NUM]);
-    void get_solution_quad(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-         int pts_num, double x_phys[MAX_QUAD_PTS_NUM], 
-         double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-         double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]);
+    void get_solution_quad(int flag, int quad_order, double *y_prev, 
+                                double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                                double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                                double bc_left_dir_values[MAX_EQN_NUM],
+                                double bc_right_dir_values[MAX_EQN_NUM]);
+    void get_solution_quad(int flag, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+                                int quad_order, 
+                                double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+				double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]);
     void get_solution_plot(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
          int pts_num, double x_phys[MAX_PLOT_PTS_NUM], 
          double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM]);
-    void get_solution_quad(double x_phys[MAX_QUAD_PTS_NUM], int pts_num,  
-                      double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                      double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
-                      double *y_prev, 
-                      double bc_left_dir_values[MAX_EQN_NUM],
-                      double bc_right_dir_values[MAX_EQN_NUM]);
     void get_solution_plot(double x_phys[MAX_PLOT_PTS_NUM], int pts_num,  
                       double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
                       double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM],

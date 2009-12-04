@@ -8,6 +8,10 @@
 
 double lobatto_val_ref_tab[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
 double lobatto_der_ref_tab[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
+double lobatto_val_ref_tab_left[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
+double lobatto_der_ref_tab_left[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
+double lobatto_val_ref_tab_right[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
+double lobatto_der_ref_tab_right[MAX_QUAD_ORDER][MAX_QUAD_PTS_NUM][MAX_P + 1];
 
 int lobatto_order_1d[] = {
 1,
@@ -91,10 +95,9 @@ extern double lobatto_der_ref(double x, int n)
     return der_array[n];
 }
 
+// integrated Legendre polynomials in (-1, 1)
 void precalculate_lobatto_1d() 
 {
-  fprintf(stderr, "Precalculating Lobatto polynomials...");
-  fflush(stderr);
   // erasing
   for (int quad_order=0; quad_order < MAX_QUAD_ORDER; quad_order++) {
     for (int point_id=0; point_id < MAX_QUAD_PTS_NUM; point_id++) {
@@ -113,7 +116,55 @@ void precalculate_lobatto_1d()
                              lobatto_der_ref_tab[quad_order][point_id]);
     }
   }
-  fprintf(stderr, "done.\n");
+}
 
+// half-polynomials in (-1, 0)
+void precalculate_lobatto_1d_left() 
+{
+  // erasing
+  for (int quad_order=0; quad_order < MAX_QUAD_ORDER; quad_order++) {
+    for (int point_id=0; point_id < MAX_QUAD_PTS_NUM; point_id++) {
+      for (int poly_deg=0; poly_deg < MAX_P + 1; poly_deg++) {
+        lobatto_val_ref_tab_left[quad_order][point_id][poly_deg] = 0;
+        lobatto_der_ref_tab_left[quad_order][point_id][poly_deg] = 0;
+      }
+    }
+  }
+
+  for (int quad_order=0; quad_order < MAX_QUAD_ORDER; quad_order++) {
+    int pts_num = g_quad_1d_std.get_num_points(quad_order);
+    double2 *ref_tab = g_quad_1d_std.get_points(quad_order);
+    for (int point_id=0; point_id < pts_num; point_id++) {
+      double x_ref = (ref_tab[point_id][0] - 1.) / 2.;  // transf to (-1, 0)
+      fill_lobatto_array_ref(x_ref, 
+            lobatto_val_ref_tab_left[quad_order][point_id],
+            lobatto_der_ref_tab_left[quad_order][point_id]);
+    }
+  }
+}
+
+// half-polynomials in (0, 1)
+void precalculate_lobatto_1d_right() 
+{
+  // erasing
+  for (int quad_order=0; quad_order < MAX_QUAD_ORDER; quad_order++) {
+    for (int point_id=0; point_id < MAX_QUAD_PTS_NUM; point_id++) {
+      for (int poly_deg=0; poly_deg < MAX_P + 1; poly_deg++) {
+        lobatto_val_ref_tab_right[quad_order][point_id][poly_deg] = 0;
+        lobatto_der_ref_tab_right[quad_order][point_id][poly_deg] = 0;
+      }
+    }
+  }
+
+  for (int quad_order=0; quad_order < MAX_QUAD_ORDER; quad_order++) {
+    int pts_num = g_quad_1d_std.get_num_points(quad_order);
+    double2 *ref_tab = g_quad_1d_std.get_points(quad_order);
+    for (int point_id=0; point_id < pts_num; point_id++) {
+      double x_ref = (ref_tab[point_id][0] + 1.) / 2.;  // transf to (0, 1)
+      fill_lobatto_array_ref(x_ref, 
+              lobatto_val_ref_tab_right[quad_order][point_id],
+              lobatto_der_ref_tab_right[quad_order][point_id]);
+    }
+  }
 }
 
