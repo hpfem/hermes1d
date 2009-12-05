@@ -68,14 +68,18 @@ void Element::refine(int3 cand)
   this->refine(cand[0], cand[1], cand[2]);
 }
 
-void Element::init(double x1, double x2, int p_init, int n_eq)
+// initialize element and allocate dof arrays for all
+// solution components
+void Element::init(double x1, double x2, int p_init, 
+                   int id, int active, int level, int n_eq)
 {
   this->x1 = x1;
   this->x2 = x2;
   this->p = p_init;
+  this->id = id;
+  this->active = active;
+  this->level = level;
   this->dof_size = n_eq;
-  // allocate element dof arrays for all solution components 
-  // and length MAX_P
   this->dof_alloc();
 }
 
@@ -304,23 +308,30 @@ void Element::get_solution_point(double x_phys,
   this->get_solution_point(x_phys, coeff, val_phys, der_phys);
 } 
 
-// Copying elements including their refinement trees, 
-// inactive Dirichlet DOF are replicated.
+// Copying elements including all their variables, dof arrays, and 
+// refinement trees, 
 // FIXME - the recursive version is slow and should be improved.
-void Element::copy_sons_recursively(Element *e_trg) {
-  // only if element has been split in space, otherwise
-  // both sons are NULL
-  if(this->sons[0] != NULL) {
-    int p_left = this->sons[0]->p;
-    int p_right = this->sons[1]->p;
-    int3 cand = {1, p_left, p_right};
-    e_trg->refine(cand);
-    // left son
-    this->sons[0]->copy_sons_recursively(e_trg->sons[0]);
-    // right son
-    this->sons[1]->copy_sons_recursively(e_trg->sons[1]);
+void Element::copy_element_recursively(Element *e_trg) 
+{
+  // copy all variables of Element class
+  e_trg->init(this->x1, this->x2, this->p, this->id, 
+              this->active, this->level, this->dof_size);
+
+  // copy dof arrays for all solution components
+  for(int c=0; c < dof_size; c++) {
+    for(int i=0; i < MAX_P + 1; i++) e_trg->dof[c][i] = this->dof[c][i];
   }
-  else {
+
+  // replicate sons if relevant
+  if(this->sons[0] != NULL) {          // element was split in space (sons will be replicated)
+    e_trg->sons[0] = new Element();
+    e_trg->sons[1] = new Element();
+    // left son
+    this->sons[0]->copy_element_recursively(e_trg->sons[0]);
+    // right son
+    this->sons[1]->copy_element_recursively(e_trg->sons[1]);
+  }
+  else {                               // element was split in space (sons are NULL)
     e_trg->sons[0] = NULL;
     e_trg->sons[1] = NULL;
   }
@@ -345,27 +356,28 @@ Mesh::Mesh() {
 // creates equidistant mesh with uniform polynomial degree of elements
 Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
 {
-  // domain end points
-  left_endpoint = a;
-  right_endpoint = b;
-  // number of equations
-  this->n_eq = n_eq;
   // print the banner (only once)
   static int n_calls = 0;
   n_calls++;
   if (n_calls == 1) intro();
+
   // check maximum number of equations
   if(n_eq > MAX_EQN_NUM) 
   error("Maximum number of equations exceeded (set in common.h)");
-  // arrays for boundary conditions
+
+  // all Mesh class variables
+  this->left_endpoint = a;
+  this->right_endpoint = b;
+  this->n_base_elem = n_base_elem;
+  this->n_eq = n_eq;
+  this->n_active_elem = n_base_elem;
+
+  // erase arrays of Dirichlet boundary conditions
   for (int i=0; i<MAX_EQN_NUM; i++) {
     this->bc_left_dir_values[i] = 0;
     this->bc_right_dir_values[i] = 0;
   }
-  // number of base elements
-  this->n_base_elem = n_base_elem;
-  // number of active elements
-  this->n_active_elem = n_base_elem;
+
   // allocate element array
   this->base_elems = new Element[this->n_base_elem];     
   if (base_elems == NULL) error("Not enough memory in Mesh::create().");
@@ -374,57 +386,59 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   // element length
   double h = (b - a)/this->n_base_elem;          
   // fill initial element array
-  for(int i=0; i<this->n_base_elem; i++) {         
-    this->base_elems[i].init(a + i*h, a + i*h + h, p_init, n_eq);
+  for(int i=0; i<this->n_base_elem; i++) { 
+    int id = i;         
+    int active = 1;
+    int level = 0; 
+    this->base_elems[i].init(a + i*h, a + i*h + h, p_init, 
+                             id, active, level, n_eq);
   }
-  this->assign_elem_ids();
 }
 
 // creates mesh using a given array of n_base_elem+1 points (pts_array)
 // and an array of n_base_elem polynomial degrees (p_array)
 Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
 {
-  // domain end points
-  left_endpoint = pts_array[0];
-  right_endpoint = pts_array[n_base_elem];
-  // number of equations
-  this->n_eq = n_eq;
   // print the banner (only once)
   static int n_calls = 0;
   n_calls++;
   if (n_calls == 1) intro();
+
   // check maximum number of equations
   if(n_eq > MAX_EQN_NUM) 
   error("Maximum number of equations exceeded (set in common.h)");
-  // arrays for boundary conditions
+
+  // all Mesh class variables
+  this->left_endpoint = pts_array[0];
+  this->right_endpoint = pts_array[n_base_elem];
+  this->n_base_elem = n_base_elem;
+  this->n_eq = n_eq;
+  this->n_active_elem = n_base_elem;
+
+  // erase arrays of Dirichlet boundary conditions
   for (int i=0; i<MAX_EQN_NUM; i++) {
     this->bc_left_dir_values[i] = 0;
     this->bc_right_dir_values[i] = 0;
   }
-  // number of base elements
-  this->n_base_elem = n_base_elem;
-  // number of active elements
-  this->n_active_elem = n_base_elem;
+
   // allocate element array
   this->base_elems = new Element[this->n_base_elem];     
   if (base_elems == NULL) error("Not enough memory in Mesh::create().");
-  // fill initial element array
+
+  // initialize element array
   for(int i=0; i<this->n_base_elem; i++) {
-    if (p_array[i] > MAX_P) 
+    if (p_array[i] > MAX_P) {
       error("Max element order exceeded (set in common.h).");
-    // polynomial degree
-    this->base_elems[i].p = p_array[i];
-    // allocate element dof arrays for all solution components 
-    // and length MAX_P
-    this->base_elems[i].dof_alloc();
-    // define element end points
-    this->base_elems[i].x1 = pts_array[i];
-    this->base_elems[i].x2 = pts_array[i+1];
+    }
+    int id = i;
+    int active = 1;
+    int level = 0; 
+    this->base_elems[i].init(pts_array[i], pts_array[i+1], 
+                             p_array[i], id, active, level, n_eq);
   }
-  this->assign_elem_ids();
 }
 
-// caution - this is expensive (traverses the entire tree 
+// CAUTION - this is expensive (traverses the entire tree 
 // from the beginning until the element is found)
 void Mesh::refine_single_elem(int id, int3 cand)
 {
@@ -472,10 +486,12 @@ void Mesh::reference_refinement(int start_elem_id, int elem_num)
 	    if (count >= elem_num) return;
             int3 cand = {1, e->p + 1, e->p + 1};
             e->refine(cand);
+            
             if (cand[0] == 1) this->n_active_elem++; // if hp-refinement
             count++;
         }
     }
+    this->assign_dofs();
 }
 
 void Mesh::set_bc_left_dirichlet(int eq_n, double val)
@@ -702,58 +718,37 @@ void element_shapefn_point(double x_ref, double a, double b,
     *der = lobatto_der_ref(x_ref, k) / jac; 
 }
 
-// Replicate mesh
+// Replicate mesh including dof arrays in all elements
 Mesh *Mesh::replicate()
 {
-  // copy base mesh element array, use dummy poly degree (p_init
-  // cannot be used since p-refinements on base mesh may have taken 
-  // place)
+  // copy base mesh element array, use dummy poly degree first 
+  // (poly degrees in base mesh may have changed since initialization)
   int p_dummy = -1; 
   Mesh *mesh_new = new Mesh(this->left_endpoint, this->right_endpoint, 
 			    this->n_base_elem, p_dummy, this->n_eq);
 
-  // copy element degrees on base mesh
-  for(int i=0; i<this->n_base_elem; i++) {
-    mesh_new->get_base_elems()[i].p = this->get_base_elems()[i].p;
-  }
-
-  // copy number of base elements
+  // copy all Mesh class variables
+  mesh_new->set_n_eq(this->n_eq);
   mesh_new->set_n_base_elem(this->n_base_elem);
-    
-  // copy arrays of Dirichlet boundary conditions
+  mesh_new->set_n_active_elem(this->n_active_elem);
+  mesh_new->set_left_endpoint(this->left_endpoint);
+  mesh_new->set_right_endpoint(this->right_endpoint);
+  mesh_new->set_n_dof(this->n_dof);
+
+  // copy links to Dirichlet boundary condition arrays
   for(int c = 0; c<this->n_eq; c++) {
     mesh_new->bc_left_dir_values[c] = this->bc_left_dir_values[c]; 
     mesh_new->bc_right_dir_values[c] = this->bc_right_dir_values[c]; 
   }
 
-  // copy inactive Dirichlet DOF on first and last element of base mesh
-  for(int c=0; c<this->n_eq; c++) {
-    if(this->base_elems[0].dof[c][0] == -1) {
-      Element *e_left = mesh_new->get_base_elems();
-      e_left->dof[c][0] = -1;
-    }
-    if(this->base_elems[this->n_base_elem-1].dof[c][1] == -1) {
-      Element *e_right = mesh_new->get_base_elems()+this->n_base_elem-1;
-      e_right->dof[c][1] = -1;
-    }
-  }
-
-  // replicate tree structure on all base mesh elements,
-  // this includes replication of inactive Dirichlet DOF
+  // replicate all base mesh elements including all their 
+  // variables, dof arrays, and tree-structure
+  Element *base_elems_new = mesh_new->get_base_elems();
   for(int i=0; i<this->n_base_elem; i++) {
     Element *e_src = this->base_elems + i;
-    Element *e_trg = mesh_new->get_base_elems() + i;
-    e_src->copy_sons_recursively(e_trg);
+    Element *e_trg = base_elems_new + i;
+    e_src->copy_element_recursively(e_trg);
   }
-
-  // copy number of base elements
-  mesh_new->n_active_elem = this->n_active_elem;
-
-  // enumerate DOF in the reference mesh
-  mesh_new->assign_dofs();
-
-  // enumerate elements in reference mesh
-  mesh_new->assign_elem_ids();
 
   return mesh_new;
 }

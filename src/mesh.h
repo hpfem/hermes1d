@@ -28,8 +28,9 @@ public:
         this->free_element();
     }
     virtual void dof_alloc();
-    void init(double x1, double x2, int p_init, int n_eq);
-    void copy_sons_recursively(Element *e_trg);
+    void init(double x1, double x2, int p_init, 
+                   int id, int active, int level, int n_eq);
+    void copy_element_recursively(Element *e_trg);
     double get_x_phys(double x_ref); // gets physical coordinate of a reference poin
     double calc_elem_norm_squared(int norm, double *y_prev, 
                                 double bc_left_dir_values[MAX_EQN_NUM],
@@ -94,7 +95,6 @@ class Mesh {
         Element *get_base_elems() {
             return this->base_elems;
         }
-
         int get_n_base_elem() {
             return this->n_base_elem;
         }
@@ -104,8 +104,14 @@ class Mesh {
         int get_n_active_elem() {
             return this->n_active_elem;
         }
+        void set_n_active_elem(int n) {
+            this->n_active_elem = n;
+        }
         int get_n_dof() {
             return this->n_dof;
+        }
+        void set_n_dof(int n) {
+            this->n_dof = n;
         }
         int get_n_eq() {
             return this->n_eq;
@@ -114,10 +120,16 @@ class Mesh {
             this->n_eq = n_eq;
         }
         double get_left_endpoint() {
-            return left_endpoint; 
+            return this->left_endpoint; 
+        }
+        void set_left_endpoint(double a) {
+            this->left_endpoint = a; 
         }
         double get_right_endpoint() {
-            return right_endpoint; 
+            return this->right_endpoint; 
+        }
+        void set_right_endpoint(double b) {
+            this->right_endpoint = b; 
         }
         Element* first_active_element();
         Element* last_active_element();

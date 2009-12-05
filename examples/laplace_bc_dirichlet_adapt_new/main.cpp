@@ -2,10 +2,9 @@
 
 // ********************************************************************
 
-// This example solves adaptively the Poisson equation -u'' - f = 0 
-// in an interval (A, B), equipped with Dirichlet boundary
-// conditions on both end points. Among others it shows how 
-// one can measure error wrt. exact solution (if available).
+// This example uses the method of fast trial refinements to solve
+// adaptively the Poisson equation -u'' - f = 0 in an interval (A, B), 
+// equipped with Dirichlet boundary conditions on both end points.
 
 // General input:
 static int N_eq = 1;
@@ -67,11 +66,11 @@ int main() {
   dp->add_matrix_form(0, 0, jacobian);
   dp->add_vector_form(0, residual);
 
-  // Allocate vector y_prev
+  // Allocate vector 'y_prev'
   double *y_prev = new double[N_dof];
   if (y_prev == NULL) error("y_prev could not be allocated in main().");
 
-  // Set y_prev zero
+  // Set 'y_prev' zero
   for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Initial Newton's loop on coarse mesh
@@ -81,25 +80,34 @@ int main() {
   printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
          iter_num);
 
-  // Create initial fine mesh
-  // Perform refinements in the fine mesh
-  // Refines 'num_to_ref' elements starting with element 'start_elem_id'
-  // For now, refine entire mesh uniformly in 'h' and 'p'
-  Mesh *mesh_ref = mesh->replicate();
-  int start_elem_id = 0; 
-  int num_to_ref = mesh->get_n_active_elem();
-  mesh_ref->reference_refinement(start_elem_id, num_to_ref);
-  int N_dof_ref = mesh_ref->assign_dofs();
-  printf("Fine mesh created (%d DOF).\n", N_dof_ref);
+  // For every element calculate the error caused by its refinement
+  int n_elem = mesh->get_n_active_elem();
+  Mesh *mesh_ref;
+  double *y_prev_ref;
+  for (int i=0; i < n_elem; i++) {
+    mesh_ref = mesh->replicate();
+    // refine one element starting with element 'i'
+    mesh_ref->reference_refinement(i, 1); 
+    int N_dof_ref = mesh_ref->assign_dofs();
+    printf("Elem [%d]: fine mesh created (%d DOF).\n", i, N_dof_ref);
 
-  // Allocate vector y_prev_ref
-  double *y_prev_ref = new double[N_dof_ref];
-  if (y_prev_ref == NULL) 
-    error("y_prev_ref could not be allocated in main().");
+    // Allocate vector 'y_prev_ref'
+    y_prev_ref = new double[N_dof_ref];
+    if (y_prev_ref == NULL) 
+      error("y_prev_ref could not be allocated in main().");
 
-  // Transfer coarse mesh solution to the fine mesh
-  transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref);
-  printf("Coarse mesh solution copied to fine mesh.\n");
+    // Transfer solution from 'mesh' to 'mesh_ref' 
+    // FIXME: this should be done on one element only,
+    //        in all others the solution remains the same !!! 
+    transfer_solution(mesh, mesh_ref, y_prev, y_prev_ref);
+    printf("Coarse mesh solution copied to fine mesh.\n");
+
+    // In the next step, estimate element errors (squared) based on 
+    // the difference between the fine mesh and coarse mesh solutions. 
+    double err_est_squared_array[MAX_ELEM_NUM]; 
+    double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
+                                 y_prev_ref, err_est_squared_array);
+  }
 
   // Convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
@@ -107,6 +115,8 @@ int main() {
   graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
   graph.add_row("exact error", "k", "-", "o");
   graph.add_row("error estimate", "k", "--");
+
+    /*
 
   // Main adaptivity loop
   int adapt_iterations = 1;
@@ -182,6 +192,7 @@ int main() {
     adapt_iterations++;
   }
 
+  */
   // Plot meshes, results, and errors
   adapt_plotting(mesh, mesh_ref, y_prev, y_prev_ref,
            NORM, EXACT_SOL_PROVIDED, exact_sol);
@@ -193,8 +204,8 @@ int main() {
   return 1;
   delete [] y_prev;
   delete [] y_prev_ref;
-}
 
+}
 
 
 

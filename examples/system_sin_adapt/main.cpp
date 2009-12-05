@@ -82,15 +82,14 @@ int main() {
   printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
          iter_num);
 
-  // Create initial fine mesh
-  // Perform refinements in the fine mesh
-  // Refines 'num_to_ref' elements starting with element 'start_elem_id'
-  // For now, refine entire mesh uniformly in 'h' and 'p'
+  // Replicate coarse mesh including dof arrays
   Mesh *mesh_ref = mesh->replicate();
+
+  // Refine entire mesh_ref uniformly in 'h' and 'p'
   int start_elem_id = 0; 
-  int num_to_ref = mesh->get_n_active_elem();
+  int num_to_ref = mesh_ref->get_n_active_elem();
   mesh_ref->reference_refinement(start_elem_id, num_to_ref);
-  int N_dof_ref = mesh_ref->assign_dofs();
+  int N_dof_ref = mesh_ref->get_n_dof();
   printf("Fine mesh created (%d DOF).\n", N_dof_ref);
 
   // Allocate vector y_prev_ref
