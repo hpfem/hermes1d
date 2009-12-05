@@ -95,7 +95,7 @@ double inverse_map(double x1, double x2, double x_phys)
 
 // returns values of normalized Legendre polynomials on (a, b), for 
 // an arbitrary point 'x'
-double legendre_val_phys(int i, double a, double b, double x) {  // x \in (a, b)
+double legendre_val_phys_plot(int i, double a, double b, double x) {  // x \in (a, b)
   double norm_const = sqrt(2/(b-a));
   return norm_const*legendre_val_ref(inverse_map(a, b, x), i);
 }
@@ -105,7 +105,7 @@ double legendre_val_phys(int i, double a, double b, double x) {  // x \in (a, b)
 // flag == 0: entire polynomial defined in interval (a,b)
 // flag == -1: only left half of polynomial defined in interval (a,b)
 // flag == 1: only right half of polynomial defined in interval (a,b)
-void legendre_val_phys(int flag, int quad_order, int fns_num, 
+void legendre_val_phys_quad(int flag, int quad_order, int fns_num, 
                        double a, double b,  
                        double leg_pol_val[MAX_QUAD_PTS_NUM][MAX_P+1]) 
 { 
@@ -139,7 +139,7 @@ void legendre_val_phys(int flag, int quad_order, int fns_num,
 
 // returns derivatives of normalized Legendre polynomials on (a, b), for
 // an arbitrary point 'x'
-double legendre_der_phys(int i, double a, double b, double x) {  // x \in (a, b)
+double legendre_der_phys_plot(int i, double a, double b, double x) {  // x \in (a, b)
   double norm_const = sqrt(2/(b-a));
   norm_const *= 2./(b-a); // to account for interval stretching/shortening
   return norm_const*legendre_der_ref(inverse_map(a, b, x), i);
@@ -150,7 +150,7 @@ double legendre_der_phys(int i, double a, double b, double x) {  // x \in (a, b)
 // flag == 0: entire polynomial defined in interval (a,b)
 // flag == -1: only left half of polynomial defined in interval (a,b)
 // flag == 1: only right half of polynomial defined in interval (a,b)
-void legendre_der_phys(int flag, int quad_order, int fns_num, 
+void legendre_der_phys_quad(int flag, int quad_order, int fns_num, 
                        double a, double b,  
                        double leg_pol_der[MAX_QUAD_PTS_NUM][MAX_P+1]) 
 {

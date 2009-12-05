@@ -58,27 +58,27 @@ double inverse_map(double x1, double x2, double x_phys);
 
 // returns values of normalized Legendre polynomials on (a, b), for 
 // an arbitrary point 'x'
-double legendre_val_phys(int i, double a, double b, double x);
+double legendre_val_phys_plot(int i, double a, double b, double x);
 
 // Returns values of normalized Legendre polynomials on (a, b) in
 // Gauss quadrature points of order 'quad_order'.
 // flag == 0: entire polynomial defined in interval (a,b)
 // flag == -1: only left half of polynomial defined in interval (a,b)
 // flag == 1: only right half of polynomial defined in interval (a,b)
-void legendre_val_phys(int flag, int quad_order, int fns_num, 
+void legendre_val_phys_quad(int flag, int quad_order, int fns_num, 
                        double a, double b,  
                        double leg_pol_val[MAX_QUAD_PTS_NUM][MAX_P+1]); 
 
 // returns derivatives of normalized Legendre polynomials on (a, b), for
 // an arbitrary point 'x'
-double legendre_der_phys(int i, double a, double b, double x);
+double legendre_der_phys_plot(int i, double a, double b, double x);
 
 // Returns derivatives of normalized Legendre polynomials on (a, b) in
 // Gauss quadrature points of order 'quad_order'
 // flag == 0: entire polynomial defined in interval (a,b)
 // flag == -1: only left half of polynomial defined in interval (a,b)
 // flag == 1: only right half of polynomial defined in interval (a,b)
-void legendre_der_phys(int flag, int quad_order, int fns_num, 
+void legendre_der_phys_quad(int flag, int quad_order, int fns_num, 
                        double a, double b,  
                        double leg_pol_der[MAX_QUAD_PTS_NUM][MAX_P+1]);
 

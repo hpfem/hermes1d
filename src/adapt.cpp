@@ -441,10 +441,10 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   double leg_pol_der_left[MAX_QUAD_PTS_NUM][MAX_P+1];
   int fns_num_left = p_left + 1;
   // 0... whole polynomials in (e_ref_left->x1, e_ref_left->x2)
-  legendre_val_phys(0, order_left, fns_num_left,
+  legendre_val_phys_quad(0, order_left, fns_num_left,
                     e_ref_left->x1, e_ref_left->x2, 
                     leg_pol_val_left);
-  if (norm == 1) legendre_der_phys(0, order_left, fns_num_left,
+  if (norm == 1) legendre_der_phys_quad(0, order_left, fns_num_left,
                     e_ref_left->x1, e_ref_left->x2, 
                     leg_pol_der_left);
 
@@ -540,10 +540,10 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   double leg_pol_der_right[MAX_QUAD_PTS_NUM][MAX_P+1];
   int fns_num_right = p_right + 1;
   // 0... whole polynomials in (e_ref_right->x1, e_ref_right->x2)
-  legendre_val_phys(0, order_right, fns_num_right,
+  legendre_val_phys_quad(0, order_right, fns_num_right,
                     e_ref_right->x1, e_ref_right->x2,
                     leg_pol_val_right);
-  if (norm == 1) legendre_der_phys(0, order_right, fns_num_right,
+  if (norm == 1) legendre_der_phys_quad(0, order_right, fns_num_right,
                                    e_ref_right->x1, e_ref_right->x2,                
                                    leg_pol_der_right);
 
@@ -668,7 +668,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_leg_pol_val_left[MAX_PLOT_PTS_NUM][MAX_P+1];
     for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_val_left[j][m] = legendre_val_phys(m, e_ref_left->x1, 
+        plot_leg_pol_val_left[j][m] = legendre_val_phys_plot(m, e_ref_left->x1, 
                             e_ref_left->x2, plot_x_left[j]);
       }
     }
@@ -687,7 +687,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_leg_pol_val_right[MAX_PLOT_PTS_NUM][MAX_P+1];
     for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_val_right[j][m] = legendre_val_phys(m, e_ref_right->x1, 
+        plot_leg_pol_val_right[j][m] = legendre_val_phys_plot(m, e_ref_right->x1, 
                             e_ref_right->x2, plot_x_right[j]);
       }
     }
@@ -759,10 +759,10 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   double leg_pol_der_left[MAX_QUAD_PTS_NUM][MAX_P+1];
   int fns_num_left = p_left + 1;
   // 0... whole polynomials in (e->x1, (e->x1 + e->x2)/2.)
-  legendre_val_phys(0, order_left, fns_num_left, 
+  legendre_val_phys_quad(0, order_left, fns_num_left, 
                     e->x1, (e->x1 + e->x2)/2.,
                     leg_pol_val_left);
-  if (norm == 1) legendre_der_phys(0, order_left, fns_num_left, 
+  if (norm == 1) legendre_der_phys_quad(0, order_left, fns_num_left, 
                     e->x1, (e->x1 + e->x2)/2.,
                     leg_pol_der_left);
 
@@ -855,10 +855,10 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   double leg_pol_der_right[MAX_QUAD_PTS_NUM][MAX_P+1];
   int fns_num_right = p_right + 1;
   // 0... whole polynomials in ((e->x1 + e->x2)/2, e->x2,)
-  legendre_val_phys(0, order_right, fns_num_right, 
+  legendre_val_phys_quad(0, order_right, fns_num_right, 
                     (e->x1 + e->x2)/2, e->x2, 
                     leg_pol_val_right);
-  if (norm == 1) legendre_der_phys(0, order_right, fns_num_right, 
+  if (norm == 1) legendre_der_phys_quad(0, order_right, fns_num_right, 
                     (e->x1 + e->x2)/2, e->x2, 
                     leg_pol_der_right);
 
@@ -982,7 +982,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     double plot_leg_pol_val_left[MAX_PLOT_PTS_NUM][MAX_P+1];
     for(int m=0; m < p_left + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {
-        plot_leg_pol_val_left[j][m] = legendre_val_phys(m, e->x1, (e->x1 + e->x2)/2,  
+        plot_leg_pol_val_left[j][m] = legendre_val_phys_plot(m, e->x1, (e->x1 + e->x2)/2,  
 					      plot_x_left[j]);
       }
     }
@@ -1001,7 +1001,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     double plot_leg_pol_val_right[MAX_PLOT_PTS_NUM][MAX_P+1];
     for(int m=0; m < p_right + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j<plot_pts_num; j++) {  
-        plot_leg_pol_val_left[j][m] = legendre_val_phys(m, (e->x1 + e->x2)/2, e->x2, 
+        plot_leg_pol_val_left[j][m] = legendre_val_phys_plot(m, (e->x1 + e->x2)/2, e->x2, 
 					      plot_x_right[j]);
       }
     }
@@ -1069,10 +1069,10 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   double leg_pol_der_left[MAX_QUAD_PTS_NUM][MAX_P+1];
   int fns_num = p + 1;
   // -1... left half of polynomials in (e_ref_left->x1, e_ref_left->x2)
-  legendre_val_phys(-1, order_left, fns_num,
+  legendre_val_phys_quad(-1, order_left, fns_num,
                     e->x1, e->x2,
                     leg_pol_val_left);
-  if (norm == 1) legendre_der_phys(-1, order_left, fns_num,
+  if (norm == 1) legendre_der_phys_quad(-1, order_left, fns_num,
                     e->x1, e->x2,
                     leg_pol_der_left);
 
@@ -1120,10 +1120,10 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   double leg_pol_val_right[MAX_QUAD_PTS_NUM][MAX_P+1];
   double leg_pol_der_right[MAX_QUAD_PTS_NUM][MAX_P+1];
   // 1... right half of polynomials in (e_ref_right->x1, e_ref_right->x2)
-  legendre_val_phys(1, order_right, fns_num,
+  legendre_val_phys_quad(1, order_right, fns_num,
                     e->x1, e->x2,
                     leg_pol_val_right);
-  if (norm == 1) legendre_der_phys(1, order_right, fns_num,
+  if (norm == 1) legendre_der_phys_quad(1, order_right, fns_num,
                     e->x1, e->x2,
                     leg_pol_der_right);
 
@@ -1343,7 +1343,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_leg_pol_val_left[MAX_PLOT_PTS_NUM][MAX_P+1];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j < plot_pts_num; j++) {  
-        plot_leg_pol_val_left[j][m] = legendre_val_phys(m, e->x1, 
+        plot_leg_pol_val_left[j][m] = legendre_val_phys_plot(m, e->x1, 
 	  				   e->x2, plot_x_left[j]);
       }
     }
@@ -1362,7 +1362,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_leg_pol_val_right[MAX_PLOT_PTS_NUM][MAX_P+1];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j < plot_pts_num; j++) {  
-        plot_leg_pol_val_right[j][m] = legendre_val_phys(m, e->x1, 
+        plot_leg_pol_val_right[j][m] = legendre_val_phys_plot(m, e->x1, 
   					   e->x2, plot_x_right[j]);
       }
     }
@@ -1432,9 +1432,9 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   double leg_pol_der[MAX_QUAD_PTS_NUM][MAX_P+1];
   int fns_num = p + 1;
   // 0... whole polynomials in (e->x1, e->x2)
-  legendre_val_phys(0, order, fns_num, 
+  legendre_val_phys_quad(0, order, fns_num, 
                     e->x1, e->x2, leg_pol_val);
-  if (norm == 1) legendre_der_phys(0, order, fns_num, 
+  if (norm == 1) legendre_der_phys_quad(0, order, fns_num, 
                     e->x1, e->x2, leg_pol_der);
 
   /*
@@ -1539,7 +1539,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     double plot_leg_pol_val[MAX_PLOT_PTS_NUM][MAX_P+1];
     for(int m=0; m < p + 1; m++) { // loop over Leg. polynomials
       for(int j=0; j < plot_pts_num; j++) {  
-        plot_leg_pol_val[j][m] = legendre_val_phys(m, e->x1, 
+        plot_leg_pol_val[j][m] = legendre_val_phys_plot(m, e->x1, 
 	  				   e->x2, plot_x[j]);
       }
     }
