@@ -168,7 +168,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 2) break;
+    //if (adapt_iterations == 8) break;
 
     // Refine coarse mesh elements whose id_array >= 0, and 
     // adjust the fine mesh accordingly.  

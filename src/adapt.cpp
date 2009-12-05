@@ -1733,7 +1733,8 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
     if (fabs(err) < 1e-12) {
       choice = i;
       if (PRINT_CANDIDATES) {
-        printf("  Elem (%g, %g): reference solution recovered, taking the following candidate:\n", e->x1, e->x2);
+        printf("  Elem (%g, %g): reference solution recovered, \
+                  taking the following candidate:\n", e->x1, e->x2);
         printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d\n", 
                e->x1, e->x2, 
                cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof);
@@ -1748,23 +1749,20 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
       int dof_orig;
       // reference solution was p-refined 
       if (ref_sol_type == 0) {
-        int p_new = cand_list[i][1];
         check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, e->p,
           bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
       }
+      // reference solution was hp-refined 
       if (ref_sol_type == 1) {
-        int p_new = cand_list[i][1];
-        check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, e->p,
+        check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, y_prev_ref, e->p,
           bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
       }  
-      if (err < err_orig) {
-        if (PRINT_CANDIDATES) {
-          printf("  Elem (%g, %g): taking special candidate with dof <= 0:\n", e->x1, e->x2);
-          printf("  Elem (%g, %g): dof = %d, err_orig = %g, err_new = %g\n", 
-		 e->x1, e->x2, dof, err_orig, err);
-        }
-        return i;
+      if (PRINT_CANDIDATES) {
+        printf("  Elem (%g, %g): candidate with dof <= 0 found:\n", e->x1, e->x2);
+        printf("  Elem (%g, %g): dof = %d, err_orig = %g, err_new = %g\n", 
+               e->x1, e->x2, dof, err_orig, err);
       }
+      if (err < err_orig) return i;
       else {
         crit = -1e10;  // forget this candidate
       }
