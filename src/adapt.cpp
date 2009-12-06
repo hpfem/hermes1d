@@ -101,7 +101,8 @@ double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref,
       double diff_val = phys_u_ref[c][i] - phys_u[c][i];
       if (norm == 1) {
         double diff_der = phys_dudx_ref[c][i] - phys_dudx[c][i];
-        norm_squared[c] += (diff_val*diff_val + diff_der*diff_der)*phys_weights[i];
+        norm_squared[c] += (diff_val*diff_val + diff_der*diff_der) 
+                           * phys_weights[i];
       }
       else norm_squared[c] += diff_val*diff_val*phys_weights[i];
     }
@@ -208,9 +209,9 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
   return err_squared;
 }
 
-double calc_elem_est_errors_squared(int norm, Mesh* mesh, Mesh* mesh_ref, 
-				    double* y_prev, double* y_prev_ref, 
-				    double *err_squared_array)
+double calc_elem_est_errors(int norm, Mesh* mesh, Mesh* mesh_ref, 
+			    double* y_prev, double* y_prev_ref, 
+			    double *err_array)
 {
   double err_total_squared = 0;
   Iterator *I = new Iterator(mesh);
@@ -218,26 +219,32 @@ double calc_elem_est_errors_squared(int norm, Mesh* mesh, Mesh* mesh_ref,
 
   // simultaneous traversal of 'mesh' and 'mesh_ref'
   Element *e;
+  int counter = 0;
   while ((e = I->next_active_element()) != NULL) {
     Element *e_ref = I_ref->next_active_element();
     double err_squared;
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      err_squared = calc_elem_est_error_squared_p(norm, e, e_ref, y_prev, y_prev_ref, 
-                                         mesh->bc_left_dir_values,
-			                 mesh->bc_right_dir_values);
+      err_squared = calc_elem_est_error_squared_p(norm, e, 
+                    e_ref, y_prev, y_prev_ref, mesh->bc_left_dir_values,
+		    mesh->bc_right_dir_values);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
-      err_squared = calc_elem_est_error_squared_hp(norm, e, e_ref_left, e_ref_right, 
-                                          y_prev, y_prev_ref, 
-                                          mesh->bc_left_dir_values,
-			                  mesh->bc_right_dir_values);
+      err_squared = calc_elem_est_error_squared_hp(norm, e, 
+                    e_ref_left, e_ref_right, 
+                    y_prev, y_prev_ref, 
+                    mesh->bc_left_dir_values,
+		    mesh->bc_right_dir_values);
     }
-    //printf("  Elem (%g, %g): err_est = %g\n", e->x1, e->x2, sqrt(err_squared));
-    err_squared_array[e->id] = err_squared;
+    err_array[e->id] = err_squared;
     err_total_squared += err_squared;
+    counter++;
+  }
+  // returned will be errors, not their squares
+  for (int i=0; i < counter; i++) {
+    err_array[i] = sqrt(err_array[i]);
   }
   return sqrt(err_total_squared);
 }

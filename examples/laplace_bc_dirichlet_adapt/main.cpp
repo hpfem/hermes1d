@@ -130,11 +130,11 @@ int main() {
              iter_num);
     }
 
-    // In the next step, estimate element errors (squared) based on 
+    // In the next step, estimate element errors based on 
     // the difference between the fine mesh and coarse mesh solutions. 
-    double err_est_squared_array[MAX_ELEM_NUM]; 
-    double err_est_total = calc_elem_est_errors_squared(NORM, mesh, mesh_ref, y_prev, 
-                                 y_prev_ref, err_est_squared_array);
+    double err_est_array[MAX_ELEM_NUM]; 
+    double err_est_total = calc_elem_est_errors(NORM, mesh, mesh_ref, y_prev, 
+                                 y_prev_ref, err_est_array);
 
     // Calculate the norm of the fine mesh solution
     double ref_sol_norm = calc_approx_sol_norm(NORM, mesh_ref, y_prev_ref);
@@ -145,7 +145,7 @@ int main() {
 
     // If exact solution available, also calculate exact error
     if (EXACT_SOL_PROVIDED) {
-      // Calculate element errors wrt. exact solution (squared)
+      // Calculate element errors wrt. exact solution
       int order = 20; // heuristic parameter
       double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
      
@@ -175,7 +175,7 @@ int main() {
     // coarse and fine mesh solutions on them, respectively. 
     // The coefficient vectors and numbers of degrees of freedom 
     // on both meshes are also updated. 
-    adapt(NORM, ADAPT_TYPE, THRESHOLD, err_est_squared_array,
+    adapt(NORM, ADAPT_TYPE, THRESHOLD, err_est_array,
           mesh, mesh_ref, y_prev, y_prev_ref, N_dof, N_dof_ref);
 
     adapt_iterations++;
@@ -189,9 +189,9 @@ int main() {
   graph.save("conv_dof.gp");
 
   printf("Done.\n");
-  return 1;
   delete [] y_prev;
   delete [] y_prev_ref;
+  return 1;
 }
 
 

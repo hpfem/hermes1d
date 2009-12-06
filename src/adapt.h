@@ -34,12 +34,12 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
                         double bc_left_dir_values[MAX_EQN_NUM],
 			double bc_right_dir_values[MAX_EQN_NUM]);
 
-// Calculates l2 or H1 norm (squared) of the difference between the coarse
+// Calculates l2 or H1 norm of the difference between the coarse
 // and reference solutions in all active elements of 'mesh'. Total
 // error is returned.
-double calc_elem_est_errors_squared(int norm, Mesh* mesh, Mesh* mesh_ref, 
-				    double* y_prev, double* y_prev_ref, 
-				    double *err_squared_array);
+double calc_elem_est_errors(int norm, Mesh* mesh, Mesh* mesh_ref, 
+			    double* y_prev, double* y_prev_ref, 
+			    double *err_array);
 
 // Can be used for both the coarse and reference solutions
 double calc_approx_sol_norm(int norm, Mesh* mesh, double* y_prev);

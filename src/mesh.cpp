@@ -1014,7 +1014,7 @@ void Mesh::plot_error_exact(int norm, const char *filename,
 // The coefficient vectors and numbers of degrees of freedom 
 // on both meshes are also updated. 
 void adapt(int norm, int adapt_type, double threshold, 
-           double *err_squared_array,
+           double *err_array,
            Mesh* &mesh, Mesh* &mesh_ref, 
            double * &y_prev, double* &y_prev_ref, 
            int &n_dof, int &n_dof_ref) 
@@ -1024,7 +1024,7 @@ void adapt(int norm, int adapt_type, double threshold,
   // Find element with largest error
   double max_elem_error = 0;
   for(int i=0; i < n_elem; i++) {
-    double elem_error = sqrt(err_squared_array[i]);
+    double elem_error = err_array[i];
     if (elem_error > max_elem_error) {
       max_elem_error = elem_error;
     }
@@ -1033,7 +1033,7 @@ void adapt(int norm, int adapt_type, double threshold,
   // Create auxiliary array of element indices
   int id_array[MAX_ELEM_NUM];
   for(int i=0; i < n_elem; i++) {
-   if(sqrt(err_squared_array[i]) < threshold*max_elem_error) id_array[i] = -1; 
+   if(err_array[i] < threshold*max_elem_error) id_array[i] = -1; 
    else id_array[i] = i;
   }
 
@@ -1042,7 +1042,7 @@ void adapt(int norm, int adapt_type, double threshold,
   printf("Elements to be refined:\n");
   for (int i=0; i<this->get_n_active_elem(); i++) {
     if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
-                                 sqrt(err_squared_array[i]));
+                                 err_array[i]);
   }
   */
 
