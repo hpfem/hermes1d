@@ -25,9 +25,9 @@ const int ADAPT_TYPE = 0;         // 0... hp-adaptivity
                                   // 2... p-adaptivity
 const double THRESHOLD = 0.7;     // Refined will be all elements whose error
                                   // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-6;  // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1e-4;  // Tolerance for the relative error between 
                                   // the coarse and fine mesh solutions
-const int NORM = 0;               // To measure errors:
+const int NORM = 1;               // To measure errors:
                                   // 1... H1 norm
                                   // 0... L2 norm
  
@@ -202,7 +202,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 16) break;
+    if (adapt_iterations == 4) break;
 
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 

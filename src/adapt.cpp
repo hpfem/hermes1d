@@ -15,54 +15,7 @@ int PLOT_CANDIDATE_PROJECTIONS = 0;
 
 // This is another help for debugging hp-adaptivity; All candidates
 //that are tried are printed along with their performance criterion
-int PRINT_CANDIDATES = 0;
-
-/* OLD CODE
-double calc_elem_norm_squared(int norm, Element *e, double *y_prev, 
-                        double bc_left_dir_values[MAX_EQN_NUM],
-			double bc_right_dir_values[MAX_EQN_NUM]) 
-{
-  int n_eq = e->dof_size;
-  //double phys_x[MAX_QUAD_PTS_NUM];         // quad points in physical element
-  //double phys_weights[MAX_QUAD_PTS_NUM];   // quad weights in physical element
-  // values of solution for all solution components
-  double phys_val[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]; 
-  double phys_der[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]; // not used
-
-  // integration order
-  int order = 2*e->p;
-  int pts_num;
-
-  // create Gauss quadrature in 'e'
-  //create_phys_element_quadrature(e->x1, e->x2, order, phys_x, phys_weights,
-  //                          &pts_num); 
-
-  // evaluate solution and its derivative 
-  // at all quadrature points in 'e', for every solution component
-  e->get_solution_quad(order, y_prev, phys_val, phys_der, pts_num, 
-                       bc_left_dir_values, bc_right_dir_values);
-
-  // integrate square over (-1, 1)
-  double norm_squared[MAX_EQN_NUM];
-  for (int c=0; c<n_eq; c++) {
-    norm_squared[c] = 0;
-    for (int i=0; i<pts_num; i++) {
-      double val = phys_val[c][i];
-      if (norm == 1) {
-        double der;
-        der = phys_der[c][i];
-        norm_squared[c] += (val*val + der*der) * phys_weights[i];
-      }
-      else norm_squared[c] += val*val * phys_weights[i];
-    }
-  }
-
-  double elem_norm_squared = 0;
-  for (int c=0; c<n_eq; c++)  
-    elem_norm_squared += norm_squared[c];
-  return elem_norm_squared;
-}
-*/
+int PRINT_CANDIDATES = 1;
 
 double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref, 
                         double *y_prev, double *y_prev_ref, 
@@ -455,22 +408,6 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
                     e_ref_left->x1, e_ref_left->x2, 
                     leg_pol_der_left);
 
-  /*
-  // get values of transformed Legendre polynomials in 'e_ref_left'
-  double leg_pol_val_left[MAX_P+1][MAX_QUAD_PTS_NUM];
-  double leg_pol_der_left[MAX_P+1][MAX_QUAD_PTS_NUM];
-  int fns_num_left = p_left + 1;
-  for(int m=0; m < fns_num_left; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j<pts_num_left; j++) {  
-      leg_pol_val_left[m][j] = legendre_val_phys(m, e_ref_left->x1, e_ref_left->x2, 
-                               phys_x_left[j]);
-      if (norm == 1) leg_pol_der_left[m][j] = legendre_der_phys(m, 
-                                  e_ref_left->x1, e_ref_left->x2, 
-                                  phys_x_left[j]);
-    }
-  }
-  */
-
   // calculate projection coefficients on the left
   double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
   if (norm == 0) calc_proj_coeffs_L2(n_eq, fns_num_left, pts_num_left,
@@ -553,21 +490,6 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   if (norm == 1) legendre_der_phys_quad(0, order_right, fns_num_right,
                                    e_ref_right->x1, e_ref_right->x2,                
                                    leg_pol_der_right);
-
-  /*
-  // get values of transformed Legendre polynomials in 'e_ref_right'
-  double leg_pol_val_right[MAX_P+1][MAX_QUAD_PTS_NUM];
-  double leg_pol_der_right[MAX_P+1][MAX_QUAD_PTS_NUM];
-  int fns_num_right = p_right + 1;
-  for(int m=0; m < fns_num_right; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j < pts_num_right; j++) {
-      leg_pol_val_right[m][j] = legendre_val_phys(m, e_ref_right->x1, 
-                            e_ref_right->x2, phys_x_right[j]);
-      if (norm == 1) leg_pol_der_right[m][j] = legendre_der_phys(m, e_ref_right->x1, 
-                            e_ref_right->x2, phys_x_right[j]);
-    }
-  }
-  */
 
   // calculate projection coefficients on the right
   double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
@@ -773,21 +695,6 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
                     e->x1, (e->x1 + e->x2)/2.,
                     leg_pol_der_left);
 
-  /*
-  // get values of transformed Legendre polynomials in the left half
-  double leg_pol_val_left[MAX_QUAD_PTS_NUM][MAX_P+1];
-  double leg_pol_der_left[MAX_QUAD_PTS_NUM][MAX_P+1];
-  int fns_num_left = p_left + 1;
-  for(int m=0; m < fns_num_left; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j<pts_num_left; j++) {  
-      leg_pol_val_left[j][m] = legendre_val_phys(m, e->x1, (e->x1 + e->x2)/2,  
-					      phys_x_left[j]);
-      if (norm == 1) leg_pol_der_left[j][m] = legendre_der_phys(m, e->x1, (e->x1 + e->x2)/2,  
-					      phys_x_left[j]);
-    }
-  }
-  */
-
   // calculate projection coefficients on the left
   double proj_coeffs_left[MAX_EQN_NUM][MAX_P+1];
   if (norm == 0) calc_proj_coeffs_L2(n_eq, fns_num_left, pts_num_left, 
@@ -868,22 +775,6 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   if (norm == 1) legendre_der_phys_quad(0, order_right, fns_num_right, 
                     (e->x1 + e->x2)/2, e->x2, 
                     leg_pol_der_right);
-
-  /*
-  // get values of transformed Legendre polynomials on the right half
-  double leg_pol_val_right[MAX_QUAD_PTS_NUM][MAX_P+1];
-  double leg_pol_der_right[MAX_QUAD_PTS_NUM][MAX_P+1];
-  int fns_num_right = p_right + 1;
-  for(int m=0; m < fns_num_right; m++) { // loop over transf. Leg. polynomials
-    for(int j=0; j < pts_num_right; j++) {
-      leg_pol_val_right[j][m] = legendre_val_phys(m, (e->x1 + e->x2)/2, e->x2,  
-					     phys_x_right[j]);
-      if (norm == 1) leg_pol_val_right[j][m] = legendre_der_phys(m, 
-                                             (e->x1 + e->x2)/2, e->x2,  
-					     phys_x_right[j]);
-    }
-  }
-  */
 
   // calculate projection coefficients on the right
   double proj_coeffs_right[MAX_EQN_NUM][MAX_P+1];
@@ -1083,29 +974,6 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
                     e->x1, e->x2,
                     leg_pol_der_left);
 
-  /*
-  // get values of (original) Legendre polynomials in 'e_ref_left'
-  double leg_pol_val_left2[MAX_QUAD_PTS_NUM][MAX_P+1];
-  double leg_pol_der_left2[MAX_QUAD_PTS_NUM][MAX_P+1];
-  //int fns_num = p + 1;
-  for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
-    for(int j=0; j < pts_num_left; j++) {  
-      leg_pol_val_left2[j][m] = legendre_val_phys(m, e->x1, 
-					   e->x2, phys_x_left[j]);
-      if (norm == 1) leg_pol_der_left2[j][m] = legendre_der_phys(m, e->x1, 
-					      e->x2, phys_x_left[j]);
-    }
-  }
-  for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
-    for(int j=0; j < pts_num_left; j++) {  
-      printf("leg_val[%d][%d] = %g, leg_val2[%d][%d] = %g\n", 
-	     j, m, leg_pol_val_left[j][m], j, m, leg_pol_val_left2[j][m]);
-      printf("leg_der[%d][%d] = %g, leg_der2[%d][%d] = %g\n", 
-	     j, m, leg_pol_der_left[j][m], j, m, leg_pol_der_left2[j][m]);
-    }
-  }
-  */
-
   // create Gauss quadrature on 'e_ref_right'
   int order_right = 2*max(e_ref_right->p, p);
   int pts_num_right;
@@ -1133,20 +1001,6 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   if (norm == 1) legendre_der_phys_quad(1, order_right, fns_num,
                     e->x1, e->x2,
                     leg_pol_der_right);
-
-  /*
-  // get values of (original) Legendre polynomials in 'e_ref_right'
-  double leg_pol_val_right[MAX_QUAD_PTS_NUM][MAX_P+1];
-  double leg_pol_der_right[MAX_QUAD_PTS_NUM][MAX_P+1];
-  for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
-    for(int j=0; j < pts_num_right; j++) {
-      leg_pol_val_right[j][m] = legendre_val_phys(m, e->x1, 
-					    e->x2, phys_x_right[j]);
-      if (norm == 1) leg_pol_der_right[j][m] = legendre_der_phys(m, e->x1, 
-					       e->x2, phys_x_right[j]);
-    }
-  }
-  */
 
   // calculate projection coefficients
   double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
@@ -1443,19 +1297,6 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
                     e->x1, e->x2, leg_pol_val);
   if (norm == 1) legendre_der_phys_quad(0, order, fns_num, 
                     e->x1, e->x2, leg_pol_der);
-
-  /*
-  // get values of (original) Legendre polynomials in 'e'
-  double leg_pol_val[MAX_QUAD_PTS_NUM][MAX_P+1];
-  double leg_pol_der[MAX_QUAD_PTS_NUM][MAX_P+1];
-  int fns_num = p + 1;
-  for(int m=0; m < fns_num; m++) { // loop over Leg. polynomials
-    for(int j=0; j < pts_num; j++) {  
-      leg_pol_val[j][m] = legendre_val_phys(m, e->x1, e->x2, phys_x[j]);
-      if (norm == 1) leg_pol_der[j][m] = legendre_der_phys(m, e->x1, e->x2, phys_x[j]);
-    }
-  }
-  */
 
   // calculate first part of the projection coefficients
   double proj_coeffs[MAX_EQN_NUM][MAX_P+1];
