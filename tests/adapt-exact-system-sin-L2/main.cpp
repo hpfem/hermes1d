@@ -6,7 +6,7 @@
 
 // This test makes sure that an exact function 
 // sin(K*x), K*cos(K*x) is approximated adaptively 
-// with relative error 1e-1% with less than 40 DOF.
+// with relative error 1e-1% with less than 60 DOF.
 // Adaptivity is done in L2 norm.
 
 #define ERROR_SUCCESS                               0
@@ -407,7 +407,7 @@ int main() {
 
   int success = 1; 
   printf("N_dof = %d\n", N_dof);
-  if (N_dof > 40) success = 0;
+  if (N_dof > 60) success = 0;
 
   if (success) {
     printf("Success!\n");
