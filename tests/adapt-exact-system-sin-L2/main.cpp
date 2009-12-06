@@ -389,8 +389,6 @@ int main() {
     // Decide whether the relative error is sufficiently small
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
-    // Refine coarse mesh elements whose id_array >= 0, and 
-    // adjust the fine mesh accordingly.  
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 
     // The coefficient vectors and numbers of degrees of freedom 

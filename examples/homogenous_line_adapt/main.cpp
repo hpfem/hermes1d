@@ -198,8 +198,6 @@ int main() {
     // debug
     //if (adapt_iterations == 2) break;
 
-    // Refine coarse mesh elements whose id_array >= 0, and 
-    // adjust the fine mesh accordingly.  
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 
     // The coefficient vectors and numbers of degrees of freedom 

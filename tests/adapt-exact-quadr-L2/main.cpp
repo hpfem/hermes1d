@@ -238,8 +238,6 @@ int main() {
       res_ref_norm = sqrt(res_ref_norm);
       printf("Residual norm (fine mesh): %.15f\n", res_ref_norm);
 
-      // If residual norm less than TOL_NEWTON_REF, break
-      // NOTE: at least one update of the fine mesh solution is 
       // enforced by the additional condition "&& newton_iterations_ref >= 2". 
       // Otherwise it can (and will) happen that already the initial residual 
       // of the fine mesh solution is too small. Then the next adaptivity 
