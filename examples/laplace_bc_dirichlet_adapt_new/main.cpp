@@ -8,7 +8,7 @@
 
 // General input:
 static int N_eq = 1;
-int N_elem = 3;                         // Number of elements
+int N_elem = 2;                         // Number of elements
 double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
@@ -165,8 +165,8 @@ int main() {
     printf("Finished fine mesh Newton's iteration (%d iter).\n", 
            iter_num);
 
-    // Estimate element errors (squared) based on 
-    // the difference between the fine mesh and coarse mesh solutions. 
+    // Estimate element errors based on the difference between the 
+    // fine mesh and coarse mesh solutions. 
     double err_est_array[MAX_ELEM_NUM]; 
     double err_est_total = calc_elem_est_errors(NORM, mesh, mesh_ref, y_prev, 
                                  y_prev_ref, err_est_array);
@@ -180,13 +180,13 @@ int main() {
 
     // If exact solution available, also calculate exact error
     if (EXACT_SOL_PROVIDED) {
-      // Calculate element errors wrt. exact solution (squared)
-      int order = 20; // heuristic parameter
-      double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
+      // Calculate element errors wrt. exact solution
+      double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol);
      
       // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
       int subdivision = 500; // heuristic parameter
+      int order = 20;        // heuristic parameter
       double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
                                                   subdivision, order);
       // Calculate an estimate of the global relative error
@@ -202,7 +202,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 4) break;
+    //if (adapt_iterations == 1) break;
 
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 

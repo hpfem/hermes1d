@@ -157,12 +157,13 @@ int main() {
     // If exact solution available, also calculate exact error
     if (EXACT_SOL_PROVIDED) {
       // Calculate element errors wrt. exact solution
-      int order = 20; // heuristic parameter
-      double err_exact_total = calc_exact_sol_error(NORM, mesh, y_prev, exact_sol, order);
+      double err_exact_total = calc_exact_sol_error(NORM, 
+                               mesh, y_prev, exact_sol);
      
       // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
       int subdivision = 500; // heuristic parameter
+      int order = 20;        // heuristic parameter
       double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
                                                   subdivision, order);
       // Calculate an estimate of the global relative error

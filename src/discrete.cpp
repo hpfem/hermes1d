@@ -348,7 +348,8 @@ void DiscreteProblem::assemble_vector(Mesh *mesh, double *res,
 } 
 
 // Newton's iteration
-int newton(DiscreteProblem *dp, Mesh *mesh, double *y_prev, double tol, int &iter_num) 
+int newton(DiscreteProblem *dp, Mesh *mesh, 
+           double *y_prev, double tol, int &iter_num) 
 {
   iter_num = 1;
   int n_dof = mesh->get_n_dof();
@@ -370,10 +371,13 @@ int newton(DiscreteProblem *dp, Mesh *mesh, double *y_prev, double tol, int &ite
     for(int i=0; i<n_dof; i++) res_norm += res[i]*res[i];
     res_norm = sqrt(res_norm);
 
-    // if residual norm less than 'tol', quit
+    // If residual norm less than 'tol', quit
     // latest solution is in y_prev
+    // CAUTION: at least one full iteration forced
+    //          here because sometimes the initial
+    //          residual on fine mesh is too small
     printf("Residual norm: %.15f\n", res_norm);
-    if(res_norm < tol) break;
+    if(res_norm < tol && iter_num > 1) break;
 
     // changing sign of vector res
     for(int i=0; i<n_dof; i++) res[i]*= -1;

@@ -99,8 +99,7 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
 
 // Error wrt. exact solution (if provided) on the entire interval (A, B) 
 double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev, 
-                            exact_sol_type exact_sol,  
-                            int order); 
+                            exact_sol_type exact_sol); 
 
 // Calculates L2 or H1 norm of function exact_sol in interval (A, B)
 double calc_exact_sol_norm(int norm, exact_sol_type exact_sol, 

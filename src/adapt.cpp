@@ -1667,13 +1667,13 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
 }
 
 double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev, 
-                            exact_sol_type exact_sol, 
-                            int order) 
+                            exact_sol_type exact_sol) 
 {
   double total_err_squared = 0;
   Iterator *I = new Iterator(mesh);
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
+    int order = max(20, 3*e->p);         // heuristic parameter
       double elem_err_squared = 
         calc_elem_exact_error_squared(norm, exact_sol, e, y_prev, 
                                       mesh->bc_left_dir_values,
@@ -1780,7 +1780,7 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
     // curve on semilog scale. Performance of p-candidates is artificially 
     // improved
     if (dof > 0) {
-      // p-candidate
+      // p-candidate (preferred - not penalized by dofs)
       if (cand_list[i][0] == 0) crit = -log(err);  // / pow(dof, 0.3); 
       // hp-candidate
       else crit = -log(err) / dof; 
