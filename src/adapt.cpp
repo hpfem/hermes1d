@@ -1630,8 +1630,8 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
     // curve on semilog scale. Performance of p-candidates is artificially 
     // improved
     if (dof > 0) {
-      // p-candidate
-      if (cand_list[i][0] == 0) crit = -log(err) / dof;  // / pow(dof, 0.3); 
+      // p-candidate (preferred - not penalized by the dof number)
+      if (cand_list[i][0] == 0) crit = -log(err); // / dof; 
       // hp-candidate
       else crit = -log(err) / dof; 
     } 

@@ -27,7 +27,7 @@ const double THRESHOLD = 0.7;     // Refined will be all elements whose error
                                   // is greater than THRESHOLD*max_elem_error
 const double TOL_ERR_REL = 1e-4;  // Tolerance for the relative error between 
                                   // the coarse and fine mesh solutions
-const int NORM = 1;               // To measure errors:
+const int NORM = 0;               // To measure errors:
                                   // 1... H1 norm
                                   // 0... L2 norm
  
@@ -94,6 +94,8 @@ int main() {
     printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
            iter_num);
 
+    /***** Identify elements whose refinement causes biggest change in
+           the solution (later to be replaced with quantity of interest )*****/
 
     // For every element perform fast trial refinement
     // and calculate an array of the corresponding errors
@@ -130,17 +132,17 @@ int main() {
       lxx->plot_solution(out_filename, y_prev_ref);
       delete lxx;
 
-      // Estimate norm of the difference between the fine mesh and coarse 
-      // mesh solutions. 
-      // FIXME: we only need to calculate 'err_est_total', not 'err_est_array'.
+      // Calculate norm of the difference between the locally refined 
+      // and coarse mesh solutions.
       double err_est_array[MAX_ELEM_NUM];
       ftr_errors[i] = calc_elem_est_errors(NORM, mesh, mesh_ref, y_prev, 
                                  y_prev_ref, err_est_array);
-      printf("Elem [%d]: absolute error (est) = %g\n", i, ftr_errors[i]);
 
       delete [] y_prev_ref;
       delete mesh_ref;
     }
+
+    /***** Select the best refinement for each element to be refined *****/
 
     // Create globally refined mesh (all elements in 'h' and 'p')
     mesh_ref = mesh->replicate();
@@ -202,7 +204,9 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    if (adapt_iterations == 4) break;
+    if (adapt_iterations == 3) break;
+
+    /***** Perform the refinements *****/
 
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 
