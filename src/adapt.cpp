@@ -11,7 +11,7 @@
 // reference solution and the projection. Thus one can visually 
 // examine the candidates and see whether the adaptivity algorithm
 // selects the correct one. 
-int PLOT_CANDIDATE_PROJECTIONS = 0;
+int PLOT_CANDIDATE_PROJECTIONS = 1;
 
 // This is another help for debugging hp-adaptivity; All candidates
 //that are tried are printed along with their performance criterion
