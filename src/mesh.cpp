@@ -9,6 +9,9 @@
 #include "transforms.h"
 #include "linearizer.h"
 
+// debug - prints element errors as they come to adapt()
+int PRINT_ELEM_ERRORS = 1;
+
 // debug - prints element dof arrays in assign_dofs()
 int DEBUG_ELEM_DOF = 0;
 
@@ -1020,6 +1023,14 @@ void adapt(int norm, int adapt_type, double threshold,
            int &n_dof, int &n_dof_ref) 
 {
   int n_elem = mesh->get_n_active_elem();
+
+  // debug
+  if (PRINT_ELEM_ERRORS) {
+    printf("  Element errors (est) in adapt():\n");
+    for(int i=0; i < n_elem; i++) {
+      printf("  Elem [%d]: %g\n", i, err_array[i]);
+    }
+  }
 
   // Find element with largest error
   double max_elem_error = 0;

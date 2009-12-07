@@ -1605,13 +1605,22 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
         check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, y_prev_ref, e->p,
           bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
       }  
-      if (PRINT_CANDIDATES) {
-        printf("  Elem (%g, %g): candidate with dof <= 0 found:\n", e->x1, e->x2);
-        printf("  Elem (%g, %g): dof = %d, err_orig = %g, err_new = %g\n", 
-               e->x1, e->x2, dof, err_orig, err);
+      if (err < err_orig) {
+        if (PRINT_CANDIDATES) {
+          printf("  Elem (%g, %g): cand (%d %d %d) has dof <= 0\n", e->x1, e->x2,
+                    cand_list[i][0], cand_list[i][1], cand_list[i][2]);
+          printf("               dof = %d, err_orig = %g, err_new = %g (accepting)\n", 
+                 dof, err_orig, err);
+        }
+        return i;
       }
-      if (err < err_orig) return i;
       else {
+        if (PRINT_CANDIDATES) {
+          printf("  Elem (%g, %g): cand (%d %d %d) has dof <= 0\n", e->x1, e->x2,
+                    cand_list[i][0], cand_list[i][1], cand_list[i][2]);
+          printf("               dof = %d, err_orig = %g, err_new = %g (throwing away)\n", 
+                 dof, err_orig, err);
+        }
         crit = -1e10;  // forget this candidate
       }
     }
