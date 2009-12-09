@@ -11,6 +11,13 @@ Content of Hermes1D Documentation
 
    src/intro.rst
 
+.. toctree::
+   :maxdepth: 2
+
+   devel/classes.rst
+
+* Developer_ documentation 
+
 Links
 =====
 
@@ -28,3 +35,4 @@ Indices and Tables
 
 .. _Hermes1D: http://www.hpfem.org/hermes1d
 .. _hp-FEM: http://www.hpfem.org
+.. _Developer: ../devel/html/index.html
