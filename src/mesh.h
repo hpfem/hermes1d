@@ -171,21 +171,4 @@ class Mesh {
 
 };
 
-// Refine coarse mesh elements whose id_array >= 0, and 
-// adjust the reference mesh accordingly.  
-// Returns updated coarse and reference meshes, with the last 
-// coarse and reference mesh solutions on them, respectively. 
-// The coefficient vectors and numbers of degrees of freedom 
-// on both meshes are also updated. 
-void adapt(int norm, int adapt_type, double threshold, 
-           double *err_squared_array,
-           Mesh* &mesh, Mesh* &mesh_ref, 
-           double * &y_prev, double* &y_prev_ref, 
-           int &n_dof, int &n_dof_ref);
-
-void adapt_plotting(Mesh *mesh, Mesh *mesh_ref, 
-              double *y_prev, double *y_prev_ref,
-              int norm, int exact_sol_provided, 
-              exact_sol_type exact_sol); 
-
 #endif

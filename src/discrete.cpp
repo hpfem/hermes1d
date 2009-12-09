@@ -60,8 +60,6 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
     //printf("Processing elem %d\n", m);
-    // variables to store quadrature data
-    // FIXME: now maximum number of Gauss points is [MAX_EQN_NUM][MAX_QUAD_PTS_NUM]0
     int    pts_num;                                     // num of quad points
     double phys_pts[MAX_QUAD_PTS_NUM];                  // quad points
     double phys_weights[MAX_QUAD_PTS_NUM];              // quad weights
@@ -69,14 +67,12 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
     double phys_dudx[MAX_QUAD_PTS_NUM];                 // basis function x-derivative
     double phys_v[MAX_QUAD_PTS_NUM];                    // test function
     double phys_dvdx[MAX_QUAD_PTS_NUM];                 // test function x-derivative
-    // FIXME: now maximum limit of equations is [MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-    // and number of Gauss points is limited to [MAX_EQN_NUM][MAX_QUAD_PTS_NUM]0
-    if(n_eq > MAX_EQN_NUM) error("number of equations too high in process_vol_forms().");
+    if (n_eq > MAX_EQN_NUM) error("number of equations exceeded in process_vol_forms().");
     double phys_u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];     // previous solution, all components
     double phys_du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];  // previous solution x-derivative, all components
     // decide quadrature order and set up 
     // quadrature weights and points in element m
-    // FIXME: for some equations this may not be enough!
+    // CAUTION: This is heuristic
     int order = 4*e->p;
 
     // prepare quadrature points and weights in element 'e'
@@ -107,6 +103,7 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
           //printf("elem (%g, %g): pos_i = %d\n", e->x1, e->x2, pos_i);
 	  if(pos_i != -1) {
 	    // transform i-th test function to element 'm'
+            //printf("Elem (%g, %g): i = %d, order = %d\n", e->x1, e->x2, i, order);
 	    element_shapefn(e->x1, e->x2,  
 			    i, order, phys_v, phys_dvdx); 
 	    // if we are constructing the matrix
@@ -114,6 +111,7 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
 	      // loop over basis functions (columns)
 	      for(int j=0; j < e->p + 1; j++) {
 		int pos_j = e->dof[c_j][j]; // matrix column
+                //printf("elem (%g, %g): pos_j = %d\n", e->x1, e->x2, pos_j);
 		// if j-th basis function is active
 		if(pos_j != -1) {
 		  // transform j-th basis function to element 'm'
@@ -153,7 +151,6 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
 	    // transform i-th test function to element 'm'
 	    element_shapefn(e->x1, e->x2,  
 			    i, order, phys_v, phys_dvdx); 
-
 	    // contribute to residual vector
 	    if(matrix_flag == 0 || matrix_flag == 2) {
 	      double val_i = vfv->fn(pts_num, phys_pts, phys_weights, 
@@ -223,8 +220,8 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
         int pos_i = e->dof[c_i][i]; // matrix row
         if(pos_i != -1) {
           // transform j-th basis function to the boundary element
-          element_shapefn_point(x_ref, e->x1, e->x2, i, &phys_v, 
-                                &phys_dvdx); 
+          element_shapefn_point(x_ref, e->x1, e->x2, i, phys_v, 
+                                phys_dvdx); 
           // loop over basis functions on the boundary element
           for(int j=0; j < e->p + 1; j++) {
             double phys_u, phys_dudx;
@@ -232,8 +229,8 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
             // if j-th basis function is active
             if(pos_j != -1) {
               // transform j-th basis function to the boundary element
-              element_shapefn_point(x_ref, e->x1, e->x2, j, &phys_u, 
-                                    &phys_dudx); 
+              element_shapefn_point(x_ref, e->x1, e->x2, j, phys_u, 
+                                    phys_dudx); 
               // evaluate the surface bilinear form
               double val_ji_surf = mfs->fn(x_phys,
                                phys_u, phys_dudx, phys_v, 
@@ -264,8 +261,8 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
         int pos_i = e->dof[c_i][i]; // matrix row
         if(pos_i != -1) {
           // transform j-th basis function to the boundary element
-          element_shapefn_point(x_ref, e->x1, e->x2, i, &phys_v, 
-                                &phys_dvdx); 
+          element_shapefn_point(x_ref, e->x1, e->x2, i, phys_v, 
+                                phys_dvdx); 
           // evaluate the surface bilinear form
           double val_i_surf = vfs->fn(x_phys,
                           phys_u_prev, phys_du_prevdx, phys_v, phys_dvdx, 

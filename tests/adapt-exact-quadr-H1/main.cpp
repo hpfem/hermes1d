@@ -152,6 +152,7 @@ int main() {
   int newton_iterations = 1;
   CooMatrix *mat = NULL;
   while (1) {
+    printf("started newton iter %d\n", newton_iterations);
     // Reset the matrix:
     if (mat != NULL) delete mat;
     mat = new CooMatrix();
@@ -179,6 +180,7 @@ int main() {
     for(int i=0; i<N_dof; i++) y_prev[i] += res[i];
 
     newton_iterations++;
+    printf("finished newton iter %d\n", newton_iterations);
   }
   printf("Finished initial coarse mesh Newton loop (%d iter).\n", 
          newton_iterations);
