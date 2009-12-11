@@ -27,7 +27,7 @@ void Linearizer::eval_approx(Element *e, double x_ref, double *y,
 
 // Plot solution in Gnuplot format
 void Linearizer::plot_solution(const char *out_filename, 
-                               double *y_prev, int plotting_elem_subdivision)
+                               int plotting_elem_subdivision)
 {
     int n_eq = this->mesh->get_n_eq();
     FILE *f[MAX_EQN_NUM];
@@ -41,7 +41,7 @@ void Linearizer::plot_solution(const char *out_filename,
         if(f[c] == NULL) error("problem opening file in plot_solution().");
         int n;
         double *x, *y;
-        this->get_xy(y_prev, c, plotting_elem_subdivision, &x, &y, &n);
+        this->get_xy(c, plotting_elem_subdivision, &x, &y, &n);
         for (int i=0; i < n; i++)
             fprintf(f[c], "%g %g\n", x[i], y[i]);
         fprintf(f[c], "\n");
@@ -54,14 +54,14 @@ void Linearizer::plot_solution(const char *out_filename,
 
 // Plot solution in Gnuplot format, as a trajectory where solution[comp_x]
 // is used as x-coordinate and solution[comp_y] as y-coordinate
-void Linearizer::plot_trajectory(FILE *f, double *y_prev,
+void Linearizer::plot_trajectory(FILE *f,
 			         int comp_x, int comp_y, 
                                  int plotting_elem_subdivision)
 {
     int n1, n2;
     double *x1, *y1, *x2, *y2;
-    this->get_xy(y_prev, comp_x, plotting_elem_subdivision, &x1, &y1, &n1);
-    this->get_xy(y_prev, comp_y, plotting_elem_subdivision, &x2, &y2, &n2);
+    this->get_xy(comp_x, plotting_elem_subdivision, &x1, &y1, &n1);
+    this->get_xy(comp_y, plotting_elem_subdivision, &x2, &y2, &n2);
     if (n1 != n2) error("internal: n1 != n2 in plot_trajectory().");
     for (int i=0; i < n1; i++) fprintf(f, "%g %g\n", y1[i], y2[i]);
     fprintf(f, "\n");
@@ -74,15 +74,14 @@ void Linearizer::plot_trajectory(FILE *f, double *y_prev,
 
 // Returns pointers to x and y coordinates in **x and **y
 // you should free it yourself when you don't need it anymore
-// y_prev --- the solution coefficients (all equations)
 // comp --- which component you want to process
 // plotting_elem_subdivision --- the number of subdivision of the element
 // x, y --- the doubles list of x,y
 // n --- the number of points
 
-void Linearizer::get_xy(double *y_prev, int comp,
-        int plotting_elem_subdivision,
-        double **x, double **y, int *n)
+void Linearizer::get_xy(int comp,
+                        int plotting_elem_subdivision,
+                        double **x, double **y, int *n)
 {
     int n_eq = this->mesh->get_n_eq();
     int n_active_elem = this->mesh->get_n_active_elem();
@@ -112,17 +111,13 @@ void Linearizer::get_xy(double *y_prev, int comp,
 	  printf("counter = %d\n", counter);
             error("Internal error: wrong n_active_elem");
         }
-        double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM];
-        e->get_coeffs(y_prev, coeffs, 
-                      this->mesh->bc_left_dir_values,
-                      this->mesh->bc_right_dir_values);
 
         double x_phys[MAX_PLOT_PTS_NUM];
         double h = (e->x2 - e->x1)/plotting_elem_subdivision;
 
         for (int j=0; j<plotting_elem_subdivision+1; j++)
             x_phys[j] = e->x1 + j*h;
-        e->get_solution_plot(coeffs, plotting_elem_subdivision+1, x_phys,
+        e->get_solution_plot(x_phys, plotting_elem_subdivision+1, 
                 phys_u_prev, phys_du_prevdx);
         double a = e->x1;
         double b = e->x2;

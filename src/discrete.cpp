@@ -51,7 +51,7 @@ void DiscreteProblem::add_vector_form_surf(int i, vector_form_surf fn, int bdy_i
 
 // process volumetric weak forms
 void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res, 
-					double *y_prev, int matrix_flag) {
+					int matrix_flag) {
   int n_eq = mesh->get_n_eq();
   Element *elems = mesh->get_base_elems();
   int n_elem = mesh->get_n_base_elem();
@@ -83,9 +83,8 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
     // at all quadrature points in the element, 
     // for every solution component
     // 0... in the entire element
-    e->get_solution_quad(0, order, y_prev, 
-                         phys_u_prev, phys_du_prevdx,
-                         mesh->bc_left_dir_values, mesh->bc_right_dir_values); 
+    e->get_solution_quad(0, order,
+                         phys_u_prev, phys_du_prevdx); 
 
     // volumetric bilinear forms
     if(matrix_flag == 0 || matrix_flag == 1) 
@@ -177,8 +176,7 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
 
 // process boundary weak forms
 void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res, 
-					 double *y_prev, int matrix_flag, 
-                                         int bdy_index) {
+					 int matrix_flag, int bdy_index) {
   Iterator *I = new Iterator(mesh);
   Element *e; 
 
@@ -201,9 +199,7 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
   }
 
   // get solution value and derivative at the boundary point
-  e->get_solution_point(x_phys, phys_u_prev, phys_du_prevdx,
-                        y_prev, mesh->bc_left_dir_values,
-                        mesh->bc_right_dir_values); 
+  e->get_solution_point(x_phys, phys_u_prev, phys_du_prevdx); 
 
   // surface bilinear forms
   if(matrix_flag == 0 || matrix_flag == 1) {
@@ -285,7 +281,7 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
 // NOTE: Simultaneous assembling of the Jacobi matrix and residual
 // vector is more efficient than if they are assembled separately
 void DiscreteProblem::assemble(Mesh *mesh, Matrix *mat, double *res, 
-              double *y_prev, int matrix_flag) {
+                               int matrix_flag) {
   // number of equations in the system
   int n_eq = mesh->get_n_eq();
 
@@ -297,13 +293,13 @@ void DiscreteProblem::assemble(Mesh *mesh, Matrix *mat, double *res,
     for(int i=0; i<n_dof; i++) res[i] = 0;
 
   // process volumetric weak forms via an element loop
-  process_vol_forms(mesh, mat, res, y_prev, matrix_flag);
+  process_vol_forms(mesh, mat, res, matrix_flag);
 
   // process surface weak forms for the left boundary
-  process_surf_forms(mesh, mat, res, y_prev, matrix_flag, BOUNDARY_LEFT);
+  process_surf_forms(mesh, mat, res, matrix_flag, BOUNDARY_LEFT);
 
   // process surface weak forms for the right boundary
-  process_surf_forms(mesh, mat, res, y_prev, matrix_flag, BOUNDARY_RIGHT);
+  process_surf_forms(mesh, mat, res, matrix_flag, BOUNDARY_RIGHT);
 
   // DEBUG: print Jacobi matrix
   if(DEBUG && (matrix_flag == 0 || matrix_flag == 1)) {
@@ -327,33 +323,43 @@ void DiscreteProblem::assemble(Mesh *mesh, Matrix *mat, double *res,
 
 // construct both the Jacobi matrix and the residual vector
 void DiscreteProblem::assemble_matrix_and_vector(Mesh *mesh, 
-                      Matrix *mat, double *res, double *y_prev) {
-  assemble(mesh, mat, res, y_prev, 0);
+                      Matrix *mat, double *res) {
+  assemble(mesh, mat, res, 0);
 } 
 
 // construct Jacobi matrix only
-void DiscreteProblem::assemble_matrix(Mesh *mesh, Matrix *mat, double *y_prev) {
+void DiscreteProblem::assemble_matrix(Mesh *mesh, Matrix *mat) {
   double *void_res = NULL;
-  assemble(mesh, mat, void_res, y_prev, 1);
+  assemble(mesh, mat, void_res, 1);
 } 
 
 // construct residual vector only
-void DiscreteProblem::assemble_vector(Mesh *mesh, double *res, 
-                                      double *y_prev) {
+void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
   Matrix *void_mat = NULL;
-  assemble(mesh, void_mat, res, y_prev, 2);
+  assemble(mesh, void_mat, res, 2);
 } 
 
 // Newton's iteration
 int newton(DiscreteProblem *dp, Mesh *mesh, 
-           double *y_prev, double tol, int &iter_num) 
+           double tol, int &iter_num) 
 {
   iter_num = 1;
   int n_dof = mesh->get_n_dof();
+  double *y = new double[n_dof];
+  if (y == NULL) error("vector y could not be allocated in newton().");
   double *res = new double[n_dof];
   if (res == NULL)
     error("res could not be allocated in newton().");
 
+  // fill vector y using dof and coeffs arrays 
+  // in elements
+  Element *e;
+  Iterator *I = new Iterator(mesh);
+  while ((e = I->next_active_element()) != NULL) {
+    e->copy_coeffs_to_vector(y);
+  }
+
+  // the iteration
   CooMatrix *mat = NULL;
   while (1) {
     // Reset the matrix:
@@ -361,7 +367,7 @@ int newton(DiscreteProblem *dp, Mesh *mesh,
     mat = new CooMatrix();
 
     // construct residual vector
-    dp->assemble_matrix_and_vector(mesh, mat, res, y_prev); 
+    dp->assemble_matrix_and_vector(mesh, mat, res); 
 
     // calculate L2 norm of residual vector
     double res_norm = 0;
@@ -369,7 +375,7 @@ int newton(DiscreteProblem *dp, Mesh *mesh,
     res_norm = sqrt(res_norm);
 
     // If residual norm less than 'tol', quit
-    // latest solution is in y_prev
+    // latest solution is in the vector y.
     // CAUTION: at least one full iteration forced
     //          here because sometimes the initial
     //          residual on fine mesh is too small
@@ -383,14 +389,22 @@ int newton(DiscreteProblem *dp, Mesh *mesh,
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
     solve_linear_system_umfpack((CooMatrix*)mat, res);
 
-    // updating y_prev by new solution which is in res
-    for(int i=0; i<n_dof; i++) y_prev[i] += res[i];
+    // updating vector y by new solution which is in res
+    for(int i=0; i<n_dof; i++) y[i] += res[i];
 
     iter_num++;
     if (iter_num >= MAX_NEWTON_ITER_NUM) 
       return 0; // no success
   }
+
+  // copy coefficients from vector y to elements
+  I->reset();
+  while ((e = I->next_active_element()) != NULL) {
+    e->get_coeffs_from_vector(y);
+  }
+
   if (mat != NULL) delete mat;
+  if (y != NULL) delete [] y;
   if (res != NULL) delete [] res;
 
   // finished successfully

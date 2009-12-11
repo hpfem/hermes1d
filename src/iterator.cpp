@@ -18,25 +18,30 @@ Element* Iterator::first_active_element()
 
 Element* Iterator::next_active_element()
 {
+  // Find the first element that has not been visited.
   Element *e;
-  // find the first element that has not been visited
-  if(current_coarse_elem_index == -1) { //either it is the first coarse mesh element
+  // Either it is the first coarse mesh element
+  if(current_coarse_elem_index == -1) { 
     e = this->mesh->get_base_elems();
     current_coarse_elem_index = 0; 
   }
-  else { // or we take it from the stack
+  // or we take it from the stack
+  else {
     if(S.empty()) {
-      if(current_coarse_elem_index == this->mesh->get_n_base_elem()-1) { // there is no new element to visit
+      // there is no new element to visit
+      if(current_coarse_elem_index == this->mesh->get_n_base_elem()-1) { 
         return NULL;
       }
-      else { // we take the next coarse mesh element
+      // we take the next coarse mesh element
+      else { 
         e = this->mesh->get_base_elems() + current_coarse_elem_index +1;
         current_coarse_elem_index++; 
       }
     }
-    else { // if stack is not empty
-      e = S.top();     // take the top element
-      S.pop(); // remove it from stack
+    // if stack is not empty
+    else {
+      e = S.top();   // take the top element
+      S.pop();       // remove it from stack
     }
   }
   // if this element is active, return it

@@ -23,19 +23,18 @@ class Linearizer {
 
         // FIXME: code needs to be fixed to allow
         // plotting_elem_subdivision to be 100 and more
-        void plot_solution(const char *out_filename, double *y_prev, int
-                plotting_elem_subdivision=50);
+        void plot_solution(const char *out_filename, 
+                           int plotting_elem_subdivision=50);
     
         // plotting trajectory where solution[comp_x] is used as
         // x-coordinate and solution[comp_y] as y-coordinate
         // FIXME: code needs to be fixed to allow
         // plotting_elem_subdivision to be 100 and more
-        void plot_trajectory(FILE *f, double *y_prev,
-			     int comp_x, int comp_y, 
+        void plot_trajectory(FILE *f, int comp_x, int comp_y, 
                              int plotting_elem_subdivision=50);
 
-        void get_xy(double *y_prev, int comp, int plotting_elem_subdivision,
-                double **x, double **y, int *n);
+        void get_xy(int comp, int plotting_elem_subdivision,
+                    double **x, double **y, int *n);
 
     private:
         Mesh *mesh;

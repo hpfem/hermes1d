@@ -13,7 +13,6 @@
 #include "matrix.h"
 #include "iterator.h"
 
-void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev, double
-        *y_prev_ref);
+void transfer_solution_forward(Mesh *mesh, Mesh *mesh_ref);
 
 #endif
