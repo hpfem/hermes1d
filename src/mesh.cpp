@@ -9,6 +9,9 @@
 #include "transforms.h"
 #include "linearizer.h"
 
+// debug - prints element errors as they come to adapt()
+int PRINT_ELEM_ERRORS = 0;
+
 // debug - prints element dof arrays in assign_dofs()
 int DEBUG_ELEM_DOF = 0;
 
@@ -118,13 +121,8 @@ void Element::get_coeffs_from_vector(double *y)
   if (!this->is_active()) error("Internal in get_coeffs_from_vector().");
   int dof_size = this->dof_size;
   for(int c=0; c<dof_size; c++) {
-    // coeff of the left vertex function
-    if (this->dof[c][0] != -1) this->coeffs[c][0] = y[this->dof[c][0]];
-    // coeff of the right vertex function
-    if (this->dof[c][1] != -1) this->coeffs[c][1] = y[this->dof[c][1]];
-    //completing coeffs of bubble functions
-    for (int j=2; j < this->p + 1; j++) {
-        this->coeffs[c][j] = y[this->dof[c][j]];
+    for (int j=0; j < this->p + 1; j++) {
+      if (this->dof[c][j] != -1) this->coeffs[c][j] = y[this->dof[c][j]];
     }
   }
 }
@@ -136,13 +134,8 @@ void Element::copy_coeffs_to_vector(double *y)
   if (!this->is_active()) error("Internal in copy_coeffs_to_vector().");
   int dof_size = this->dof_size;
   for(int c=0; c<dof_size; c++) {
-    // coeff of the left vertex function
-    if (this->dof[c][0] != -1) y[this->dof[c][0]] = this->coeffs[c][0];
-    // coeff of the right vertex function
-    if (this->dof[c][1] != -1) y[this->dof[c][1]] = this->coeffs[c][1];
-    //completing coeffs of bubble functions
-    for (int j=2; j < this->p + 1; j++) {
-      y[this->dof[c][j]] = this->coeffs[c][j];
+    for (int j=0; j < this->p + 1; j++) {
+      if (this->dof[c][j] != -1) y[this->dof[c][j]] = this->coeffs[c][j];
     }
   }
 }

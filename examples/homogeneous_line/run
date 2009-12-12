@@ -1,4 +1,4 @@
 clean
-first_order_general
+homogeneous_line
 python plot.py &
 

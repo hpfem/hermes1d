@@ -1,3 +1,4 @@
+clean
 first_order_general_adapt
 python plot.py &
 python plot_mesh.py &

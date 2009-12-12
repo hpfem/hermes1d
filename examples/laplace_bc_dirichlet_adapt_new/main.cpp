@@ -58,11 +58,18 @@ double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
 int main() {
   // Create coarse mesh, set Dirichlet BC, enumerate 
   // basis functions
+  printf("CC0\n");
+  exit(0);
   Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
+  printf("here A\n");
   mesh->set_bc_left_dirichlet(0, Val_dir_left);
+  printf("here B\n");
   mesh->set_bc_right_dirichlet(0, Val_dir_right);
+  printf("here C\n");
   mesh->assign_dofs();
   printf("N_dof = %d\n", mesh->get_n_dof());
+
+  printf("here D\n");
 
   // Create discrete problem on coarse mesh
   DiscreteProblem *dp = new DiscreteProblem();
@@ -253,8 +260,6 @@ int main() {
     else {
 
       // Returns updated coarse mesh with the last solution on it. 
-      // The coefficient vector and number of degrees of freedom 
-      // are also updated. 
       /*
       adapt(NORM, ADAPT_TYPE, THRESHOLD, elem_errors,
             mesh, ref_elem_pairs);
@@ -263,8 +268,6 @@ int main() {
 
     adapt_iterations++;
   }
-
-
 
   // Plot meshes, results, and errors
   adapt_plotting(mesh, mesh_ref,

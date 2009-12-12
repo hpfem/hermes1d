@@ -339,7 +339,7 @@ void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
   assemble(mesh, void_mat, res, 2);
 } 
 
-// Newton's iteration
+// Newton iteration
 int newton(DiscreteProblem *dp, Mesh *mesh, 
            double tol, int &iter_num) 
 {
@@ -366,7 +366,7 @@ int newton(DiscreteProblem *dp, Mesh *mesh,
     if (mat != NULL) delete mat;
     mat = new CooMatrix();
 
-    // construct residual vector
+    // construct matrix and residual vector
     dp->assemble_matrix_and_vector(mesh, mat, res); 
 
     // calculate L2 norm of residual vector
@@ -392,15 +392,15 @@ int newton(DiscreteProblem *dp, Mesh *mesh,
     // updating vector y by new solution which is in res
     for(int i=0; i<n_dof; i++) y[i] += res[i];
 
+    // copy coefficients from vector y to elements
+    I->reset();
+    while ((e = I->next_active_element()) != NULL) {
+      e->get_coeffs_from_vector(y);
+    }
+
     iter_num++;
     if (iter_num >= MAX_NEWTON_ITER_NUM) 
       return 0; // no success
-  }
-
-  // copy coefficients from vector y to elements
-  I->reset();
-  while ((e = I->next_active_element()) != NULL) {
-    e->get_coeffs_from_vector(y);
   }
 
   if (mat != NULL) delete mat;
