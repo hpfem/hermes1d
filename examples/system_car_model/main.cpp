@@ -63,8 +63,7 @@ const double TOL_NEWTON = 1e-5;        // tolerance for the Newton's method
 // Include weak forms
 #include "forms.cpp"
 
-void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp, 
-                        double *y_prev) 
+void compute_trajectory(Mesh *mesh, DiscreteProblem *dp) 
 {
   //if (PRINT) {
     printf("alpha = (%g, %g, %g, %g), zeta = (%g, %g, %g, %g)\n", 
@@ -75,12 +74,12 @@ void compute_trajectory(Mesh * mesh, int n_dof, DiscreteProblem *dp,
 
   // Newton's loop
   int success, iter_num;
-  success = newton(dp, mesh, y_prev, TOL_NEWTON, iter_num);
+  success = newton(dp, mesh, TOL_NEWTON, iter_num);
   if (!success) error("Newton's method did not converge."); 
   printf("Finished Newton's iteration (%d iter).\n", iter_num);
 }
 
-void plot_trajectory(Mesh *mesh, double *y_prev, int subdivision) 
+void plot_trajectory(Mesh *mesh, int subdivision) 
 {
   static int first_traj = 1;
   const char *traj_filename = "trajectory.gp";
@@ -94,11 +93,11 @@ void plot_trajectory(Mesh *mesh, double *y_prev, int subdivision)
   Linearizer l_traj(mesh);
   int x_comp = 0; // take first solution component as the x-coordinate
   int y_comp = 1; // take second solution component as the y-coordinate
-  l_traj.plot_trajectory(f, y_prev, x_comp, y_comp, subdivision);
+  l_traj.plot_trajectory(f, x_comp, y_comp, subdivision);
   fclose(f);
 }
 
-void plot_trajectory_endpoint(Mesh *mesh, double *y_prev) 
+void plot_trajectory_endpoint(Mesh *mesh) 
 {
   static int first_traj = 1;
   const char *traj_filename = "reach.gp";
@@ -113,18 +112,18 @@ void plot_trajectory_endpoint(Mesh *mesh, double *y_prev)
   double x_ref = 1; 
   double x_phys; 
   double val[MAX_EQN_NUM];
-  l_reach. eval_approx(mesh->last_active_element(), x_ref, y_prev, &x_phys, val);
+  l_reach. eval_approx(mesh->last_active_element(), x_ref, &x_phys, val);
   int x_comp = 0; // take first solution component as the x-coordinate
   int y_comp = 1; // take second solution component as the y-coordinate
   fprintf(f, "%g %g\n", val[x_comp], val[y_comp]);
   fclose(f);
 }
 
-void plot_solution(Mesh *mesh, double *y_prev, int subdivision)
+void plot_solution(Mesh *mesh, int subdivision)
 {
   Linearizer l(mesh);
   const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev, subdivision);
+  l.plot_solution(out_filename, subdivision);
 }
 
 // set global controls
@@ -167,8 +166,7 @@ int main() {
 
   // enumerate shape functions and calculate
   // the number of DOF
-  int N_dof = mesh->assign_dofs();
-  printf("N_dof = %d\n", N_dof);
+  printf("N_dof = %d\n", mesh->assign_dofs());
 
   // register weak forms
   DiscreteProblem *dp = new DiscreteProblem();
@@ -190,15 +188,6 @@ int main() {
   dp->add_vector_form(2, residual_2);
   dp->add_vector_form(3, residual_3);
   dp->add_vector_form(4, residual_4);
-
-  // Allocate vector y_prev
-  double *y_prev = new double[N_dof];
-  if (y_prev == NULL)
-    error("y_prev could not be allocated in main().");
-
-  // At the very beginning, set zero initial 
-  // condition for the Newton's method
-  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
 
   // Move on the boundary of the rectangle 
   // (-Alpha_max, Alpha_max) x (-Zeta_max, Zeta_max) in the CCW
@@ -222,25 +211,24 @@ int main() {
           // parameters alpha_ctrl[] and zeta_ctrl[] via the Newton's 
           // method, using the last computed trajectory as the initial 
           // condition  
-          compute_trajectory(mesh, N_dof, dp, y_prev);
+          compute_trajectory(mesh, dp);
 
           // save trajectory to a file
           int plotting_subdivision = 10;
-          plot_trajectory_endpoint(mesh, y_prev); 
+          plot_trajectory_endpoint(mesh); 
 
           // save trajectory to a file
           //int plotting_subdivision = 10;
-          //plot_trajectory(mesh, y_prev, plotting_subdivision); 
+          //plot_trajectory(mesh, plotting_subdivision); 
 
           // save solution to a file
           //int plotting_subdivision_2 = 10;
-          //plot_solution(mesh, y_prev, plotting_subdivision_2); 
+          //plot_solution(mesh, plotting_subdivision_2); 
         }
       }
     }
   }
 
   printf("Done.\n");
-  delete[] y_prev;
   return 1;
 }

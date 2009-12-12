@@ -1,3 +1,4 @@
+clean
 system_car_model
 python plot_traj.py
 

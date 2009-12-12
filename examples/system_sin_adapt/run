@@ -1,3 +1,4 @@
+clean
 system_sin_adapt
 python plot.py &
 python plot_mesh.py &

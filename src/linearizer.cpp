@@ -10,13 +10,14 @@
 // Evaluate (vector-valued) approximate solution at reference 
 // point 'x_ref' in element 'm'. Here 'y' is the global vector 
 // of coefficients. The result is a vector of length mesh->n_eq
-void Linearizer::eval_approx(Element *e, double x_ref, double *y, 
+void Linearizer::eval_approx(Element *e, double x_ref,
                              double *x_phys, double *val) {
   int n_eq = this->mesh->get_n_eq();
   for(int c=0; c<n_eq; c++) { // loop over solution components
     val[c] = 0;
     for(int i=0; i <= e->p; i++) { // loop over shape functions
-      if(e->dof[c][i] >= 0) val[c] += y[e->dof[c][i]]*lobatto_val_ref(x_ref, i);
+      if(e->dof[c][i] >= 0) val[c] += 
+                  e->coeffs[c][i]*lobatto_val_ref(x_ref, i);
     }
   }
   double a = e->x1;

@@ -1,3 +1,4 @@
+clean
 laplace_bc_dirichlet_adapt
 python plot.py &
 python plot_mesh.py &

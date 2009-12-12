@@ -1,3 +1,4 @@
+clean
 system_chaotic
 python plot.py &
 
