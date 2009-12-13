@@ -31,18 +31,18 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
 // Calculates L2 or H1 norm of the difference between the coarse
 // and reference solutions in all active elements of 'mesh'. Total
 // error is returned.
-double calc_elem_est_errors(int norm, Mesh* mesh, Mesh* mesh_ref, 
-			    double *err_array);
+double calc_error_estimate(int norm, Mesh* mesh, Mesh* mesh_ref, 
+			   double *err_array);
 
 // Calculates L2 or H1 norm of the difference between the coarse
 // and reference solutions in all active elements of 'mesh'. Total
 // error is returned.
-double calc_elem_est_errors(int norm, Mesh* mesh, ElemPtr2* ref_element_pairs, 
-			    double *err_array);
+double calc_error_estimate(int norm, Mesh* mesh, 
+                           ElemPtr2* ref_element_pairs);
 
 // Can be used for both the coarse and reference solutions
-double calc_approx_sol_norm(int norm, Mesh* mesh);
-double calc_approx_sol_norm(int norm, Mesh* mesh, ElemPtr2* ref_element_pairs);
+double calc_solution_norm(int norm, Mesh* mesh);
+double calc_solution_norm(int norm, Mesh* mesh, ElemPtr2* ref_element_pairs);
 
 // Sort err_array[] and returning array of sorted element indices
 void sort_element_errors(int n, double *err_array, int *id_array); 
@@ -85,11 +85,11 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
                                      Element *e, int order);
 
 // Error wrt. exact solution (if provided) on the entire interval (A, B) 
-double calc_exact_sol_error(int norm, Mesh *mesh, 
-                            exact_sol_type exact_sol); 
+double calc_error_exact(int norm, Mesh *mesh, 
+                        exact_sol_type exact_sol); 
 
 // Calculates L2 or H1 norm of function exact_sol in interval (A, B)
-double calc_exact_sol_norm(int norm, exact_sol_type exact_sol, 
+double calc_solution_norm(int norm, exact_sol_type exact_sol, 
                            int n_eq, 
                            double A, double B, int subdivision, 
                            int order);

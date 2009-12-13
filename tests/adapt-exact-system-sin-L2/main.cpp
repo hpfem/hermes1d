@@ -205,11 +205,11 @@ int main() {
     // In the next step, estimate element errors based on 
     // the difference between the fine mesh and coarse mesh solutions. 
     double err_est_array[MAX_ELEM_NUM]; 
-    double err_est_total = calc_elem_est_errors(NORM, mesh, mesh_ref, 
+    double err_est_total = calc_error_estimate(NORM, mesh, mesh_ref, 
                            err_est_array);
 
     // Calculate the norm of the fine mesh solution
-    double ref_sol_norm = calc_approx_sol_norm(NORM, mesh_ref);
+    double ref_sol_norm = calc_solution_norm(NORM, mesh_ref);
 
     // Calculate an estimate of the global relative error
     double err_est_rel = err_est_total/ref_sol_norm;
@@ -219,13 +219,13 @@ int main() {
     double err_exact_rel;  
     if (EXACT_SOL_PROVIDED) {
       // Calculate element errors wrt. exact solution
-      double err_exact_total = calc_exact_sol_error(NORM, mesh, exact_sol);
+      double err_exact_total = calc_error_exact(NORM, mesh, exact_sol);
      
       // Calculate the norm of the exact solution
       // (using a fine subdivision and high-order quadrature)
       int subdivision = 500; // heuristic parameter
       int order = 20;        // heuristic parameter
-      double exact_sol_norm = calc_exact_sol_norm(NORM, exact_sol, N_eq, A, B,
+      double exact_sol_norm = calc_solution_norm(NORM, exact_sol, N_eq, A, B,
                                                   subdivision, order);
       // Calculate an estimate of the global relative error
       err_exact_rel = err_exact_total/exact_sol_norm;

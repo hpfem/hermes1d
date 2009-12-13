@@ -1162,6 +1162,19 @@ void adapt(int norm, int adapt_type, double threshold,
   mesh_ref->set_n_dof(n_dof_ref_new);
 }
 
+// Refine coarse mesh elements whose id_array >= 0, and 
+// adjust the reference mesh accordingly.  
+// Returns updated coarse mesh, with the last 
+// coarse solution on it. 
+// The coefficient vector and number of degrees of freedom 
+// also is updated. 
+void adapt(int norm, int adapt_type, double threshold, 
+           double *err_array, 
+           Mesh* &mesh, ElemPtr2 *ref_elem_pairs) 
+{
+  error("not implemented yet.");
+}
+
 void adapt_plotting(Mesh *mesh, Mesh *mesh_ref, 
                     int norm, int exact_sol_provided, 
                     exact_sol_type exact_sol) 
