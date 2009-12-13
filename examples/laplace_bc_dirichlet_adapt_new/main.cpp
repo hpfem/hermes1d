@@ -142,10 +142,10 @@ int main() {
       Iterator *I_ref = new Iterator(mesh_ref_local);
       Element *e;
       while (I->next_active_element()->id <= i) {
-  	  I_ref->next_active_element()->copy_into(&(ref_elem_pairs[e->id][0]));
+  	  I_ref->next_active_element()->copy_into(ref_elem_pairs[e->id][0]);
           // coarse element 'e' was split in space
-          if (e->level != ref_elem_pairs[e->id][0].level) {
-    	    I_ref->next_active_element()->copy_into(&(ref_elem_pairs[e->id][1]));
+          if (e->level != ref_elem_pairs[e->id][0]->level) {
+    	    I_ref->next_active_element()->copy_into(ref_elem_pairs[e->id][1]);
           }
       }
       delete I;

@@ -198,14 +198,14 @@ double calc_error_estimate(int norm, Mesh* mesh,
   while ((e = I->next_active_element()) != NULL) {
     double err_squared;
     // element 'e' was not refined in space for reference solution
-    if (e->level == ref_element_pairs[e->id][0].level) {
+    if (e->level == ref_element_pairs[e->id][0]->level) {
       err_squared = calc_elem_est_error_squared_p(norm, e, 
-		    &(ref_element_pairs[e->id][0]));
+		    ref_element_pairs[e->id][0]);
     }
     // element 'e' was refined in space for reference solution
     else { 
-      Element* e_ref_left = &(ref_element_pairs[e->id][0]);
-      Element* e_ref_right = &(ref_element_pairs[e->id][1]);
+      Element* e_ref_left = ref_element_pairs[e->id][0];
+      Element* e_ref_right = ref_element_pairs[e->id][1];
       err_squared = calc_elem_est_error_squared_hp(norm, e, 
                     e_ref_left, e_ref_right);
     }
@@ -243,10 +243,10 @@ double calc_solution_norm(int norm, Mesh *mesh,
   Element *e;
   Element *e_ref;
   while ((e = I->next_active_element()) != NULL) {
-    e_ref = &(elem_ref_pairs[e->id][0]);
+    e_ref = elem_ref_pairs[e->id][0];
     norm_squared += e_ref->calc_elem_norm_squared(norm);
     if (e->level != e_ref->level) {
-      e_ref = &(elem_ref_pairs[e->id][1]);
+      e_ref = elem_ref_pairs[e->id][1];
       norm_squared += e_ref->calc_elem_norm_squared(norm);
     }
   }

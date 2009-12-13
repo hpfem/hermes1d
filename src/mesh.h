@@ -64,7 +64,7 @@ public:
     Element *sons[2];  // for refinement
 };
 
-typedef Element ElemPtr2[2];
+typedef Element* ElemPtr2[2];
 
 class Mesh {
     public:
