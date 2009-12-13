@@ -911,13 +911,13 @@ void Mesh::plot_element_error_exact(int norm, FILE *f, Element *e,
 }
 
 // Plots the error between the reference and coarse mesh solutions
-void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref, 
+void Mesh::plot_error_estimate(int norm, Mesh* mesh_ref, const char *filename, 
 		          int subdivision)
 {
   char final_filename[MAX_STRING_LENGTH];
   sprintf(final_filename, "%s", filename);
   FILE *f = fopen(final_filename, "wb");
-  if(f == NULL) error("problem opening file in plot_error_est().");
+  if(f == NULL) error("problem opening file in plot_error_estimate().");
 
   // simultaneous traversal of 'this' and 'mesh_ref'
   Element *e;
@@ -929,7 +929,7 @@ void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref,
                                     // for reference solution
       if (e_ref->p >= MAX_P) {
         printf("Try to increase MAX_P in common.h.\n");
-        error("Max poly degree exceeded in plot_error_est().");
+        error("Max poly degree exceeded in plot_error_estimate().");
       }
       plot_element_error_p(norm, f, e, e_ref, subdivision);
     }
@@ -938,7 +938,47 @@ void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref,
       Element* e_ref_right = I_ref->next_active_element();
       if (e_ref_left->p >= MAX_P || e_ref_right->p >= MAX_P) {
         printf("Try to increase MAX_P in common.h.\n");
-        error("Max poly degree exceeded in plot_error_est().");
+        error("Max poly degree exceeded in plot_error_estimate().");
+      }
+      plot_element_error_hp(norm, f, e, e_ref_left, e_ref_right, 
+                            subdivision);
+    }
+  }
+
+  fclose(f);
+  printf("Error function written to %s.\n", final_filename);
+}
+
+// Plots the error between the coarse mesh solution
+// and the solution stored in the elem_ref_pairs[] array
+void Mesh::plot_error_estimate(int norm, ElemPtr2* elem_ref_pairs, 
+                               const char *filename, 
+		               int subdivision)
+{
+  char final_filename[MAX_STRING_LENGTH];
+  sprintf(final_filename, "%s", filename);
+  FILE *f = fopen(final_filename, "wb");
+  if(f == NULL) error("problem opening file in plot_error_estimate().");
+
+  // simultaneous traversal of 'this' and the elem_ref_pairs[] array
+  Element *e;
+  Iterator *I = new Iterator(this);
+  while ((e = I->next_active_element()) != NULL) {
+    Element* e_ref = elem_ref_pairs[e->id][0];
+    if (e->level == e_ref->level) { // element 'e' was not refined in space
+                                    // for reference solution
+      if (e_ref->p >= MAX_P) {
+        printf("Try to increase MAX_P in common.h.\n");
+        error("Max poly degree exceeded in plot_error_estimate().");
+      }
+      plot_element_error_p(norm, f, e, e_ref, subdivision);
+    }
+    else { // element 'e' was refined in space for reference solution
+      Element* e_ref_left = e_ref;
+      Element* e_ref_right = elem_ref_pairs[e->id][1];
+      if (e_ref_left->p >= MAX_P || e_ref_right->p >= MAX_P) {
+        printf("Try to increase MAX_P in common.h.\n");
+        error("Max poly degree exceeded in plot_error_estimate().");
       }
       plot_element_error_hp(norm, f, e, e_ref_left, e_ref_right, 
                             subdivision);
@@ -950,8 +990,9 @@ void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref,
 }
 
 // Plots the error wrt. the exact solution (if available)
-void Mesh::plot_error_exact(int norm, const char *filename,  
-		            exact_sol_type exact_sol, int subdivision)
+void Mesh::plot_error_exact(int norm, exact_sol_type exact_sol, 
+                            const char *filename,  
+		            int subdivision)
 {
   char final_filename[MAX_STRING_LENGTH];
   sprintf(final_filename, "%s", filename);
@@ -964,7 +1005,7 @@ void Mesh::plot_error_exact(int norm, const char *filename,
   while ((e = I->next_active_element()) != NULL) {
     if (e->p >= MAX_P) {
       printf("Try to increase MAX_P in common.h.\n");
-      error("Max poly degree exceeded in plot_error_est().");
+      error("Max poly degree exceeded in plot_error_exact().");
     }
     plot_element_error_exact(norm, f, e, exact_sol, subdivision);
   }
@@ -973,8 +1014,57 @@ void Mesh::plot_error_exact(int norm, const char *filename,
   printf("Exact solution error written to %s.\n", final_filename);
 }
 
-// Refine coarse mesh elements whose id_array >= 0, and 
-// adjust the reference mesh accordingly.  
+// Use the err_array[] and threshold to create a list of 
+// elements to be refined.
+void create_ref_index_array(double threshold, double *err_array, 
+                            int n_elem, int *adapt_list, int &num_to_adapt) 
+{
+  // debug
+  //printf("num_to_adapt = %d\n", num_to_adapt);
+  //for (int i=0; i < n_elem; i++) printf("err_array[%d] = %g\n", i, err_array[i]);
+
+  // Find element with largest error
+  double max_elem_error = 0;
+  for(int i=0; i < n_elem; i++) {
+    if (err_array[i] > max_elem_error) {
+      max_elem_error = err_array[i];
+    }
+  }
+
+  // Create auxiliary array of element indices
+  int id_array[MAX_ELEM_NUM];
+  for(int i=0; i < n_elem; i++) {
+    if(err_array[i] < threshold*max_elem_error) id_array[i] = -1; 
+    else id_array[i] = i;
+  }
+
+  /*
+  // Debug:
+  // Print elements to be refined
+  printf("Elements to be refined:\n");
+  for (int i=0; i < n_elem; i++) {
+    if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
+                                 err_array[i]);
+  }
+  */
+
+  // Create list of elements to be refined, in increasing order
+  num_to_adapt = 0;
+  for (int i=0; i < n_elem; i++) {
+    if (id_array[i] >= 0) {
+      adapt_list[num_to_adapt] = id_array[i];
+      num_to_adapt++;
+    }
+  }
+ 
+  /*
+  // Debug: Printing list of elements to be refined
+  printf("Elements to be refined: ");
+  for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
+  printf("\n");
+  */
+}
+
 // Returns updated coarse and reference meshes, with the last 
 // coarse and reference mesh solutions on them, respectively. 
 // The coefficient vectors and numbers of degrees of freedom 
@@ -984,47 +1074,12 @@ void adapt(int norm, int adapt_type, double threshold,
            Mesh* &mesh, Mesh* &mesh_ref) 
 {
   int n_elem = mesh->get_n_active_elem();
-
-  // Find element with largest error
-  double max_elem_error = 0;
-  for(int i=0; i < n_elem; i++) {
-    double elem_error = err_array[i];
-    if (elem_error > max_elem_error) {
-      max_elem_error = elem_error;
-    }
-  }
-
-  // Create auxiliary array of element indices
-  int id_array[MAX_ELEM_NUM];
-  for(int i=0; i < n_elem; i++) {
-   if(err_array[i] < threshold*max_elem_error) id_array[i] = -1; 
-   else id_array[i] = i;
-  }
-
-  // Print elements to be refined
-  /*
-  printf("Elements to be refined:\n");
-  for (int i=0; i<this->get_n_active_elem(); i++) {
-    if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
-                                 err_array[i]);
-  }
-  */
-
+  
+  // Use the err_array[] and threshold to create a list of 
+  // elements to be refined.
   int adapt_list[MAX_ELEM_NUM];
-  int num_to_adapt = 0;
-
-  // Create list of elements to be refined, in increasing order
-  for (int i=0; i < n_elem; i++) {
-    if (id_array[i] >= 0) {
-      adapt_list[num_to_adapt] = id_array[i];
-      num_to_adapt++;
-    }
-  }
- 
-  // Debug: Printing list of elements to be refined
-  //printf("Elements to be refined: ");
-  //for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
-  //printf("\n");
+  int num_to_adapt;
+  create_ref_index_array(threshold, err_array, n_elem, adapt_list, num_to_adapt);
 
   // Replicate the coarse and fine meshes. The original meshes become
   // backup and refinements will only be done in the new ones.
@@ -1049,15 +1104,16 @@ void adapt(int norm, int adapt_type, double threshold,
     if (e->id == adapt_list[counter]) {
       counter++;
       int choice = 0;
-      int3 cand_list[MAX_CAND_NUM];   // Every refinement candidates consists of three
-                                      // numbers: 1/0 whether it is a p-candidate or not,
-                                      // and then either one or two polynomial degrees
+      // Every refinement candidate consists of three
+      // and then either one or two polynomial degrees
+      int3 cand_list[MAX_CAND_NUM];   
       Element* e_ref_left;
       Element* e_ref_right;
       Element* e_ref_new_left;
       Element* e_ref_new_right;
-      if (e->level == e_ref->level) { // element 'e' was not refined in space
-                                      // for reference solution
+      // Element 'e' was not refined in space
+      // for reference solution.
+      if (e->level == e_ref->level) {
         e_ref_left = e_ref;
         e_ref_new_left = e_ref_new;
         e_ref_right = NULL;
@@ -1069,14 +1125,14 @@ void adapt(int norm, int adapt_type, double threshold,
         choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
                                       0, norm);
       }
-      else { // element 'e' was refined in space for reference solution
+      // Element 'e' was refined in space for reference solution.
+      else {
         e_ref_left = e_ref;
         e_ref_new_left = e_ref_new;
         e_ref_right = I_ref->next_active_element();
         e_ref_new_right = I_ref_new->next_active_element();
         int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, 
                                            e_ref_right->p, cand_list);
-        // reference element was hp-refined
         choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
                                       num_cand, cand_list, 1, norm);
       }
@@ -1135,7 +1191,7 @@ void adapt(int norm, int adapt_type, double threshold,
           mesh_ref_new->n_active_elem++;
 	  e_ref_new_right->refine(1, new_p_right + 1, new_p_right + 1);
           mesh_ref_new->n_active_elem++;
-       }
+        }
       }
     }
     else {
@@ -1168,8 +1224,6 @@ void adapt(int norm, int adapt_type, double threshold,
   mesh_ref->set_n_dof(n_dof_ref_new);
 }
 
-// Refine coarse mesh elements whose id_array >= 0, and 
-// adjust the reference mesh accordingly.  
 // Returns updated coarse mesh, with the last 
 // coarse solution on it. 
 // The coefficient vector and number of degrees of freedom 
@@ -1178,7 +1232,93 @@ void adapt(int norm, int adapt_type, double threshold,
            double *err_array, 
            Mesh* &mesh, ElemPtr2 *ref_elem_pairs) 
 {
-  error("not implemented yet.");
+  int n_elem = mesh->get_n_active_elem();
+  
+  // Use the err_array[] and threshold to create a list of 
+  // elements to be refined.
+  int adapt_list[MAX_ELEM_NUM];
+  int num_to_adapt;
+  create_ref_index_array(threshold, err_array, n_elem, adapt_list, num_to_adapt);
+
+  // Replicate the coarse mesh. The original coarse mesh becomes
+  // backup and refinements will only be done in the new one.
+  Mesh *mesh_new = mesh->replicate();
+
+  // Simultaneous traversal of mesh_new and the ref_elem_pairs[] array.
+  // For each element in mesh_new create a list of refinement 
+  // candidates and select the one that best resembles the reference 
+  // solution in ref_elem_pairs[]. 
+  Iterator *I = new Iterator(mesh);
+  Iterator *I_new = new Iterator(mesh_new);
+  Element *e = I->next_active_element();
+  Element *e_new = I_new->next_active_element();
+  int counter_adapt = 0;
+  while (counter_adapt != num_to_adapt) {
+    if (e->id == adapt_list[counter_adapt]) {
+      counter_adapt++;
+      int choice = 0;
+      // Every refinement candidate consists of three
+      // and then either one or two polynomial degrees
+      int3 cand_list[MAX_CAND_NUM];   
+      Element* e_ref = ref_elem_pairs[e->id][0];
+      Element* e_ref_left;
+      Element* e_ref_right;
+      // Element 'e' was not refined in space
+      // for reference solution.
+      if (e->level == e_ref->level) {
+        e_ref_left = e_ref;
+        e_ref_right = NULL;
+        int num_cand = e->create_cand_list(adapt_type, e_ref->p, -1, cand_list);
+        // debug:
+        //e->print_cand_list(num_cand, cand_list);
+        // reference element was p-refined
+        choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
+                                      0, norm);
+      }
+      // Element 'e' was refined in space for reference solution.
+      else {
+        e_ref_left = e_ref;
+        e_ref_right = ref_elem_pairs[e->id][1];
+        int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, 
+                                           e_ref_right->p, cand_list);
+        choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
+                                      num_cand, cand_list, 1, norm);
+      }
+
+      // Next we perform the refinement defined by cand_list[choice]
+      // e_new_last... element in mesh_new that will be refined,
+      // e_ref_left... corresponding element in ref_elem_pairs[] (if reference 
+      //               refinement was p-refinement). In this case 
+      //               e_ref_right == NULL
+      // e_ref_left, e_ref_right... corresponding pair of elements 
+      //               in ref_elem_pairs[] (if reference refinement was hp-refinement)
+      Element *e_new_last = e_new;
+      // moving pointers 'e' and 'e_new' to the next position in coarse meshes
+      e = I->next_active_element();
+      e_new = I_new->next_active_element();
+      // perform the refinement of element e_new_last
+      e_new_last->refine(cand_list[choice]);
+      printf("  Refined element (%g, %g), cand = (%d %d %d)\n", 
+             e_new_last->x1, e_new_last->x2, cand_list[choice][0], 
+             cand_list[choice][1], cand_list[choice][2]);
+      if(cand_list[choice][0] == 1) mesh_new->n_active_elem++;
+    }
+    else {
+      e = I->next_active_element();
+      e_new = I_new->next_active_element();
+    }
+  }
+  // enumerate dofs in both new meshes
+  int n_dof_new = mesh_new->assign_dofs();
+  printf("New mesh has %d elements.\n",
+         mesh_new->get_n_active_elem(), n_dof_new);
+
+  // Delete old coarse mesh
+  delete mesh;
+  mesh = mesh_new;
+
+  // Adjust the number of dofs
+  mesh->set_n_dof(n_dof_new);
 }
 
 void adapt_plotting(Mesh *mesh, Mesh *mesh_ref, 
@@ -1187,29 +1327,47 @@ void adapt_plotting(Mesh *mesh, Mesh *mesh_ref,
 {
   // Plot the coarse mesh solution
   Linearizer l(mesh);
-  const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename);
+  l.plot_solution("solution.gp");
 
   // Plot the fine mesh solution
-  Linearizer lxx(mesh_ref);
-  const char *out_filename2 = "solution_ref.gp";
-  lxx.plot_solution(out_filename2);
+  Linearizer l_ref(mesh_ref);
+  l_ref.plot_solution("solution_ref.gp");
 
   // Plot the coarse and fine meshes
-  const char *mesh_filename = "mesh.gp";
-  mesh->plot(mesh_filename);
-  const char *mesh_ref_filename = "mesh_ref.gp";
-  mesh_ref->plot(mesh_ref_filename);
+  mesh->plot("mesh.gp");
+  mesh_ref->plot("mesh_ref.gp");
 
   // Plot the error estimate (difference between 
   // coarse and fine mesh solutions)
-  const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(norm, err_est_filename, mesh_ref);
+  mesh->plot_error_estimate(norm, mesh_ref, "error_est.gp");
 
   // Plot error wrt. exact solution (if available)
   if (exact_sol_provided) {   
-    const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(norm, err_exact_filename, 
-                           exact_sol);
+    mesh->plot_error_exact(norm, exact_sol, "error_exact.gp");
+  }
+}
+
+void adapt_plotting(Mesh *mesh, ElemPtr2 *ref_elem_pairs,
+                    int norm, int exact_sol_provided, 
+                    exact_sol_type exact_sol) 
+{
+  // Plot the coarse mesh solution.
+  Linearizer l(mesh);
+  l.plot_solution("solution.gp");
+
+  // Plot solution stored in the ref_elem_pairs[] array.
+  Linearizer l_ref(mesh);
+  l_ref.plot_ref_elem_pairs(ref_elem_pairs, "solution_ref.gp");
+
+  // Plot the mesh
+  mesh->plot("mesh.gp");
+
+  // Plot the difference between the coarse mesh solution
+  // and the solution stored in the ref_elem_pairs[] array.
+  mesh->plot_error_estimate(norm, ref_elem_pairs, "error_est.gp");
+
+  // Plot error wrt. exact solution (if available).
+  if (exact_sol_provided) {   
+    mesh->plot_error_exact(norm, exact_sol, "error_exact.gp");
   }
 }

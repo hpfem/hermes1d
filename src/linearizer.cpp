@@ -42,7 +42,36 @@ void Linearizer::plot_solution(const char *out_filename,
         if(f[c] == NULL) error("problem opening file in plot_solution().");
         int n;
         double *x, *y;
-        this->get_xy(c, plotting_elem_subdivision, &x, &y, &n);
+        this->get_xy_mesh(c, plotting_elem_subdivision, &x, &y, &n);
+        for (int i=0; i < n; i++)
+            fprintf(f[c], "%g %g\n", x[i], y[i]);
+        fprintf(f[c], "\n");
+        delete[] x;
+        delete[] y;
+        printf("Output written to %s.\n", final_filename[c]);
+        fclose(f[c]);
+    }
+}
+
+// Plot solution stored in the ref_elem_pairs[] array 
+// in Gnuplot format
+void Linearizer::plot_ref_elem_pairs(ElemPtr2* ref_elem_pairs, 
+                                     const char *out_filename, 
+                                     int plotting_elem_subdivision)
+{
+    int n_eq = this->mesh->get_n_eq();
+    FILE *f[MAX_EQN_NUM];
+    char final_filename[MAX_EQN_NUM][MAX_STRING_LENGTH];
+    for(int c=0; c<n_eq; c++) {
+        if(n_eq == 1)
+            sprintf(final_filename[c], "%s", out_filename);
+        else
+            sprintf(final_filename[c], "%s_%d", out_filename, c);
+        f[c] = fopen(final_filename[c], "wb");
+        if(f[c] == NULL) error("problem opening file in plot_solution().");
+        int n;
+        double *x, *y;
+        this->get_xy_ref_array(c, ref_elem_pairs, plotting_elem_subdivision, &x, &y, &n);
         for (int i=0; i < n; i++)
             fprintf(f[c], "%g %g\n", x[i], y[i]);
         fprintf(f[c], "\n");
@@ -61,8 +90,8 @@ void Linearizer::plot_trajectory(FILE *f,
 {
     int n1, n2;
     double *x1, *y1, *x2, *y2;
-    this->get_xy(comp_x, plotting_elem_subdivision, &x1, &y1, &n1);
-    this->get_xy(comp_y, plotting_elem_subdivision, &x2, &y2, &n2);
+    this->get_xy_mesh(comp_x, plotting_elem_subdivision, &x1, &y1, &n1);
+    this->get_xy_mesh(comp_y, plotting_elem_subdivision, &x2, &y2, &n2);
     if (n1 != n2) error("internal: n1 != n2 in plot_trajectory().");
     for (int i=0; i < n1; i++) fprintf(f, "%g %g\n", y1[i], y2[i]);
     fprintf(f, "\n");
@@ -80,7 +109,7 @@ void Linearizer::plot_trajectory(FILE *f,
 // x, y --- the doubles list of x,y
 // n --- the number of points
 
-void Linearizer::get_xy(int comp,
+void Linearizer::get_xy_mesh(int comp,
                         int plotting_elem_subdivision,
                         double **x, double **y, int *n)
 {
@@ -133,4 +162,50 @@ void Linearizer::get_xy(int comp,
     *y = y_out;
     delete I;
 }
+
+void Linearizer::get_xy_ref_array(int comp, ElemPtr2* ref_elem_pairs,
+                        int plotting_elem_subdivision,
+                        double **x, double **y, int *n)
+{
+    int n_eq = this->mesh->get_n_eq();
+    int n_active_elem = this->mesh->get_n_active_elem();
+
+    *n = 2 * n_active_elem * (plotting_elem_subdivision+1);
+    double *x_out = new double[*n];
+    double *y_out = new double[*n];
+
+    // FIXME:
+    if(n_eq > MAX_EQN_NUM) {
+      printf("n_eq = %d\n", n_eq);
+        error("number of equations too high in plot_solution().");
+    }
+    // FIXME
+    if(plotting_elem_subdivision > MAX_PLOT_PTS_NUM)
+        error("plotting_elem_subdivision too high in plot_solution().");
+    double phys_u_prev[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+    double phys_du_prevdx[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
+
+    for (int i=0; i < n_active_elem; i++) {
+      for (int m=0; m < 2; m++) {
+        Element *e = ref_elem_pairs[i][m];
+        double x_phys[MAX_PLOT_PTS_NUM];
+        double h = (e->x2 - e->x1)/plotting_elem_subdivision;
+
+        for (int j=0; j<plotting_elem_subdivision+1; j++)
+            x_phys[j] = e->x1 + j*h;
+        e->get_solution_plot(x_phys, plotting_elem_subdivision+1, 
+                phys_u_prev, phys_du_prevdx);
+        double a = e->x1;
+        double b = e->x2;
+        for (int j=0; j<plotting_elem_subdivision+1; j++) {
+	  x_out[(2*i+m)*(plotting_elem_subdivision + 1) + j] = x_phys[j];
+          y_out[(2*i+m)*(plotting_elem_subdivision + 1) + j] =
+                phys_u_prev[comp][j];
+        }
+      }
+    }
+    *x = x_out;
+    *y = y_out;
+}
+
 

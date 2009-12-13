@@ -21,9 +21,10 @@ class Linearizer {
         void eval_approx(Element *e, double x_ref, double *x_phys,
 			 double *val);
 
-        // FIXME: code needs to be fixed to allow
-        // plotting_elem_subdivision to be 100 and more
         void plot_solution(const char *out_filename, 
+                           int plotting_elem_subdivision=50);
+        void plot_ref_elem_pairs(ElemPtr2 *elem_ref_pairs,
+                           const char *out_filename,
                            int plotting_elem_subdivision=50);
     
         // plotting trajectory where solution[comp_x] is used as
@@ -33,8 +34,11 @@ class Linearizer {
         void plot_trajectory(FILE *f, int comp_x, int comp_y, 
                              int plotting_elem_subdivision=50);
 
-        void get_xy(int comp, int plotting_elem_subdivision,
-                    double **x, double **y, int *n);
+        void get_xy_mesh(int comp, int plotting_elem_subdivision,
+                         double **x, double **y, int *n);
+        void get_xy_ref_array(int comp, ElemPtr2* elem_ref_pairs, 
+                              int plotting_elem_subdivision,
+                              double **x, double **y, int *n);
 
     private:
         Mesh *mesh;

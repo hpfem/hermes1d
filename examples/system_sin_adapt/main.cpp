@@ -74,7 +74,7 @@ int main() {
   printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
          iter_num);
 
-  // Replicate coarse mesh including dof arrays
+  // Replicate coarse mesh including solution.
   Mesh *mesh_ref = mesh->replicate();
 
   // Refine entire mesh_ref uniformly in 'h' and 'p'

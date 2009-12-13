@@ -76,6 +76,11 @@ class Mesh {
                 delete[] this->base_elems;
             }
         }
+        void free_elements() {
+            if (this->base_elems != NULL) {
+                delete[] this->base_elems;
+            }
+        }
         int assign_dofs();
         Element *get_base_elems() {
             return this->base_elems;
@@ -135,9 +140,11 @@ class Mesh {
 				   exact_sol_type exact_sol,
                                    int subdivision = 20); // plots error wrt. reference solution
                                                           // if ref. refinement was hp-refinement
-        void plot_error_est(int norm, const char *filename, Mesh* mesh_ref, 
+        void plot_error_estimate(int norm, Mesh* mesh_ref, const char *filename, 
                         int subdivision = 500);  // plots error wrt. reference solution
-        void plot_error_exact(int norm, const char *filename, exact_sol_type exact_sol, 
+        void plot_error_estimate(int norm, ElemPtr2* elem_ref_pairs, const char *filename,  
+                        int subdivision = 500);  // plots error wrt. reference solution
+        void plot_error_exact(int norm, exact_sol_type exact_sol, const char *filename,  
                         int subdivision = 500); // plots error wrt. exact solution
         int assign_elem_ids();
         int n_active_elem;
@@ -151,8 +158,6 @@ class Mesh {
 
 };
 
-// Refine coarse mesh elements whose id_array >= 0, and 
-// adjust the reference mesh accordingly.  
 // Returns updated coarse and reference meshes, with the last 
 // coarse and reference mesh solutions on them, respectively. 
 // The coefficient vectors and numbers of degrees of freedom 
@@ -161,8 +166,6 @@ void adapt(int norm, int adapt_type, double threshold,
            double *err_squared_array,
            Mesh* &mesh, Mesh* &mesh_ref);
 
-// Refine coarse mesh elements whose id_array >= 0, and 
-// adjust the reference mesh accordingly.  
 // Returns updated coarse mesh, with the last 
 // coarse solution on it. 
 // The coefficient vector and number of degrees of freedom 
@@ -175,5 +178,8 @@ void adapt_plotting(Mesh *mesh, Mesh *mesh_ref,
                     int norm, int exact_sol_provided, 
                     exact_sol_type exact_sol); 
 
+void adapt_plotting(Mesh *mesh, ElemPtr2* ref_elem_pairs,
+                    int norm, int exact_sol_provided, 
+                    exact_sol_type exact_sol); 
 
 #endif

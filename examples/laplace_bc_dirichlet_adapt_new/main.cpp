@@ -10,7 +10,7 @@
 
 // General input:
 static int N_eq = 1;
-int N_elem = 2;                         // Number of elements
+int N_elem = 3;                         // Number of elements
 double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
@@ -61,7 +61,7 @@ int main() {
   Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, Val_dir_left);
   mesh->set_bc_right_dirichlet(0, Val_dir_right);
-  printf("N_dof = %d\n", mesh->assign_dofs());
+  mesh->assign_dofs();
 
   // Create discrete problem on coarse mesh
   DiscreteProblem *dp = new DiscreteProblem();
@@ -75,13 +75,6 @@ int main() {
   graph.add_row("exact error", "k", "-", "o");
   graph.add_row("error estimate", "k", "--");
 
-  // Newton's loop on coarse mesh
-  int success, iter_num;
-  success = newton(dp, mesh, TOL_NEWTON_COARSE, iter_num);
-  if (!success) error("Newton's method did not converge."); 
-  printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
-         iter_num);
-
   // Main adaptivity loop
   int adapt_iterations = 1;
   double elem_errors[MAX_ELEM_NUM];      // This array decides what 
@@ -89,21 +82,35 @@ int main() {
   ElemPtr2 ref_elem_pairs[MAX_ELEM_NUM]; // To store element pairs from the 
                                          // FTR solution. Decides how 
                                          // elements will be hp-refined. 
-
+  for (int i=0; i < MAX_ELEM_NUM; i++) {
+    ref_elem_pairs[i][0] = new Element();
+    ref_elem_pairs[i][1] = new Element();
+  }
   while(1) {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
-    
+
+    printf("N_dof = %d\n", mesh->get_n_dof());
+ 
+    // Newton's loop on coarse mesh
+    int success, iter_num;
+    success = newton(dp, mesh, TOL_NEWTON_COARSE, iter_num);
+    if (!success) error("Newton's method did not converge."); 
+    printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
+           iter_num);
+
     // For every element perform its fast trial refinement (FTR),
     // calculate the norm of the difference between the FTR
-    // solution and the coarse mesh solution, and store this 
+    // solution and the coarse mesh solution, and store the
     // error in the elem_errors[] array.
     int n_elem = mesh->get_n_active_elem();
     for (int i=0; i < n_elem; i++) {
 
-      // replicate coarse mesh incl. dof[] and coeffs[] arrays
+      printf("=== Starting FTR of Elem [%d]\n", i);
+
+      // Replicate coarse mesh including solution.
       Mesh *mesh_ref_local = mesh->replicate();
 
-      // refine one element starting with element 'i'
+      // Perform FTR of element 'i'
       mesh_ref_local->reference_refinement(i, 1);
       printf("Elem [%d]: fine mesh created (%d DOF).\n", 
              i, mesh_ref_local->assign_dofs());
@@ -114,46 +121,50 @@ int main() {
       printf("Elem [%d]: finished fine mesh Newton's iteration (%d iter).\n", 
              i, iter_num);
 
-      // Print FTR solutions (enumerated) 
+      // Print FTR solution (enumerated) 
       Linearizer *lxx = new Linearizer(mesh_ref_local);
       char out_filename[255];
       sprintf(out_filename, "solution_ref_%d.gp", i);
       lxx->plot_solution(out_filename);
       delete lxx;
 
-      // Calculate norm of the difference between the locally refined 
-      // and coarse mesh solutions.
+      // Calculate norm of the difference between the coarse mesh 
+      // and FTR solutions.
+      // NOTE: later we want to look at the difference in some quantity 
+      // of interest rather than error in global norm.
       double err_est_array[MAX_ELEM_NUM];
       elem_errors[i] = calc_error_estimate(NORM, mesh, mesh_ref_local, 
                        err_est_array);
       printf("Elem [%d]: absolute error (est) = %g\n", i, elem_errors[i]);
 
-      // Store pointers to the reference element pair for element 'i'
-      // in the ref_elem_pairs[] array
+      // Copy the reference element pair for element 'i'
+      // into the ref_elem_pairs[i][] array
       Iterator *I = new Iterator(mesh);
       Iterator *I_ref = new Iterator(mesh_ref_local);
-      Element *e;
-      while (I->next_active_element()->id <= i) {
-  	  I_ref->next_active_element()->copy_into(ref_elem_pairs[e->id][0]);
+      Element *e, *e_ref;
+      while (1) {
+        e = I->next_active_element();
+        e_ref = I_ref->next_active_element();
+        if (e->id == i) {
+  	  e_ref->copy_into(ref_elem_pairs[e->id][0]);
           // coarse element 'e' was split in space
-          if (e->level != ref_elem_pairs[e->id][0]->level) {
-    	    I_ref->next_active_element()->copy_into(ref_elem_pairs[e->id][1]);
+          if (e->level != e_ref->level) {
+            e_ref = I_ref->next_active_element();
+            e_ref->copy_into(ref_elem_pairs[e->id][1]);
           }
+          break;
+        }
       }
+
       delete I;
       delete I_ref;
       delete mesh_ref_local;
     }  
 
-    // Calculate the global error estimate based on the difference 
-    // between the coarse mesh and the ref_elem_pairs[] array
+    // Use the ref_elem_pairs[] array to calculate a global error estimate
+    // and estimate reference solution norm.
     double err_est_total = calc_error_estimate(NORM, mesh, ref_elem_pairs);
-
-    // TODO: use the ref_elem_pairs[] array to estimate reference 
-    // solution norm
     double ref_sol_norm = calc_solution_norm(NORM, mesh, ref_elem_pairs);
-
-    // Calculate an estimate of the global relative error
     double err_est_rel = err_est_total/ref_sol_norm;
     printf("Relative error (est) = %g %%\n", 100.*err_est_rel);
 
@@ -181,9 +192,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 1) break;
-
-    /***** Perform the refinements *****/
+    //if (adapt_iterations == 4) break;
 
     // Returns updated coarse mesh with the last solution on it. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, elem_errors,
@@ -192,12 +201,9 @@ int main() {
     adapt_iterations++;
   }
 
-  // TODO: replace mesh_ref with ref_element_pairs[]
   // Plot meshes, results, and errors
-  /*
-  adapt_plotting(mesh, mesh_ref,
-           NORM, EXACT_SOL_PROVIDED, exact_sol);
-  */
+  adapt_plotting(mesh, ref_elem_pairs,
+                 NORM, EXACT_SOL_PROVIDED, exact_sol);
 
   // Save convergence graph
   graph.save("conv_dof.gp");
