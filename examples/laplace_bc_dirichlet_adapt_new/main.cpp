@@ -56,8 +56,6 @@ double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
 
 /******************************************************************************/
 int main() {
-  printf("here!\n"); exit(0);
-
   // Create coarse mesh, set Dirichlet BC, enumerate 
   // basis functions
   Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
@@ -110,12 +108,6 @@ int main() {
       printf("Elem [%d]: fine mesh created (%d DOF).\n", 
              i, mesh_ref_local->assign_dofs());
 
-      // Transfer solution from coarse mesh to the FTR mesh
-      // FIXME: this should be done on one element only,
-      //        in all others the solution remains the same !!! 
-      transfer_solution_forward(mesh, mesh_ref_local);
-      printf("Elem [%d]: coarse mesh solution copied to fine mesh.\n", i);
-
       // Newton's loop on the FTR mesh
       success = newton(dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
       if (!success) error("Newton's method did not converge."); 
@@ -153,12 +145,12 @@ int main() {
       delete mesh_ref_local;
     }  
 
-    // TODO: calculate the global error estimate based on the 
-    //       difference between the coarse mesh and the 
-    //       ref_elem_pairs[] array
+    // Calculate the global error estimate based on the difference 
+    // between the coarse mesh and the ref_elem_pairs[] array
     double err_est_total = calc_error_estimate(NORM, mesh, ref_elem_pairs);
 
-    // TODO: use the ref_elem_pairs[] array
+    // TODO: use the ref_elem_pairs[] array to estimate reference 
+    // solution norm
     double ref_sol_norm = calc_solution_norm(NORM, mesh, ref_elem_pairs);
 
     // Calculate an estimate of the global relative error

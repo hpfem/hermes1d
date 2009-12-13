@@ -83,10 +83,6 @@ int main() {
   mesh_ref->reference_refinement(start_elem_id, num_to_ref);
   printf("Fine mesh created (%d DOF).\n", mesh_ref->get_n_dof());
 
-  // Transfer coarse mesh solution to the fine mesh
-  transfer_solution_forward(mesh, mesh_ref);
-  printf("Coarse mesh solution copied to fine mesh.\n");
-
   // Convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
   graph.set_log_y();

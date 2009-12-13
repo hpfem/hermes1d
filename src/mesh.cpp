@@ -44,6 +44,12 @@ unsigned Element::is_active()
   return this->active;
 }
 
+// Refines an element. In case of p-refinement, only the 
+// poly degree is increased. In case of hp-refinement, 
+// two sons are created and the solution is moved into 
+// them. 
+// NOTE: dof[] arrays become invalid because they are global.
+// assign_dof() must be run after the refinement is completed. 
 void Element::refine(int type, int p_left, int p_right) 
 {
   if(type == 0) {         // p-refinement
@@ -54,8 +60,9 @@ void Element::refine(int type, int p_left, int p_right)
     double x2 = this->x2;
     double midpoint = (x1 + x2)/2.; 
     this->sons[0] = new Element(x1, midpoint, this->level + 1, p_left, dof_size);
-    this->sons[1] = new Element(midpoint, x2, this->level + 1, p_right, dof_size);
-    // copying negative dof and Dirichlet BCs to sons if any
+    this->sons[1] = new Element(midpoint, x2, this->level + 1, 
+                                p_right, dof_size);
+    // Copy Dirichtel boundary conditions to sons
     for(int c=0; c<dof_size; c++) {
       if (this->dof[c][0] < 0) {
         this->sons[0]->dof[c][0] = this->dof[c][0];
@@ -65,6 +72,11 @@ void Element::refine(int type, int p_left, int p_right)
         this->sons[1]->dof[c][1] = this->dof[c][1];
         this->sons[1]->coeffs[c][1] = this->coeffs[c][1];
       }
+    }
+    // Transfer solution to sons
+    for(int c=0; c<dof_size; c++) {
+      transform_element_refined_forward(c, this, 
+					this->sons[0], this->sons[1]);
     }
     this->active = 0;
   }
@@ -440,8 +452,9 @@ void Mesh::refine_elems(int elem_num, int *id_array, int3 *cand_array)
     }
 }
 
-// splits the indicated elements and 
-// increases poly degree in sons by one
+// Splits the indicated elements and 
+// increases poly degree in sons by one.
+// Solution is transfered to new elements.
 void Mesh::reference_refinement(int start_elem_id, int elem_num)
 {
     Iterator *I = new Iterator(this);
@@ -1141,15 +1154,8 @@ void adapt(int norm, int adapt_type, double threshold,
   int n_dof_ref_new = mesh_ref_new->assign_dofs();
   printf("Coarse mesh refined (%d elem, %d DOF)\n", 
          mesh_new->get_n_active_elem(), n_dof_new);
-  printf("Fine mesh updated (%d elem, %d DOF)\n", 
+  printf("Fine mesh refined (%d elem, %d DOF)\n", 
   	 mesh_ref_new->get_n_active_elem(), n_dof_ref_new);
-
-  // Transfer last coarse and fine mesh solutions to the new coarse and 
-  // fine meshes, respectively. 
-  transfer_solution_forward(mesh, mesh_new);
-  printf("Last coarse mesh solution copied to new coarse mesh.\n");
-  transfer_solution_forward(mesh_ref, mesh_ref_new);
-  printf("Last fine mesh solution copied to new fine mesh.\n");
 
   // Delete old meshes and copy the new ones in place of them
   delete mesh;

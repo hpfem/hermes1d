@@ -72,18 +72,15 @@ int main() {
   printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
          iter_num);
 
-  // Replicate coarse mesh including dof arrays
+  // Replicate coarse mesh including solution.
   Mesh *mesh_ref = mesh->replicate();
 
   // Refine entire mesh_ref uniformly in 'h' and 'p'
+  // Solution is transfered to new elements.
   int start_elem_id = 0; 
   int num_to_ref = mesh_ref->get_n_active_elem();
   mesh_ref->reference_refinement(start_elem_id, num_to_ref);
   printf("Fine mesh created (%d DOF).\n", mesh_ref->get_n_dof());
-
-  // Transfer coarse mesh solution to the fine mesh
-  transfer_solution_forward(mesh, mesh_ref);
-  printf("Coarse mesh solution copied to fine mesh.\n");
 
   // Convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
