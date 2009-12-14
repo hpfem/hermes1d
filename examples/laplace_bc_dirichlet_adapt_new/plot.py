@@ -7,6 +7,6 @@ plot(x, y, label="FTR array")
 data = numpy.loadtxt("solution.gp")
 x = data[:, 0]
 y = data[:, 1]
-plot(x, y, label="coarse")
+plot(x, y, label="solution")
 legend()
 show()

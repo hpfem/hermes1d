@@ -22,10 +22,9 @@ double TOL_NEWTON_REF = 1e-10;           // Reference mesh
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 1... h-adaptivity
                                         // 2... p-adaptivity
-const double THRESHOLD = 0.7;           // Refined will be all elements whose error
-                                        // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-8;        // Tolerance for the relative error between 
-                                        // the coarse mesh and reference solutions
+const double THRESHOLD = 0.7;           // Refined will be all elements whose FTR error
+                                        // is greater than THRESHOLD*max_ftr_error
+const double TOL_ERR_FTR = 1e-8;        // Tolerance for the maximum FTR error
 const int NORM = 1;                     // To measure errors:
                                         // 1... H1 norm
                                         // 0... L2 norm
@@ -71,9 +70,9 @@ int main() {
   // Convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph;
   graph.set_log_y();
-  graph.set_captions("Convergence History", "Degrees of Freedom", "Error [%]");
-  graph.add_row("exact error", "k", "-", "o");
-  graph.add_row("error estimate", "k", "--");
+  graph.set_captions("Convergence History", "Degrees of Freedom", "Error");
+  graph.add_row("exact error [%]", "k", "-", "o");
+  graph.add_row("max FTR error", "k", "--");
 
   // Main adaptivity loop
   int adapt_iterations = 1;
@@ -161,13 +160,6 @@ int main() {
       delete mesh_ref_local;
     }  
 
-    // Use the ref_elem_pairs[] array to calculate a global error estimate
-    // and estimate reference solution norm.
-    double err_est_total = calc_error_estimate(NORM, mesh, ref_elem_pairs);
-    double ref_sol_norm = calc_solution_norm(NORM, mesh, ref_elem_pairs);
-    double err_est_rel = err_est_total/ref_sol_norm;
-    printf("Relative error (est) = %g %%\n", 100.*err_est_rel);
-
     // If exact solution available, also calculate exact error
     if (EXACT_SOL_PROVIDED) {
       // Calculate element errors wrt. exact solution
@@ -185,14 +177,21 @@ int main() {
       graph.add_values(0, mesh->get_n_dof(), 100 * err_exact_rel);
     }
 
-    // add entry to DOF convergence graph
-    graph.add_values(1, mesh->get_n_dof(), 100 * err_est_rel);
+    // Calculate max FTR error
+    double max_ftr_error = 0;
+    for (int i=0; i < mesh->get_n_active_elem(); i++) {
+      if (elem_errors[i] > max_ftr_error) max_ftr_error = elem_errors[i];
+    }
+    printf("Max FTR error = %g\n", max_ftr_error);
 
-     // Decide whether the relative error is sufficiently small
-    if(err_est_rel*100 < TOL_ERR_REL) break;
+    // Add entry to DOF convergence graph
+    graph.add_values(1, mesh->get_n_dof(), max_ftr_error);
+
+    // Decide whether the max. FTR error is sufficiently small
+    if(max_ftr_error < TOL_ERR_FTR) break;
 
     // debug
-    if (adapt_iterations == 1) break;
+    //if (adapt_iterations == 10) break;
 
     // Returns updated coarse mesh with the last solution on it. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, elem_errors,
@@ -211,14 +210,6 @@ int main() {
   printf("Done.\n");
   return 1;
 }
-
-
-
-
-
-
-
-
 
 
 
