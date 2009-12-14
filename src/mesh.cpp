@@ -271,7 +271,8 @@ double Element::calc_elem_norm_squared(int norm)
 
 // Evaluate solution and its derivative at point x_phys.
 void Element::get_solution_point(double x_phys, 
-                                 double val[MAX_EQN_NUM], double der[MAX_EQN_NUM])
+                                 double val[MAX_EQN_NUM], 
+                                 double der[MAX_EQN_NUM])
 {
   double x1 = this->x1;
   double x2 = this->x2;
@@ -1371,3 +1372,4 @@ void adapt_plotting(Mesh *mesh, ElemPtr2 *ref_elem_pairs,
     mesh->plot_error_exact(norm, exact_sol, "error_exact.gp");
   }
 }
+

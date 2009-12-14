@@ -76,14 +76,14 @@ int main() {
 
   // Main adaptivity loop
   int adapt_iterations = 1;
-  double elem_errors[MAX_ELEM_NUM];      // This array decides what 
+  double ftr_errors[MAX_ELEM_NUM];      // This array decides what 
                                          // elements will be refined.
-  ElemPtr2 ref_elem_pairs[MAX_ELEM_NUM]; // To store element pairs from the 
+  ElemPtr2 ref_ftr_pairs[MAX_ELEM_NUM]; // To store element pairs from the 
                                          // FTR solution. Decides how 
                                          // elements will be hp-refined. 
   for (int i=0; i < MAX_ELEM_NUM; i++) {
-    ref_elem_pairs[i][0] = new Element();
-    ref_elem_pairs[i][1] = new Element();
+    ref_ftr_pairs[i][0] = new Element();
+    ref_ftr_pairs[i][1] = new Element();
   }
   while(1) {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
@@ -100,7 +100,7 @@ int main() {
     // For every element perform its fast trial refinement (FTR),
     // calculate the norm of the difference between the FTR
     // solution and the coarse mesh solution, and store the
-    // error in the elem_errors[] array.
+    // error in the ftr_errors[] array.
     int n_elem = mesh->get_n_active_elem();
     for (int i=0; i < n_elem; i++) {
 
@@ -117,8 +117,8 @@ int main() {
       // Newton's loop on the FTR mesh
       success = newton(dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
       if (!success) error("Newton's method did not converge."); 
-      printf("Elem [%d]: finished fine mesh Newton's iteration (%d iter).\n", 
-             i, iter_num);
+      //printf("Elem [%d]: finished fine mesh Newton's iteration (%d iter).\n", 
+      //       i, iter_num);
 
       // Print FTR solution (enumerated) 
       Linearizer *lxx = new Linearizer(mesh_ref_local);
@@ -132,12 +132,12 @@ int main() {
       // NOTE: later we want to look at the difference in some quantity 
       // of interest rather than error in global norm.
       double err_est_array[MAX_ELEM_NUM];
-      elem_errors[i] = calc_error_estimate(NORM, mesh, mesh_ref_local, 
-                       err_est_array);
-      printf("Elem [%d]: absolute error (est) = %g\n", i, elem_errors[i]);
+      ftr_errors[i] = calc_error_estimate(NORM, mesh, mesh_ref_local, 
+                      err_est_array);
+      //printf("Elem [%d]: absolute error (est) = %g\n", i, ftr_errors[i]);
 
       // Copy the reference element pair for element 'i'
-      // into the ref_elem_pairs[i][] array
+      // into the ref_ftr_pairs[i][] array
       Iterator *I = new Iterator(mesh);
       Iterator *I_ref = new Iterator(mesh_ref_local);
       Element *e, *e_ref;
@@ -145,11 +145,11 @@ int main() {
         e = I->next_active_element();
         e_ref = I_ref->next_active_element();
         if (e->id == i) {
-  	  e_ref->copy_into(ref_elem_pairs[e->id][0]);
+  	  e_ref->copy_into(ref_ftr_pairs[e->id][0]);
           // coarse element 'e' was split in space
           if (e->level != e_ref->level) {
             e_ref = I_ref->next_active_element();
-            e_ref->copy_into(ref_elem_pairs[e->id][1]);
+            e_ref->copy_into(ref_ftr_pairs[e->id][1]);
           }
           break;
         }
@@ -173,14 +173,14 @@ int main() {
                                                   subdivision, order);
       // Calculate an estimate of the global relative error
       double err_exact_rel = err_exact_total/exact_sol_norm;
-      printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
+      //printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
       graph.add_values(0, mesh->get_n_dof(), 100 * err_exact_rel);
     }
 
     // Calculate max FTR error
     double max_ftr_error = 0;
     for (int i=0; i < mesh->get_n_active_elem(); i++) {
-      if (elem_errors[i] > max_ftr_error) max_ftr_error = elem_errors[i];
+      if (ftr_errors[i] > max_ftr_error) max_ftr_error = ftr_errors[i];
     }
     printf("Max FTR error = %g\n", max_ftr_error);
 
@@ -194,14 +194,14 @@ int main() {
     //if (adapt_iterations == 10) break;
 
     // Returns updated coarse mesh with the last solution on it. 
-    adapt(NORM, ADAPT_TYPE, THRESHOLD, elem_errors,
-          mesh, ref_elem_pairs);
+    adapt(NORM, ADAPT_TYPE, THRESHOLD, ftr_errors,
+          mesh, ref_ftr_pairs);
 
     adapt_iterations++;
   }
 
   // Plot meshes, results, and errors
-  adapt_plotting(mesh, ref_elem_pairs,
+  adapt_plotting(mesh, ref_ftr_pairs,
                  NORM, EXACT_SOL_PROVIDED, exact_sol);
 
   // Save convergence graph
