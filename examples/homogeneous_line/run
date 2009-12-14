@@ -1,4 +1,4 @@
 clean
-laplace_bc_neumann
+homogeneous_line
 python plot.py &
 

@@ -137,16 +137,12 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
 }
 
 // Transfers solution from coarse mesh element 'e' to a pair of fine mesh elements 
-// 'e_ref_left' and 'e_ref_right' (obtained via hp-refinement of 'e'). Used is the 
-// global coefficient vector y_prev corresponding to the coarse mesh, and the 
-// connectivity information on 'e', 'e_ref_left' and 'e_ref_right'. Result are 
-// new solution coefficients on 'e_ref_left' and 'e_ref_right' which are stored 
-// in the new global coefficient vector y_prev_ref.
-// WARNING: For this to work, element DOF must be assigned correctly 
+// 'e_ref_left' and 'e_ref_right' (obtained via hp-refinement of 'e'). Result are 
+// new solution coefficients on 'e_ref_left' and 'e_ref_right'. 
+// CAUTION: For this to work, element DOF must be assigned correctly 
 // in all three elements 'e', 'e_ref_left' and 'e_ref_right'!
-void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Element
-			       *e, Element *e_ref_left, Element *e_ref_right, 
-                               double *bc_left_dir_values, double *bc_right_dir_values)
+void transform_element_refined_forward(int comp, Element *e, Element *e_ref_left, 
+                               Element *e_ref_right)
 {
   // checking whether elements match
   if (fabs(e->x1 - e_ref_left->x1) > 1e-10 ||
@@ -166,21 +162,13 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
   double y_prev_loc[MAX_P+1];
   double y_prev_loc_trans_left[MAX_P+1];
   double y_prev_loc_trans_right[MAX_P+1];
-  if (e->dof[comp][0] == -1)
-      y_prev_loc[0] = bc_left_dir_values[comp];
-  else
-      y_prev_loc[0] = y_prev[e->dof[comp][0]];
-  if (e->dof[comp][1] == -1)
-      y_prev_loc[1] = bc_right_dir_values[comp];
-  else
-      y_prev_loc[1] = y_prev[e->dof[comp][1]];
   int fns_num_coarse = e->p + 1;
-  for (int i=2; i < fns_num_coarse; i++)
-      y_prev_loc[i] = y_prev[e->dof[comp][i]];  
+  for (int i=0; i < fns_num_coarse; i++)
+      y_prev_loc[i] = e->coeffs[comp][i];  
   //debug
   if (DEBUG_SOLUTION_TRANSFER) {
     for (int i=0; i < fns_num_coarse; i++) {
-        printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
+      printf("y_prev_loc[%d] = %f\n", i, y_prev_loc[i]);
     }
     printf("\n");
   }
@@ -222,31 +210,30 @@ void transform_element_refined(int comp, double *y_prev, double *y_prev_ref, Ele
   // Copying computed coefficients into the elements e_ref_left and e_ref_right.
   // low-order part left:
   if (e->dof[comp][0] != -1)
-      y_prev_ref[e_ref_left->dof[comp][0]] = y_prev_loc_trans_left[0];
-  y_prev_ref[e_ref_left->dof[comp][1]] = y_prev_loc_trans_left[1];
+    e_ref_left->coeffs[comp][0] = y_prev_loc_trans_left[0];
+  else e_ref_left->coeffs[comp][0] = e->coeffs[comp][0];
+  e_ref_left->coeffs[comp][1] = y_prev_loc_trans_left[1];
   // low-order part right:
-  y_prev_ref[e_ref_right->dof[comp][0]] = y_prev_loc_trans_right[0];
+  e_ref_right->coeffs[comp][0] = y_prev_loc_trans_right[0];
   if (e->dof[comp][1] != -1)
-      y_prev_ref[e_ref_right->dof[comp][1]] = y_prev_loc_trans_right[1];
+    e_ref_right->coeffs[comp][1] = y_prev_loc_trans_right[1];
+  else e_ref_right->coeffs[comp][1] = e->coeffs[comp][1];
   // higher-order part left:
   for (int p=2; p < fns_num_ref_left; p++) {
-      y_prev_ref[e_ref_left->dof[comp][p]] = y_prev_loc_trans_left[p];
+    e_ref_left->coeffs[comp][p] = y_prev_loc_trans_left[p];
   }
   // higher-order part right:
   for (int p=2; p < fns_num_ref_right; p++) {
-      y_prev_ref[e_ref_right->dof[comp][p]] = y_prev_loc_trans_right[p];
+    e_ref_right->coeffs[comp][p] = y_prev_loc_trans_right[p];
   }
 }
 
 // Transfers solution from coarse mesh element 'e' to fine mesh element 'e_ref' 
-// (obtained via p-refinement of 'e'). Used is the global coefficient vector 
-// y_prev corresponding to the coarse mesh, and the connectivity information 
-// on 'e' and 'e_ref'. Result are new solution coefficients on 'e_ref' which 
-// are stored in the new global coefficient vector y_prev_ref.
-// WARNING: For this to work, element DOF must be assigned correctly 
+// (obtained via p-refinement of 'e'). Result are new solution coefficients on 
+// 'e_ref'.
+// CAUTION: For this to work, element DOF must be assigned correctly 
 // in both elements 'e' and 'e_ref'!
-void transform_element_unrefined(int comp, double *y_prev, double *y_prev_ref, 
-        Element *e, Element *e_ref)
+void transform_element_unrefined_forward(int comp, Element *e, Element *e_ref)
 {
   // checking whether elements match
   if (fabs(e->x1 - e_ref->x1) > 1e-10 ||
@@ -261,12 +248,11 @@ void transform_element_unrefined(int comp, double *y_prev, double *y_prev_ref,
   }
   int fns_num = e->p + 1; 
   for (int p=0; p < fns_num; p++) {
-      if (e->dof[comp][p] != -1)
-          y_prev_ref[e_ref->dof[comp][p]] = y_prev[e->dof[comp][p]];
+    e_ref->coeffs[comp][p] = e->coeffs[comp][p];
   }
   int fns_num_ref = e_ref->p + 1;
   for (int p = fns_num; p < fns_num_ref; p++) {
-      y_prev_ref[e_ref->dof[comp][p]] = 0.;
+    e_ref->coeffs[comp][p] = 0.;
   }
 }
 
@@ -275,8 +261,7 @@ void transform_element_unrefined(int comp, double *y_prev, double *y_prev_ref,
 // y_prev_ref will be constructed/
 // WARNING: For this to work, element DOF must be assigned correctly 
 // in both the coarse and fine meshes!
-void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev, 
-                       double *y_prev_ref)
+void transfer_solution_forward(Mesh *mesh, Mesh *mesh_ref)
 {
     Iterator *I = new Iterator(mesh);
     Iterator *I_ref = new Iterator(mesh_ref);
@@ -289,15 +274,12 @@ void transfer_solution(Mesh *mesh, Mesh *mesh_ref, double *y_prev,
         while ((e = I->next_active_element()) != NULL) {
             e_ref = I_ref->next_active_element();
             if (e->level == e_ref->level)
-                transform_element_unrefined(comp, y_prev, 
-                                            y_prev_ref, e, e_ref);
+                transform_element_unrefined_forward(comp, e, e_ref);
             else {
                 e_ref_left = e_ref;
                 e_ref_right = I_ref->next_active_element();
-                transform_element_refined(comp, y_prev, y_prev_ref, e,
-					  e_ref_left, e_ref_right, 
-                                          mesh->bc_left_dir_values, 
-                                          mesh->bc_left_dir_values);
+                transform_element_refined_forward(comp, e,
+					  e_ref_left, e_ref_right);
             }
         }
     }

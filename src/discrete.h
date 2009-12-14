@@ -44,14 +44,14 @@ public:
     void add_vector_form_surf(int i, vector_form_surf fn, int bdy_index);
     // c is solution component
     void process_vol_forms(Mesh *mesh, Matrix *mat, double *res, 
-                           double *y_prev, int matrix_flag);
+                           int matrix_flag);
     // c is solution component
-    void process_surf_forms(Mesh *mesh, Matrix *mat, double *res, double *y_prev, 
+    void process_surf_forms(Mesh *mesh, Matrix *mat, double *res, 
                             int matrix_flag, int bdy_index);
-    void assemble(Mesh *mesh, Matrix *mat, double *res, double *y_prev, int matrix_flag);
-    void assemble_matrix_and_vector(Mesh *mesh, Matrix *mat, double *res, double *y_prev); 
-    void assemble_matrix(Mesh *mesh, Matrix *mat, double *y_prev);
-    void assemble_vector(Mesh *mesh, double *res, double *y_prev);
+    void assemble(Mesh *mesh, Matrix *mat, double *res, int matrix_flag);
+    void assemble_matrix_and_vector(Mesh *mesh, Matrix *mat, double *res); 
+    void assemble_matrix(Mesh *mesh, Matrix *mat);
+    void assemble_vector(Mesh *mesh, double *res);
 
 private:
 	struct MatrixFormVol {
@@ -78,8 +78,7 @@ private:
 
 // return coefficients for all shape functions on the element m,
 // for all solution components
-void calculate_elem_coeffs(Element *e, double *y_prev, 
-                           double **coeffs, int n_eq);
+void calculate_elem_coeffs(Element *e, double **coeffs, int n_eq);
 
 void element_quadrature(double a, double b, 
                         int order, double *pts, double *weights, int *num);
@@ -88,8 +87,8 @@ void element_shapefn(double a, double b,
 		     int k, int order, double *val, double *der);
 
 void element_shapefn_point(double x_ref, double a, double b, 
-			   int k, double *val, double *der);
+			   int k, double &val, double &der);
 
-int newton(DiscreteProblem *dp, Mesh *mesh, double *y_prev, double tol, int &iter_num); 
+int newton(DiscreteProblem *dp, Mesh *mesh, double tol, int &iter_num); 
 
 #endif

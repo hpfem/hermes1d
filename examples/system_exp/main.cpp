@@ -39,14 +39,14 @@ double f_1(double x) {
 
 /******************************************************************************/
 int main() {
-  // Create mesh
+  // Create coarse mesh, set Dirichlet BC, enumerate 
+  // basis functions
   Mesh *mesh = new Mesh(A, B, N_elem, P_init, N_eq);
   mesh->set_bc_left_dirichlet(0, Val_dir_left_0);
   mesh->set_bc_right_dirichlet(0, Val_dir_right_0);
   mesh->set_bc_left_dirichlet(1, Val_dir_left_1);
   mesh->set_bc_right_dirichlet(1, Val_dir_right_1);
-  int N_dof = mesh->assign_dofs();
-  printf("N_dof = %d\n", N_dof);
+  printf("N_dof = %d\n", mesh->assign_dofs());
 
   // Register weak forms
   DiscreteProblem *dp = new DiscreteProblem();
@@ -57,25 +57,17 @@ int main() {
   dp->add_vector_form(0, residual_0);
   dp->add_vector_form(1, residual_1);
 
-  // Allocate vector y_prev
-  double *y_prev = new double[N_dof];
-  if (y_prev == NULL) error("res or y_prev could not be allocated in main().");
-
-  // Set zero initial condition for the Newton's method
-  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
-
   // Newton's loop
   int success, iter_num;
-  success = newton(dp, mesh, y_prev, TOL_NEWTON, iter_num);
+  success = newton(dp, mesh, TOL_NEWTON, iter_num);
   if (!success) error("Newton's method did not converge."); 
   printf("Finished Newton's iteration (%d iter).\n", iter_num);
 
   // Plot the solution
   Linearizer l(mesh);
-  const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev);
+  l.plot_solution("solution.gp");
 
   printf("Done.\n");
-  delete [] y_prev;
   return 1;
 }
+

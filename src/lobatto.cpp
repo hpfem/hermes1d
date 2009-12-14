@@ -28,11 +28,11 @@ int lobatto_order_1d[] = {
 };
 
 static double lobatto_fn_0(double x) {
-    return 1.0/2.0 - x/2;
+    return 1.0/2.0 - x/2.;
 }
 
 static double lobatto_fn_1(double x) {
-    return 1.0/2.0 + x/2;
+    return 1.0/2.0 + x/2.;
 }
 
 static double lobatto_der_0(double x) {
@@ -47,15 +47,14 @@ static double lobatto_der_1(double x) {
 // functions (integrated normalized Legendre polynomials) 
 // at point 'x'. 
 extern void fill_lobatto_array_ref(double x, 
-                               double lobatto_array_val[MAX_P+1],
-                               double lobatto_array_der[MAX_P+1]) {
+                                   double lobatto_array_val[MAX_P+1],
+                                   double lobatto_array_der[MAX_P+1]) {
     double legendre_array[MAX_P + 1];
-    int max_fns_num = MAX_P + 1;
     // calculating (non-normalized) Legendre polynomials
     legendre_array[0] = 1.;
     legendre_array[1] = x;
-    for (int i=1; i < max_fns_num; i++) {
-      legendre_array[i+1]  = (2*i+1)*x*legendre_array[i] 
+    for (int i=1; i < MAX_P; i++) {
+      legendre_array[i+1]  = (2*i+1)*x*legendre_array[i] // last index is MAX_P
                              - i*legendre_array[i-1]; 
       legendre_array[i+1] /= i+1; 
     }
@@ -66,8 +65,8 @@ extern void fill_lobatto_array_ref(double x,
     lobatto_array_der[1] = lobatto_der_1(x);
     // then fill the quadratic and higher which actually are 
     // the integrated Legendre polynomials
-    for (int i=1; i < max_fns_num; i++) {
-      lobatto_array_val[i+1] = 
+    for (int i=1; i < MAX_P; i++) {
+      lobatto_array_val[i+1] =                           // last index is MAX_P
         (legendre_array[i+1] - legendre_array[i-1]) / (2.*i + 1.);
       lobatto_array_val[i+1] /= leg_norm_const_ref(i);
       lobatto_array_der[i+1] = legendre_array[i]; 
@@ -82,6 +81,7 @@ extern double lobatto_val_ref(double x, int n)
     double val_array[MAX_P + 1];
     double der_array[MAX_P + 1];
     fill_lobatto_array_ref(x, val_array, der_array);
+    //printf("val_array[%d] = %g\n", n, val_array[n]);
     return val_array[n];
 }
 

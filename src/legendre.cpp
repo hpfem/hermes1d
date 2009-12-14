@@ -39,23 +39,22 @@ double leg_norm_const_ref(int n)
 extern void fill_legendre_array_ref(double x, 
                                 double val_array[MAX_P+1],
                                 double der_array[MAX_P+1]) {
-    int max_fns_num = MAX_P + 1;
     // first fill the array with unnormed Legendre 
     // polynomials using the recursive formula
     val_array[0] = 1.;
     der_array[0] = 0;
     val_array[1] = x;
     der_array[1] = 1.;
-    for (int i=1; i < max_fns_num; i++) {
-      val_array[i+1]  = (2*i+1)*x*val_array[i] - i*val_array[i-1]; 
+    for (int i=1; i < MAX_P; i++) {
+      val_array[i+1]  = (2*i+1)*x*val_array[i] - i*val_array[i-1]; // last index is MAX_P
       val_array[i+1] /= i+1; 
       der_array[i+1]  = (2*i+1)*(val_array[i] + x*der_array[i]) 
                         - i*der_array[i-1]; 
       der_array[i+1] /= i+1; 
     }
     // normalization
-    for (int i=0; i < max_fns_num; i++) {
-      val_array[i] /= leg_norm_const_ref(i);
+    for (int i=0; i < MAX_P + 1; i++) {   
+      val_array[i] /= leg_norm_const_ref(i);   // last index is MAX_P
       der_array[i] /= leg_norm_const_ref(i);
     }
 }

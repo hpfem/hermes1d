@@ -3,24 +3,25 @@
 // file for the exact terms).
 // Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
-#include "transforms.h"
 #include "common.h"
+#include "transforms.h"
+#include "linearizer.h"
 
 // This is great help to debug automatic adaptivity. Generated are 
 // Gnuplot files for all refinement candidates, showing both the 
 // reference solution and the projection. Thus one can visually 
 // examine the candidates and see whether the adaptivity algorithm
 // selects the correct one. 
-int PLOT_CANDIDATE_PROJECTIONS = 1;
+int PLOT_CANDIDATE_PROJECTIONS = 0;
 
 // This is another help for debugging hp-adaptivity; All candidates
 //that are tried are printed along with their performance criterion
-int PRINT_CANDIDATES = 1;
+int PRINT_CANDIDATES = 0;
 
-double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref, 
-                        double *y_prev, double *y_prev_ref, 
-                        double bc_left_dir_values[MAX_EQN_NUM],
-			double bc_right_dir_values[MAX_EQN_NUM]) 
+// debug - prints element errors as they come to adapt()
+int PRINT_ELEM_ERRORS = 1;
+
+double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref) 
 {
   // create Gauss quadrature on 'e'
   int quad_order = 2*e_ref->p;
@@ -34,16 +35,14 @@ double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref,
   double phys_u[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... in the whole interval (e->x1, e->x2)
-  e->get_solution_quad(0, quad_order, y_prev, phys_u, phys_dudx,
-                       bc_left_dir_values, bc_right_dir_values); 
+  e->get_solution_quad(0, quad_order, phys_u, phys_dudx); 
 
   // get fine mesh solution values and derivatives
   double phys_u_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... in the whole interval (e->x1, e->x2)
-  e_ref->get_solution_quad(0, quad_order, y_prev_ref, 
-                           phys_u_ref, phys_dudx_ref,
-                           bc_left_dir_values, bc_right_dir_values); 
+  e_ref->get_solution_quad(0, quad_order, 
+                           phys_u_ref, phys_dudx_ref); 
 
   // integrate over 'e'
   double norm_squared[MAX_EQN_NUM];
@@ -68,10 +67,7 @@ double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref,
 }
 
 double calc_elem_est_error_squared_hp(int norm, Element *e, 
-				   Element *e_ref_left, Element *e_ref_right,
-                                   double *y_prev, double *y_prev_ref, 
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-			           double bc_right_dir_values[MAX_EQN_NUM]) 
+				   Element *e_ref_left, Element *e_ref_right) 
 {
   // create Gauss quadrature on 'e_ref_left'
   int order_left = 2*e_ref_left->p;
@@ -86,17 +82,14 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
   double phys_u_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // -1... left half of polynomials in (e_ref_left->x1, e_ref_left->x2)
-  e->get_solution_quad(-1, order_left, y_prev, 
-                       phys_u_left, phys_dudx_left,
-                       bc_left_dir_values, bc_right_dir_values); 
+  e->get_solution_quad(-1, order_left, phys_u_left, phys_dudx_left); 
 
   // get fine mesh solution values and derivatives on 'e_ref_left'
   double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... in the whole interval (e_ref_left->x1, e_ref_left->x2)
-  e_ref_left->get_solution_quad(0, order_left, y_prev_ref, 
-				phys_u_ref_left, phys_dudx_ref_left,
-                                bc_left_dir_values, bc_right_dir_values); 
+  e_ref_left->get_solution_quad(0, order_left, 
+				phys_u_ref_left, phys_dudx_ref_left); 
 
   // integrate over 'e_ref_left'
   double norm_squared_left[MAX_EQN_NUM];
@@ -127,17 +120,14 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
   double phys_u_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 1... right half of polynomials in (e_ref_right->x1, e_ref_right->x2)
-  e->get_solution_quad(1, order_right, y_prev, 
-                       phys_u_right, phys_dudx_right, 
-                       bc_left_dir_values, bc_right_dir_values); 
+  e->get_solution_quad(1, order_right, phys_u_right, phys_dudx_right); 
 
   // get fine mesh solution values and derivatives on 'e_ref_right'
   double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... in the whole interval (e_ref_right->x1, e_ref_right->x2)
-  e_ref_right->get_solution_quad(0, order_right, y_prev_ref,  
-				 phys_u_ref_right, phys_dudx_ref_right, 
-                                 bc_left_dir_values, bc_right_dir_values); 
+  e_ref_right->get_solution_quad(0, order_right, phys_u_ref_right, 
+                                 phys_dudx_ref_right); 
 
   // integrate over 'e_ref_right'
   double norm_squared_right[MAX_EQN_NUM];
@@ -162,9 +152,8 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
   return err_squared;
 }
 
-double calc_elem_est_errors(int norm, Mesh* mesh, Mesh* mesh_ref, 
-			    double* y_prev, double* y_prev_ref, 
-			    double *err_array)
+double calc_error_estimate(int norm, Mesh* mesh, Mesh* mesh_ref,
+			   double *err_array)
 {
   double err_total_squared = 0;
   Iterator *I = new Iterator(mesh);
@@ -178,31 +167,56 @@ double calc_elem_est_errors(int norm, Mesh* mesh, Mesh* mesh_ref,
     double err_squared;
     if (e->level == e_ref->level) { // element 'e' was not refined in space
                                     // for reference solution
-      err_squared = calc_elem_est_error_squared_p(norm, e, 
-                    e_ref, y_prev, y_prev_ref, mesh->bc_left_dir_values,
-		    mesh->bc_right_dir_values);
+      err_squared = calc_elem_est_error_squared_p(norm, e, e_ref);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
       err_squared = calc_elem_est_error_squared_hp(norm, e, 
-                    e_ref_left, e_ref_right, 
-                    y_prev, y_prev_ref, 
-                    mesh->bc_left_dir_values,
-		    mesh->bc_right_dir_values);
+                    e_ref_left, e_ref_right);
     }
     err_array[e->id] = err_squared;
     err_total_squared += err_squared;
     counter++;
   }
-  // returned will be errors, not their squares
+
   for (int i=0; i < counter; i++) {
     err_array[i] = sqrt(err_array[i]);
   }
   return sqrt(err_total_squared);
 }
 
-double calc_approx_sol_norm(int norm, Mesh* mesh, double* y_prev)
+double calc_error_estimate(int norm, Mesh* mesh, 
+                           ElemPtr2* ref_element_pairs)
+{
+  double err_total_squared = 0;
+  Iterator *I = new Iterator(mesh);
+
+  // simultaneous traversal of 'mesh' and 'ref_element_pairs' 
+  Element *e;
+  int counter = 0;
+  while ((e = I->next_active_element()) != NULL) {
+    double err_squared;
+    // element 'e' was not refined in space for reference solution
+    if (e->level == ref_element_pairs[e->id][0]->level) {
+      err_squared = calc_elem_est_error_squared_p(norm, e, 
+		    ref_element_pairs[e->id][0]);
+    }
+    // element 'e' was refined in space for reference solution
+    else { 
+      Element* e_ref_left = ref_element_pairs[e->id][0];
+      Element* e_ref_right = ref_element_pairs[e->id][1];
+      err_squared = calc_elem_est_error_squared_hp(norm, e, 
+                    e_ref_left, e_ref_right);
+    }
+    err_total_squared += err_squared;
+    counter++;
+  }
+
+  return sqrt(err_total_squared);
+}
+
+double calc_solution_norm(int norm, Mesh* mesh)
 {
   double norm_squared = 0;
   Iterator *I = new Iterator(mesh);
@@ -211,9 +225,30 @@ double calc_approx_sol_norm(int norm, Mesh* mesh, double* y_prev)
   // in every element 
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
-    norm_squared += e->calc_elem_norm_squared(norm, y_prev,
-                                           mesh->bc_left_dir_values,
-			                   mesh->bc_right_dir_values);
+    norm_squared += e->calc_elem_norm_squared(norm);
+  }
+  return sqrt(norm_squared);
+}
+
+double calc_solution_norm(int norm, Mesh *mesh, 
+                            ElemPtr2* elem_ref_pairs)
+{
+  int n_elem = mesh->get_n_active_elem();
+  double norm_squared = 0;
+  Iterator *I = new Iterator(mesh);
+
+  // traverse 'mesh' and 'elem_ref_pairs' simultaneously 
+  // calculate squared solution L2 or H1 norm in every element 
+  // of 'elem_ref_pairs'
+  Element *e;
+  Element *e_ref;
+  while ((e = I->next_active_element()) != NULL) {
+    e_ref = elem_ref_pairs[e->id][0];
+    norm_squared += e_ref->calc_elem_norm_squared(norm);
+    if (e->level != e_ref->level) {
+      e_ref = elem_ref_pairs[e->id][1];
+      norm_squared += e_ref->calc_elem_norm_squared(norm);
+    }
   }
   return sqrt(norm_squared);
 }
@@ -368,9 +403,7 @@ void calc_proj_coeffs_H1(int n_eq, int fns_num, int pts_num,
 // number of dof added by this candidate.
 double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left, 
                                     Element *e_ref_right, 
-                                    double *y_prev_ref, int p_left, int p_right, 
-                                    double bc_left_dir_values[MAX_EQN_NUM],
-				    double bc_right_dir_values[MAX_EQN_NUM],
+                                    int p_left, int p_right,
                                     double &err, int &dof)
 {
   int n_eq = e->dof_size;
@@ -392,9 +425,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... in the whole interval (e_ref_left->x1, e_ref_left->x2)
-  e_ref_left->get_solution_quad(0, order_left, y_prev_ref, 
-                                phys_u_ref_left, phys_dudx_ref_left,
-                                bc_left_dir_values, bc_right_dir_values); 
+  e_ref_left->get_solution_quad(0, order_left,
+                                phys_u_ref_left, phys_dudx_ref_left); 
 
   // get values of transformed Legendre polynomials in 'e_ref_left'
   double leg_pol_val_left[MAX_QUAD_PTS_NUM][MAX_P+1];
@@ -475,9 +507,8 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... whole polynomials in (e_ref_right->x1, e_ref_right->x2)
-  e_ref_right->get_solution_quad(0, order_right, y_prev_ref, 
-				 phys_u_ref_right, phys_dudx_ref_right,
-                                 bc_left_dir_values, bc_right_dir_values); 
+  e_ref_right->get_solution_quad(0, order_right,
+				 phys_u_ref_right, phys_dudx_ref_right); 
 
   // get values of transformed Legendre polynomials in 'e_ref_right'
   double leg_pol_val_right[MAX_QUAD_PTS_NUM][MAX_P+1];
@@ -566,9 +597,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
            plot_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     e_ref_left->get_solution_plot(plot_x_left, plot_pts_num, 
-                             plot_u_ref_left, plot_dudx_ref_left, 
-                             y_prev_ref, bc_left_dir_values, 
-                             bc_right_dir_values); 
+                             plot_u_ref_left, plot_dudx_ref_left); 
     // values of reference solution at plotting points right
     double plot_x_right[MAX_PLOT_PTS_NUM];
     double h_right = (e_ref_right->x2 - e_ref_right->x1)/(plot_pts_num-1);
@@ -578,8 +607,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
            plot_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     e_ref_right->get_solution_plot(plot_x_right, plot_pts_num, 
-                              plot_u_ref_right, plot_dudx_ref_right, 
-                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+                              plot_u_ref_right, plot_dudx_ref_right); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
     sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_%d_fine_%d_%d_visit_%d.gp", 
@@ -655,9 +683,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
 // 'p_right' on the right half of 'e'. Returned is projection error and
 // number of dof added by this candidate.
 double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
-                                   double *y_prev_ref, int p_left, int p_right,
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-				   double bc_right_dir_values[MAX_EQN_NUM],
+                                   int p_left, int p_right,
                                    double &err, int &dof)
 {
   int n_eq = e->dof_size;
@@ -679,9 +705,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // -1... left half of polynomials in (e->x1, (e->x1 + e->x2)/2.)
-  e_ref->get_solution_quad(-1, order_left, y_prev_ref, 
-                           phys_u_ref_left, phys_dudx_ref_left,
-                           bc_left_dir_values, bc_right_dir_values); 
+  e_ref->get_solution_quad(-1, order_left,
+                           phys_u_ref_left, phys_dudx_ref_left); 
 
   // get values of transformed Legendre polynomials in 'e_ref_left'
   double leg_pol_val_left[MAX_QUAD_PTS_NUM][MAX_P+1];
@@ -760,9 +785,8 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 1... right half of polynomials in ((e->x1 + e->x2)/2., e->x2)
-  e_ref->get_solution_quad(1, order_right, y_prev_ref, 
-                           phys_u_ref_right, phys_dudx_ref_right,
-                           bc_left_dir_values, bc_right_dir_values); 
+  e_ref->get_solution_quad(1, order_right,
+                           phys_u_ref_right, phys_dudx_ref_right); 
 
   // get values of transformed Legendre polynomials in 'e_ref_right'
   double leg_pol_val_right[MAX_QUAD_PTS_NUM][MAX_P+1];
@@ -850,8 +874,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     }
     double plot_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
            plot_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
-    e_ref->get_solution_plot(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left, 
-                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    e_ref->get_solution_plot(plot_x_left, plot_pts_num, plot_u_ref_left, plot_dudx_ref_left); 
     // values of reference solution at plotting points right
     double plot_x_right[MAX_PLOT_PTS_NUM];
     double h_right = ((e->x2 - e->x1)/2)/(plot_pts_num-1);
@@ -861,8 +884,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
     double plot_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
            plot_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     e_ref->get_solution_plot(plot_x_right, plot_pts_num, 
-                              plot_u_ref_right, plot_dudx_ref_right, 
-                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+                             plot_u_ref_right, plot_dudx_ref_right); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
     sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_%d_fine_%d_visit_%d.gp", 
@@ -937,10 +959,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
 // polynomials of degree 'p' on 'e'. Returned is projection error and
 // number of dof added by this candidate.
 double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left, 
-                                   Element *e_ref_right, 
-                                   double *y_prev_ref, int p,
-                                   double bc_left_dir_values[MAX_EQN_NUM],
-				   double bc_right_dir_values[MAX_EQN_NUM],
+                                   Element *e_ref_right, int p,
                                    double &err, int &dof)
 {
   int n_eq = e->dof_size;
@@ -958,9 +977,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   double phys_u_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_left[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... whole polynomials in (e_ref_left->x1, e_ref_left->x2)
-  e_ref_left->get_solution_quad(0, order_left, y_prev_ref, 
-                                phys_u_ref_left, phys_dudx_ref_left,
-                                bc_left_dir_values, bc_right_dir_values); 
+  e_ref_left->get_solution_quad(0, order_left,
+                                phys_u_ref_left, phys_dudx_ref_left); 
 
   // get values of halves of Legendre polynomials in 'e_ref_left'
   double leg_pol_val_left[MAX_QUAD_PTS_NUM][MAX_P+1];
@@ -987,9 +1005,8 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   double phys_u_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref_right[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... whole polynomials in (e_ref_right->x1, e_ref_right->x2)
-  e_ref_right->get_solution_quad(0, order_right, y_prev_ref,  
-				 phys_u_ref_right, phys_dudx_ref_right,
-                                 bc_left_dir_values, bc_right_dir_values); 
+  e_ref_right->get_solution_quad(0, order_right,
+				 phys_u_ref_right, phys_dudx_ref_right); 
 
   // get values of halves of Legendre polynomials in 'e_ref_right'
   double leg_pol_val_right[MAX_QUAD_PTS_NUM][MAX_P+1];
@@ -1174,8 +1191,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
            plot_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     e_ref_left->get_solution_plot(plot_x_left, plot_pts_num, plot_u_ref_left, 
-                             plot_dudx_ref_left, 
-                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+                             plot_dudx_ref_left); 
     // values of reference solution at plotting points right
     double plot_x_right[MAX_PLOT_PTS_NUM];
     double h_right = (e_ref_right->x2 - e_ref_right->x1)/(plot_pts_num-1);
@@ -1185,8 +1201,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
     double plot_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
            plot_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
     e_ref_right->get_solution_plot(plot_x_right, plot_pts_num, 
-                              plot_u_ref_right, plot_dudx_ref_right, 
-                              y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+                              plot_u_ref_right, plot_dudx_ref_right); 
     // plotting the reference solution in the left and right halves
     char filename_refsol[255];
     sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_fine_%d_%d_visit_%d.gp", 
@@ -1262,10 +1277,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
 // polynomials of degree 'p' on 'e'. Returned is projection error and
 // number of dof added by this candidate.
 double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
-                                  double *y_prev_ref, int p,
-                                  double bc_left_dir_values[MAX_EQN_NUM],
-				  double bc_right_dir_values[MAX_EQN_NUM],
-                                  double &err, int &dof)
+                                  int p, double &err, int &dof)
 {
   int n_eq = e->dof_size;
 
@@ -1284,9 +1296,8 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   double phys_u_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_ref[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... whole polynomials in (e->x1, e->x2)
-  e_ref->get_solution_quad(0, order, y_prev_ref, 
-                           phys_u_ref, phys_dudx_ref,
-                           bc_left_dir_values, bc_right_dir_values); 
+  e_ref->get_solution_quad(0, order,
+                           phys_u_ref, phys_dudx_ref); 
 
   // get values of (original) Legendre polynomials in 'e'
   double leg_pol_val[MAX_QUAD_PTS_NUM][MAX_P+1];
@@ -1371,8 +1382,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     }
     double plot_u_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
            plot_dudx_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
-    e_ref->get_solution_plot(plot_x, plot_pts_num, plot_u_ref, plot_dudx_ref, 
-                             y_prev_ref, bc_left_dir_values, bc_right_dir_values); 
+    e_ref->get_solution_plot(plot_x, plot_pts_num, plot_u_ref, plot_dudx_ref); 
     // plotting the reference solution
     char filename_refsol[255];
     sprintf(filename_refsol, "refsol_%g_%g_coarse_%d_cand_%d_fine_%d_visit_%d.gp", 
@@ -1416,7 +1426,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   // **************************************************************************
 }
 
-double calc_exact_sol_norm(int norm, exact_sol_type exact_sol, 
+double calc_solution_norm(int norm, exact_sol_type exact_sol, 
                            int n_eq, 
                            double A, double B, int subdivision, 
                            int order)
@@ -1452,10 +1462,7 @@ double calc_exact_sol_norm(int norm, exact_sol_type exact_sol,
 }
 
 double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
-                                     Element *e, double *y_prev, 
-                                     double *bc_left_dir_values,
-			             double *bc_right_dir_values,
-                                     int order)
+                                     Element *e, int order)
 {
   // create Gauss quadrature on 'e'
   int pts_num;
@@ -1468,8 +1475,7 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
   double phys_u[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   // 0... in the whole interval (e->x1, e->x2)
-  e->get_solution_quad(0, order, y_prev, phys_u, phys_dudx, 
-		       bc_left_dir_values, bc_right_dir_values); 
+  e->get_solution_quad(0, order, phys_u, phys_dudx); 
 
   // get exact solution values and derivatives
   int n_eq = e->dof_size;
@@ -1507,8 +1513,8 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
   return err_squared;
 }
 
-double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev, 
-                            exact_sol_type exact_sol) 
+double calc_error_exact(int norm, Mesh *mesh, 
+                        exact_sol_type exact_sol) 
 {
   double total_err_squared = 0;
   Iterator *I = new Iterator(mesh);
@@ -1516,10 +1522,7 @@ double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev,
   while ((e = I->next_active_element()) != NULL) {
     int order = max(20, 3*e->p);         // heuristic parameter
       double elem_err_squared = 
-        calc_elem_exact_error_squared(norm, exact_sol, e, y_prev, 
-                                      mesh->bc_left_dir_values,
-			              mesh->bc_right_dir_values,
-                                      order);
+        calc_elem_exact_error_squared(norm, exact_sol, e, order);
       total_err_squared += elem_err_squared;
   }
   
@@ -1533,9 +1536,7 @@ double calc_exact_sol_error(int norm, Mesh *mesh, double *y_prev,
 // number are the new proposed polynomial degrees.
 int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2, 
                          int num_cand, int3 *cand_list, 
-                         int ref_sol_type, int norm, 
-                         double *y_prev_ref, double *bc_left_dir_values,
-			 double *bc_right_dir_values) 
+                         int ref_sol_type, int norm) 
 {
   Element *e_ref_left, *e_ref_right;  
   if (ref_sol_type == 1) {
@@ -1554,26 +1555,24 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
     int dof;
     if (cand_list[i][0] == 0 && ref_sol_type == 0) {
       int p_new = cand_list[i][1];
-      check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, p_new,
-        bc_left_dir_values, bc_right_dir_values, err, dof);
+      check_cand_coarse_p_fine_p(norm, e, e_ref, p_new, err, dof);
     }
     if (cand_list[i][0] == 0 && ref_sol_type == 1) {
       int p_new = cand_list[i][1];
       check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
-        y_prev_ref, p_new, bc_left_dir_values, bc_right_dir_values, err, dof);
+        p_new, err, dof);
     }
     if (cand_list[i][0] == 1 && ref_sol_type == 0) {
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
-      check_cand_coarse_hp_fine_p(norm, e, e_ref, y_prev_ref, p_new_left, 
-        p_new_right, bc_left_dir_values, bc_right_dir_values, err, dof);
+      check_cand_coarse_hp_fine_p(norm, e, e_ref, p_new_left, 
+        p_new_right, err, dof);
     }
     if (cand_list[i][0] == 1 && ref_sol_type == 1) {
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
       check_cand_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
-        y_prev_ref, p_new_left, p_new_right, bc_left_dir_values,
-	bc_right_dir_values, err, dof);
+        p_new_left, p_new_right, err, dof);
     }
 
     // The projection error is zero (reference 
@@ -1597,13 +1596,13 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
       int dof_orig;
       // reference solution was p-refined 
       if (ref_sol_type == 0) {
-        check_cand_coarse_p_fine_p(norm, e, e_ref, y_prev_ref, e->p,
-          bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
+        check_cand_coarse_p_fine_p(norm, e, e_ref, e->p,
+          err_orig, dof_orig);
       }
       // reference solution was hp-refined 
       if (ref_sol_type == 1) {
-        check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, y_prev_ref, e->p,
-          bc_left_dir_values, bc_right_dir_values, err_orig, dof_orig);
+        check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, e->p,
+          err_orig, dof_orig);
       }  
       if (err < err_orig) {
         if (PRINT_CANDIDATES) {

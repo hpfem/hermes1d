@@ -9,9 +9,6 @@
 #include "transforms.h"
 #include "linearizer.h"
 
-// debug - prints element errors as they come to adapt()
-int PRINT_ELEM_ERRORS = 1;
-
 // debug - prints element dof arrays in assign_dofs()
 int DEBUG_ELEM_DOF = 0;
 
@@ -20,6 +17,7 @@ Element::Element()
   x1 = x2 = 0;
   p = 0; 
   dof = NULL;
+  coeffs = NULL;
   sons[0] = sons[1] = NULL; 
   active = 1;
   level = 0;
@@ -33,7 +31,7 @@ Element::Element(double x_left, double x_right, int lev, int deg, int n_eq)
   x2 = x_right;
   p = deg; 
   dof_size = n_eq;
-  this->dof_alloc();
+  this->alloc_arrays();
   if (dof == NULL) error("Not enough memory in Element().");
   sons[0] = sons[1] = NULL; 
   active = 1;
@@ -46,6 +44,12 @@ unsigned Element::is_active()
   return this->active;
 }
 
+// Refines an element. In case of p-refinement, only the 
+// poly degree is increased. In case of hp-refinement, 
+// two sons are created and the solution is moved into 
+// them. 
+// NOTE: dof[] arrays become invalid because they are global.
+// assign_dof() must be run after the refinement is completed. 
 void Element::refine(int type, int p_left, int p_right) 
 {
   if(type == 0) {         // p-refinement
@@ -56,11 +60,23 @@ void Element::refine(int type, int p_left, int p_right)
     double x2 = this->x2;
     double midpoint = (x1 + x2)/2.; 
     this->sons[0] = new Element(x1, midpoint, this->level + 1, p_left, dof_size);
-    this->sons[1] = new Element(midpoint, x2, this->level + 1, p_right, dof_size);
-    // copying negative dof to sons if any
+    this->sons[1] = new Element(midpoint, x2, this->level + 1, 
+                                p_right, dof_size);
+    // Copy Dirichtel boundary conditions to sons
     for(int c=0; c<dof_size; c++) {
-      if (this->dof[c][0] < 0) this->sons[0]->dof[c][0] = this->dof[c][0];
-      if (this->dof[c][1] < 0) this->sons[1]->dof[c][1] = this->dof[c][1];
+      if (this->dof[c][0] < 0) {
+        this->sons[0]->dof[c][0] = this->dof[c][0];
+        this->sons[0]->coeffs[c][0] = this->coeffs[c][0];
+      }
+      if (this->dof[c][1] < 0) {
+        this->sons[1]->dof[c][1] = this->dof[c][1];
+        this->sons[1]->coeffs[c][1] = this->coeffs[c][1];
+      }
+    }
+    // Transfer solution to sons
+    for(int c=0; c<dof_size; c++) {
+      transform_element_refined_forward(c, this, 
+					this->sons[0], this->sons[1]);
     }
     this->active = 0;
   }
@@ -71,8 +87,8 @@ void Element::refine(int3 cand)
   this->refine(cand[0], cand[1], cand[2]);
 }
 
-// initialize element and allocate dof arrays for all
-// solution components
+// initialize element and allocate dof and coeffs 
+// arrays for all solution components
 void Element::init(double x1, double x2, int p_init, 
                    int id, int active, int level, int n_eq)
 {
@@ -83,48 +99,59 @@ void Element::init(double x1, double x2, int p_init,
   this->active = active;
   this->level = level;
   this->dof_size = n_eq;
-  this->dof_alloc();
+  this->alloc_arrays();
 }
 
-void Element::dof_alloc() 
+void Element::alloc_arrays() 
 {
+  // first dof arrays
   this->dof = (int**)malloc(dof_size*sizeof(int*));
-  if(this->dof == NULL) error("Element dof_alloc() failed.");
+  if(this->dof == NULL) error("Element alloc_arrays() failed.");
   // c is solution component
   for(int c=0; c<dof_size; c++) {
     this->dof[c] = new int[MAX_P + 1];
-    // important for th etreatment of boundary conditions
+    // important for the treatment of boundary conditions
     for(int i=0; i<MAX_P + 1; i++) this->dof[c][i] = 0;
+  }
+  // second coeffs arrays
+  this->coeffs = (double**)malloc(dof_size*sizeof(double*));
+  if(this->coeffs == NULL) error("Element alloc_arrays() failed.");
+  // c is solution component
+  for(int c=0; c<dof_size; c++) {
+    this->coeffs[c] = new double[MAX_P + 1];
+    for(int i=0; i<MAX_P + 1; i++) this->coeffs[c][i] = 0;
   }
 }
 
-// return coefficients for all shape functions on the element m,
-// for all solution components
-void Element::get_coeffs(double *y_prev, 
-                         double coeffs[MAX_EQN_NUM][MAX_COEFFS_NUM],
-                         double bc_left_dir_values[MAX_EQN_NUM],
-                         double bc_right_dir_values[MAX_EQN_NUM])
+// Copies coefficients from the solution vector into element.
+// Assumes that Dirichlet boundary conditions have been set. 
+void Element::get_coeffs_from_vector(double *y)
 {
-  if (!this->is_active()) error("Internal in calculate_elem_coeffs().");
+  if (!this->is_active()) error("Internal in get_coeffs_from_vector().");
   int dof_size = this->dof_size;
   for(int c=0; c<dof_size; c++) {
-    // coeff of the left vertex function
-    if (this->dof[c][0] == -1) coeffs[c][0] = bc_left_dir_values[c];
-    else coeffs[c][0] = y_prev[this->dof[c][0]];
-    // coeff of the right vertex function
-    if (this->dof[c][1] == -1) coeffs[c][1] = bc_right_dir_values[c];
-    else coeffs[c][1] = y_prev[this->dof[c][1]];
-    //completing coeffs of bubble functions
-    for (int j=2; j<=this->p; j++) {
-        coeffs[c][j] = y_prev[this->dof[c][j]];
+    for (int j=0; j < this->p + 1; j++) {
+      if (this->dof[c][j] != -1) this->coeffs[c][j] = y[this->dof[c][j]];
     }
   }
 }
 
-// Evaluate solution and its derivatives in quadrature points 'x_phys' 
-// in the element (coeffs[][] array provided).
-void Element::get_solution_quad(int flag, double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                                int quad_order, 
+// Copies coefficients from element coeffs arrays to the solution vector.
+// Assumes that Dirichlet boundary conditions have been set. 
+void Element::copy_coeffs_to_vector(double *y)
+{
+  if (!this->is_active()) error("Internal in copy_coeffs_to_vector().");
+  int dof_size = this->dof_size;
+  for(int c=0; c<dof_size; c++) {
+    for (int j=0; j < this->p + 1; j++) {
+      if (this->dof[c][j] != -1) y[this->dof[c][j]] = this->coeffs[c][j];
+    }
+  }
+}
+
+// Evaluate solution and its derivatives in Gauss quadrature points 
+// of order 'quad_order' in the element.
+void Element::get_solution_quad(int flag, int quad_order, 
                                 double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
 				double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM])
 {
@@ -145,8 +172,8 @@ void Element::get_solution_quad(int flag, double coeff[MAX_EQN_NUM][MAX_COEFFS_N
       for (int i=0 ; i < pts_num; i++) {
         der_phys[c][i] = val_phys[c][i] = 0;
         for(int j=0; j<=p; j++) {
-          val_phys[c][i] += coeff[c][j]*lobatto_val_ref_tab[quad_order][i][j];
-          der_phys[c][i] += coeff[c][j]*lobatto_der_ref_tab[quad_order][i][j];
+          val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref_tab[quad_order][i][j];
+          der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref_tab[quad_order][i][j];
         }
         der_phys[c][i] /= jac;
       }
@@ -157,8 +184,8 @@ void Element::get_solution_quad(int flag, double coeff[MAX_EQN_NUM][MAX_COEFFS_N
       for (int i=0 ; i < pts_num; i++) {
         der_phys[c][i] = val_phys[c][i] = 0;
         for(int j=0; j<=p; j++) {
-          val_phys[c][i] += coeff[c][j]*lobatto_val_ref_tab_left[quad_order][i][j];
-          der_phys[c][i] += coeff[c][j]*lobatto_der_ref_tab_left[quad_order][i][j];
+          val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref_tab_left[quad_order][i][j];
+          der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref_tab_left[quad_order][i][j];
         }
         der_phys[c][i] /= jac;
       }
@@ -169,8 +196,8 @@ void Element::get_solution_quad(int flag, double coeff[MAX_EQN_NUM][MAX_COEFFS_N
       for (int i=0 ; i < pts_num; i++) {
         der_phys[c][i] = val_phys[c][i] = 0;
         for(int j=0; j<=p; j++) {
-          val_phys[c][i] += coeff[c][j]*lobatto_val_ref_tab_right[quad_order][i][j];
-          der_phys[c][i] += coeff[c][j]*lobatto_der_ref_tab_right[quad_order][i][j];
+          val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref_tab_right[quad_order][i][j];
+          der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref_tab_right[quad_order][i][j];
         }
         der_phys[c][i] /= jac;
       }
@@ -179,11 +206,10 @@ void Element::get_solution_quad(int flag, double coeff[MAX_EQN_NUM][MAX_COEFFS_N
 } 
 
 // Evaluate solution and its derivatives in plotting points 'x_phys' 
-// in the element (coeffs[][] array provided).
-void Element::get_solution_plot(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
-                           int pts_num, double x_phys[MAX_PLOT_PTS_NUM], 
-                           double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
-                           double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM])
+// in the element.
+void Element::get_solution_plot(double x_phys[MAX_PLOT_PTS_NUM], int pts_num,
+                                double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
+                                double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM])
 {
   double x1 = this->x1;
   double x2 = this->x2;
@@ -198,40 +224,22 @@ void Element::get_solution_plot(double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM],
     for (int i=0 ; i < pts_num; i++) {
       der_phys[c][i] = val_phys[c][i] = 0;
       for(int j=0; j<=p; j++) {
-        val_phys[c][i] += coeff[c][j]*lobatto_val_ref(x_ref[i], j);
-        der_phys[c][i] += coeff[c][j]*lobatto_der_ref(x_ref[i], j);
+        val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref(x_ref[i], j);
+        der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref(x_ref[i], j);
       }
       der_phys[c][i] /= jac;
     }
   }
 } 
 
-// Evaluate solution and its derivatives in quadrature points 'x_phys' 
-// in the element (coeffs[][] array not provided).
-void Element::get_solution_quad(int flag, int quad_order, double *y_prev, 
-                                double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                                double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
-                                double bc_left_dir_values[MAX_EQN_NUM],
-                                double bc_right_dir_values[MAX_EQN_NUM])
-{
-
-  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
-  this->get_solution_quad(flag, coeff, quad_order, val_phys, der_phys);
-} 
-
 // Calculates square of the L2 or H1 norm of the solution in element
-double Element::calc_elem_norm_squared(int norm, double *y_prev, 
-                                double bc_left_dir_values[MAX_EQN_NUM],
-                                double bc_right_dir_values[MAX_EQN_NUM])
+double Element::calc_elem_norm_squared(int norm)
 {
-  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
   double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   int pts_num;
   int order = 2*this->p;
-  this->get_solution_quad(0, coeff, order, val_phys, der_phys);
+  this->get_solution_quad(0,  order, val_phys, der_phys);
 
   double phys_x[MAX_QUAD_PTS_NUM];
   double phys_weights[MAX_QUAD_PTS_NUM];
@@ -261,24 +269,8 @@ double Element::calc_elem_norm_squared(int norm, double *y_prev,
   return elem_norm_squared;
 } 
 
-// Evaluate solution and its derivatives in plotting points 'x_phys' 
-// in the element (coeffs[][] array not provided).
-void Element::get_solution_plot(double x_phys[MAX_PLOT_PTS_NUM], int pts_num,  
-                           double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
-                           double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM],
-                           double *y_prev, 
-                           double bc_left_dir_values[MAX_EQN_NUM],
-                           double bc_right_dir_values[MAX_EQN_NUM])
-{
-  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values);
-  this->get_solution_plot(coeff, pts_num, x_phys, val_phys, der_phys);
-} 
-
-// evaluate solution and its derivative 
-// at point x_phys (coeffs[][] array provided)
-void Element::get_solution_point(double x_phys,
-			         double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM], 
+// Evaluate solution and its derivative at point x_phys.
+void Element::get_solution_point(double x_phys, 
                                  double val[MAX_EQN_NUM], double der[MAX_EQN_NUM])
 {
   double x1 = this->x1;
@@ -288,33 +280,19 @@ void Element::get_solution_point(double x_phys,
   int p = this->p;
   // transforming point x_phys to (-1, 1)
   double x_ref = inverse_map(x1, x2, x_phys);
-  for(int c=0; c<dof_size; c++) {
+  for(int c=0; c < dof_size; c++) {
     der[c] = val[c] = 0;
     for(int j=0; j<=p; j++) {
-      val[c] += coeff[c][j]*lobatto_val_ref(x_ref, j);
-      der[c] += coeff[c][j]*lobatto_der_ref(x_ref, j);
+      val[c] += this->coeffs[c][j]*lobatto_val_ref(x_ref, j);
+      der[c] += this->coeffs[c][j]*lobatto_der_ref(x_ref, j);
     }
     der[c] /= jac;
   }
 } 
 
-// evaluate solution and its derivative 
-// at the point x_phys (coeffs[][] array not provided)
-void Element::get_solution_point(double x_phys,
-				 double val_phys[MAX_EQN_NUM], 
-                                 double der_phys[MAX_EQN_NUM],
-                                 double *y_prev, double *bc_left_dir_values,
-                                 double *bc_right_dir_values)
-{
-  double coeff[MAX_EQN_NUM][MAX_COEFFS_NUM];
-  this->get_coeffs(y_prev, coeff, bc_left_dir_values, bc_right_dir_values); 
-  this->get_solution_point(x_phys, coeff, val_phys, der_phys);
-} 
-
-// Copying elements including all their variables, dof arrays, and 
-// refinement trees, 
-// FIXME - the recursive version is slow and should be improved.
-void Element::copy_element_recursively(Element *e_trg) 
+// Copying elements including all their variables, dof arrays, but not
+// refinement trees. Does not care about sons.
+void Element::copy_into(Element *e_trg) 
 {
   // copy all variables of Element class
   e_trg->init(this->x1, this->x2, this->p, this->id, 
@@ -323,16 +301,25 @@ void Element::copy_element_recursively(Element *e_trg)
   // copy dof arrays for all solution components
   for(int c=0; c < dof_size; c++) {
     for(int i=0; i < MAX_P + 1; i++) e_trg->dof[c][i] = this->dof[c][i];
+    for(int i=0; i < MAX_P + 1; i++) e_trg->coeffs[c][i] = this->coeffs[c][i];
   }
+}
+
+// Copying elements including all their variables, dof and coeffs 
+// arrays, and refinement trees, 
+// FIXME - the recursive version is slow and should be improved.
+void Element::copy_recursively_into(Element *e_trg) 
+{
+  this->copy_into(e_trg);  // copy all variables of Element class but sons
 
   // replicate sons if relevant
   if(this->sons[0] != NULL) {          // element was split in space (sons will be replicated)
     e_trg->sons[0] = new Element();
     e_trg->sons[1] = new Element();
     // left son
-    this->sons[0]->copy_element_recursively(e_trg->sons[0]);
+    this->sons[0]->copy_recursively_into(e_trg->sons[0]);
     // right son
-    this->sons[1]->copy_element_recursively(e_trg->sons[1]);
+    this->sons[1]->copy_recursively_into(e_trg->sons[1]);
   }
   else {                               // element was split in space (sons are NULL)
     e_trg->sons[0] = NULL;
@@ -375,12 +362,6 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   this->n_eq = n_eq;
   this->n_active_elem = n_base_elem;
 
-  // erase arrays of Dirichlet boundary conditions
-  for (int i=0; i<MAX_EQN_NUM; i++) {
-    this->bc_left_dir_values[i] = 0;
-    this->bc_right_dir_values[i] = 0;
-  }
-
   // allocate element array
   this->base_elems = new Element[this->n_base_elem];     
   if (base_elems == NULL) error("Not enough memory in Mesh::create().");
@@ -417,12 +398,6 @@ Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
   this->n_base_elem = n_base_elem;
   this->n_eq = n_eq;
   this->n_active_elem = n_base_elem;
-
-  // erase arrays of Dirichlet boundary conditions
-  for (int i=0; i<MAX_EQN_NUM; i++) {
-    this->bc_left_dir_values[i] = 0;
-    this->bc_right_dir_values[i] = 0;
-  }
 
   // allocate element array
   this->base_elems = new Element[this->n_base_elem];     
@@ -477,8 +452,9 @@ void Mesh::refine_elems(int elem_num, int *id_array, int3 *cand_array)
     }
 }
 
-// splits the indicated elements and 
-// increases poly degree in sons by one
+// Splits the indicated elements and 
+// increases poly degree in sons by one.
+// Solution is transfered to new elements.
 void Mesh::reference_refinement(int start_elem_id, int elem_num)
 {
     Iterator *I = new Iterator(this);
@@ -499,32 +475,32 @@ void Mesh::reference_refinement(int start_elem_id, int elem_num)
 
 void Mesh::set_bc_left_dirichlet(int eq_n, double val)
 {
-  this->bc_left_dir_values[eq_n] = val;
   // deactivate the corresponding dof for the left-most
   // element and all his descendants adjacent to the 
-  // left boundary
+  // left boundary, and fill the coeffs array entry
   Element *e = this->base_elems + 0;
   do {
     e->dof[eq_n][0] = -1;
+    e->coeffs[eq_n][0] = val;
     e = e->sons[0];
   } while (e != NULL);
 }
 
 void Mesh::set_bc_right_dirichlet(int eq_n, double val)
 {
-  this->bc_right_dir_values[eq_n] = val;
   // deactivate the corresponding dof for the right-most
   // element and all his descendants adjacent to the 
-  // right boundary
+  // right boundary, and fill the coeffs array entry
   Element *e = this->base_elems + this->n_base_elem - 1;
   do {
     e->dof[eq_n][1] = -1;
+    e->coeffs[eq_n][1] = val;
     e = e->sons[1];
   } while (e != NULL);
 
 }
 
-// define element connectivities (global dof)
+// define element connectivities (dof arrays)
 int Mesh::assign_dofs()
 {
   Iterator *I = new Iterator(this);
@@ -701,24 +677,26 @@ void Element::print_cand_list(int num_cand, int3 *cand_list)
 // corresponding to 'order' to physical interval (a,b)
 void element_shapefn(double a, double b, 
 		     int k, int order, double *val, double *der) {
-  double2 *ref_tab = g_quad_1d_std.get_points(order);
+  //double2 *ref_tab = g_quad_1d_std.get_points(order);
   int pts_num = g_quad_1d_std.get_num_points(order);
-  for (int i=0 ; i<pts_num; i++) {
+  double jac = (b-a)/2.; 
+  for (int i=0 ; i < pts_num; i++) {
     // change function values and derivatives to interval (a, b)
-    val[i] = lobatto_val_ref(ref_tab[i][0], k);
-    double jac = (b-a)/2.; 
-    der[i] = lobatto_der_ref(ref_tab[i][0], k) / jac; 
+    //val[i] = lobatto_val_ref(ref_tab[i][0], k);
+    val[i] = lobatto_val_ref_tab[order][i][k];
+    //der[i] = lobatto_der_ref(ref_tab[i][0], k) / jac; 
+    der[i] = lobatto_der_ref_tab[order][i][k]/jac;
   }
 };
 
 // transformation of k-th shape function at the reference 
 // point x_ref to physical interval (a,b).
 void element_shapefn_point(double x_ref, double a, double b, 
-		           int k, double *val, double *der) {
+		           int k, double &val, double &der) {
     // change function values and derivatives to interval (a, b)
-  *val = lobatto_val_ref(x_ref, k);
+    val = lobatto_val_ref(x_ref, k);
     double jac = (b-a)/2.; 
-    *der = lobatto_der_ref(x_ref, k) / jac; 
+    der = lobatto_der_ref(x_ref, k) / jac; 
 }
 
 // Replicate mesh including dof arrays in all elements
@@ -738,19 +716,13 @@ Mesh *Mesh::replicate()
   mesh_new->set_right_endpoint(this->right_endpoint);
   mesh_new->set_n_dof(this->n_dof);
 
-  // copy links to Dirichlet boundary condition arrays
-  for(int c = 0; c<this->n_eq; c++) {
-    mesh_new->bc_left_dir_values[c] = this->bc_left_dir_values[c]; 
-    mesh_new->bc_right_dir_values[c] = this->bc_right_dir_values[c]; 
-  }
-
   // replicate all base mesh elements including all their 
   // variables, dof arrays, and tree-structure
   Element *base_elems_new = mesh_new->get_base_elems();
   for(int i=0; i<this->n_base_elem; i++) {
     Element *e_src = this->base_elems + i;
     Element *e_trg = base_elems_new + i;
-    e_src->copy_element_recursively(e_trg);
+    e_src->copy_recursively_into(e_trg);
   }
 
   return mesh_new;
@@ -774,8 +746,7 @@ void Mesh::plot(const char* filename)
 
 // Plots the error between the reference and coarse mesh solutions
 // if the reference refinement was p-refinement
-void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref, 
-                                double *y_prev, double *y_prev_ref,
+void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref,
                                 int subdivision)
 {
   int n_eq = this->get_n_eq();
@@ -797,14 +768,12 @@ void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref,
   // get coarse mesh solution values and derivatives
   double phys_u[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          phys_dudx[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
-  e->get_solution_plot(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
-                  this->bc_left_dir_values, this->bc_right_dir_values); 
+  e->get_solution_plot(x_phys, pts_num, phys_u, phys_dudx); 
 
   // get fine mesh solution values and derivatives
   double phys_u_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          phys_dudx_ref[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
-  e->get_solution_plot(x_phys, pts_num, phys_u_ref, phys_dudx_ref, y_prev_ref, 
-                  this->bc_left_dir_values, this->bc_right_dir_values); 
+  e_ref->get_solution_plot(x_phys, pts_num, phys_u_ref, phys_dudx_ref); 
 
   for (int i=0; i < pts_num; i++) {
     double diff_squared_pt = 0;
@@ -823,8 +792,7 @@ void Mesh::plot_element_error_p(int norm, FILE *f, Element *e, Element *e_ref,
 // if the reference refinement was hp-refinement
 void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e, 
                                  Element *e_ref_left, 
-                                 Element *e_ref_right, 
-                                 double *y_prev, double *y_prev_ref,
+                                 Element *e_ref_right,
                                  int subdivision)
 {
   // We will be plotting the error separately in the 
@@ -851,15 +819,13 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
   // get coarse mesh solution values and derivatives
   double phys_u_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          phys_dudx_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
-  e->get_solution_plot(x_phys_left, pts_num, phys_u_left, phys_dudx_left, y_prev, 
-                  this->bc_left_dir_values, this->bc_right_dir_values); 
+  e->get_solution_plot(x_phys_left, pts_num, phys_u_left, phys_dudx_left); 
 
   // get fine mesh solution values and derivatives
   double phys_u_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          phys_dudx_ref_left[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
   e_ref_left->get_solution_plot(x_phys_left, pts_num, phys_u_ref_left, 
-                  phys_dudx_ref_left, y_prev_ref, 
-                  this->bc_left_dir_values, this->bc_right_dir_values); 
+                  phys_dudx_ref_left); 
 
   for (int i=0; i < pts_num; i++) {
     double diff_squared_pt = 0;
@@ -887,15 +853,13 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
   // get coarse mesh solution values and derivatives
   double phys_u_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          phys_dudx_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
-  e->get_solution_plot(x_phys_right, pts_num, phys_u_right, phys_dudx_right, y_prev, 
-                  this->bc_left_dir_values, this->bc_right_dir_values); 
+  e->get_solution_plot(x_phys_right, pts_num, phys_u_right, phys_dudx_right); 
 
   // get fine mesh solution values and derivatives
   double phys_u_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          phys_dudx_ref_right[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
   e_ref_right->get_solution_plot(x_phys_right, pts_num, phys_u_ref_right, 
-    phys_dudx_ref_right, y_prev_ref, this->bc_left_dir_values, 
-    this->bc_right_dir_values); 
+    phys_dudx_ref_right); 
 
   for (int i=0; i < pts_num; i++) {
     double diff_squared_pt = 0;
@@ -912,7 +876,7 @@ void Mesh::plot_element_error_hp(int norm, FILE *f, Element *e,
 
 // Plots the error wrt. the exact solution (if available)
 void Mesh::plot_element_error_exact(int norm, FILE *f, Element *e, 
-                                    double *y_prev, exact_sol_type exact_sol, int subdivision)
+                                    exact_sol_type exact_sol, int subdivision)
 {
   int pts_num = subdivision + 1;
   double x1 = e->x1;
@@ -928,8 +892,7 @@ void Mesh::plot_element_error_exact(int norm, FILE *f, Element *e,
   // get coarse mesh solution values and derivatives
   double phys_u[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
          phys_dudx[MAX_EQN_NUM][MAX_PLOT_PTS_NUM];
-  e->get_solution_plot(x_phys, pts_num, phys_u, phys_dudx, y_prev, 
-                  this->bc_left_dir_values, this->bc_right_dir_values); 
+  e->get_solution_plot(x_phys, pts_num, phys_u, phys_dudx); 
 
   for (int i=0; i < pts_num; i++) {
     double exact_sol_point[MAX_EQN_NUM];
@@ -948,13 +911,13 @@ void Mesh::plot_element_error_exact(int norm, FILE *f, Element *e,
 }
 
 // Plots the error between the reference and coarse mesh solutions
-void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref, 
-		          double* y_prev, double* y_prev_ref, int subdivision)
+void Mesh::plot_error_estimate(int norm, Mesh* mesh_ref, const char *filename, 
+		          int subdivision)
 {
   char final_filename[MAX_STRING_LENGTH];
   sprintf(final_filename, "%s", filename);
   FILE *f = fopen(final_filename, "wb");
-  if(f == NULL) error("problem opening file in plot_error_est().");
+  if(f == NULL) error("problem opening file in plot_error_estimate().");
 
   // simultaneous traversal of 'this' and 'mesh_ref'
   Element *e;
@@ -966,19 +929,59 @@ void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref,
                                     // for reference solution
       if (e_ref->p >= MAX_P) {
         printf("Try to increase MAX_P in common.h.\n");
-        error("Max poly degree exceeded in plot_error_est().");
+        error("Max poly degree exceeded in plot_error_estimate().");
       }
-      plot_element_error_p(norm, f, e, e_ref, y_prev, y_prev_ref, subdivision);
+      plot_element_error_p(norm, f, e, e_ref, subdivision);
     }
     else { // element 'e' was refined in space for reference solution
       Element* e_ref_left = e_ref;
       Element* e_ref_right = I_ref->next_active_element();
       if (e_ref_left->p >= MAX_P || e_ref_right->p >= MAX_P) {
         printf("Try to increase MAX_P in common.h.\n");
-        error("Max poly degree exceeded in plot_error_est().");
+        error("Max poly degree exceeded in plot_error_estimate().");
       }
       plot_element_error_hp(norm, f, e, e_ref_left, e_ref_right, 
-                            y_prev, y_prev_ref, subdivision);
+                            subdivision);
+    }
+  }
+
+  fclose(f);
+  printf("Error function written to %s.\n", final_filename);
+}
+
+// Plots the error between the coarse mesh solution
+// and the solution stored in the elem_ref_pairs[] array
+void Mesh::plot_error_estimate(int norm, ElemPtr2* elem_ref_pairs, 
+                               const char *filename, 
+		               int subdivision)
+{
+  char final_filename[MAX_STRING_LENGTH];
+  sprintf(final_filename, "%s", filename);
+  FILE *f = fopen(final_filename, "wb");
+  if(f == NULL) error("problem opening file in plot_error_estimate().");
+
+  // simultaneous traversal of 'this' and the elem_ref_pairs[] array
+  Element *e;
+  Iterator *I = new Iterator(this);
+  while ((e = I->next_active_element()) != NULL) {
+    Element* e_ref = elem_ref_pairs[e->id][0];
+    if (e->level == e_ref->level) { // element 'e' was not refined in space
+                                    // for reference solution
+      if (e_ref->p >= MAX_P) {
+        printf("Try to increase MAX_P in common.h.\n");
+        error("Max poly degree exceeded in plot_error_estimate().");
+      }
+      plot_element_error_p(norm, f, e, e_ref, subdivision);
+    }
+    else { // element 'e' was refined in space for reference solution
+      Element* e_ref_left = e_ref;
+      Element* e_ref_right = elem_ref_pairs[e->id][1];
+      if (e_ref_left->p >= MAX_P || e_ref_right->p >= MAX_P) {
+        printf("Try to increase MAX_P in common.h.\n");
+        error("Max poly degree exceeded in plot_error_estimate().");
+      }
+      plot_element_error_hp(norm, f, e, e_ref_left, e_ref_right, 
+                            subdivision);
     }
   }
 
@@ -987,8 +990,9 @@ void Mesh::plot_error_est(int norm, const char *filename, Mesh* mesh_ref,
 }
 
 // Plots the error wrt. the exact solution (if available)
-void Mesh::plot_error_exact(int norm, const char *filename,  
-		            double* y_prev, exact_sol_type exact_sol, int subdivision)
+void Mesh::plot_error_exact(int norm, exact_sol_type exact_sol, 
+                            const char *filename,  
+		            int subdivision)
 {
   char final_filename[MAX_STRING_LENGTH];
   sprintf(final_filename, "%s", filename);
@@ -1001,66 +1005,51 @@ void Mesh::plot_error_exact(int norm, const char *filename,
   while ((e = I->next_active_element()) != NULL) {
     if (e->p >= MAX_P) {
       printf("Try to increase MAX_P in common.h.\n");
-      error("Max poly degree exceeded in plot_error_est().");
+      error("Max poly degree exceeded in plot_error_exact().");
     }
-    plot_element_error_exact(norm, f, e, y_prev, exact_sol, subdivision);
+    plot_element_error_exact(norm, f, e, exact_sol, subdivision);
   }
 
   fclose(f);
   printf("Exact solution error written to %s.\n", final_filename);
 }
 
-// Refine coarse mesh elements whose id_array >= 0, and 
-// adjust the reference mesh accordingly.  
-// Returns updated coarse and reference meshes, with the last 
-// coarse and reference mesh solutions on them, respectively. 
-// The coefficient vectors and numbers of degrees of freedom 
-// on both meshes are also updated. 
-void adapt(int norm, int adapt_type, double threshold, 
-           double *err_array,
-           Mesh* &mesh, Mesh* &mesh_ref, 
-           double * &y_prev, double* &y_prev_ref, 
-           int &n_dof, int &n_dof_ref) 
+// Use the err_array[] and threshold to create a list of 
+// elements to be refined.
+void create_ref_index_array(double threshold, double *err_array, 
+                            int n_elem, int *adapt_list, int &num_to_adapt) 
 {
-  int n_elem = mesh->get_n_active_elem();
-
   // debug
-  if (PRINT_ELEM_ERRORS) {
-    printf("  Element errors (est) in adapt():\n");
-    for(int i=0; i < n_elem; i++) {
-      printf("  Elem [%d]: %g\n", i, err_array[i]);
-    }
-  }
+  //printf("num_to_adapt = %d\n", num_to_adapt);
+  //for (int i=0; i < n_elem; i++) printf("err_array[%d] = %g\n", i, err_array[i]);
 
   // Find element with largest error
   double max_elem_error = 0;
   for(int i=0; i < n_elem; i++) {
-    double elem_error = err_array[i];
-    if (elem_error > max_elem_error) {
-      max_elem_error = elem_error;
+    if (err_array[i] > max_elem_error) {
+      max_elem_error = err_array[i];
     }
   }
 
   // Create auxiliary array of element indices
   int id_array[MAX_ELEM_NUM];
   for(int i=0; i < n_elem; i++) {
-   if(err_array[i] < threshold*max_elem_error) id_array[i] = -1; 
-   else id_array[i] = i;
+    if(err_array[i] < threshold*max_elem_error) id_array[i] = -1; 
+    else id_array[i] = i;
   }
 
-  // Print elements to be refined
   /*
+  // Debug:
+  // Print elements to be refined
   printf("Elements to be refined:\n");
-  for (int i=0; i<this->get_n_active_elem(); i++) {
+  for (int i=0; i < n_elem; i++) {
     if (id_array[i] >= 0) printf("Elem[%d], error = %g\n", id_array[i], 
                                  err_array[i]);
   }
   */
 
-  int adapt_list[MAX_ELEM_NUM];
-  int num_to_adapt = 0;
-
   // Create list of elements to be refined, in increasing order
+  num_to_adapt = 0;
   for (int i=0; i < n_elem; i++) {
     if (id_array[i] >= 0) {
       adapt_list[num_to_adapt] = id_array[i];
@@ -1068,10 +1057,29 @@ void adapt(int norm, int adapt_type, double threshold,
     }
   }
  
+  /*
   // Debug: Printing list of elements to be refined
-  //printf("Elements to be refined: ");
-  //for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
-  //printf("\n");
+  printf("Elements to be refined: ");
+  for (int i=0; i<num_to_adapt; i++) printf("%d ", adapt_list[i]);
+  printf("\n");
+  */
+}
+
+// Returns updated coarse and reference meshes, with the last 
+// coarse and reference mesh solutions on them, respectively. 
+// The coefficient vectors and numbers of degrees of freedom 
+// on both meshes are also updated. 
+void adapt(int norm, int adapt_type, double threshold, 
+           double *err_array, 
+           Mesh* &mesh, Mesh* &mesh_ref) 
+{
+  int n_elem = mesh->get_n_active_elem();
+  
+  // Use the err_array[] and threshold to create a list of 
+  // elements to be refined.
+  int adapt_list[MAX_ELEM_NUM];
+  int num_to_adapt;
+  create_ref_index_array(threshold, err_array, n_elem, adapt_list, num_to_adapt);
 
   // Replicate the coarse and fine meshes. The original meshes become
   // backup and refinements will only be done in the new ones.
@@ -1096,15 +1104,16 @@ void adapt(int norm, int adapt_type, double threshold,
     if (e->id == adapt_list[counter]) {
       counter++;
       int choice = 0;
-      int3 cand_list[MAX_CAND_NUM];   // Every refinement candidates consists of three
-                                      // numbers: 1/0 whether it is a p-candidate or not,
-                                      // and then either one or two polynomial degrees
+      // Every refinement candidate consists of three
+      // and then either one or two polynomial degrees
+      int3 cand_list[MAX_CAND_NUM];   
       Element* e_ref_left;
       Element* e_ref_right;
       Element* e_ref_new_left;
       Element* e_ref_new_right;
-      if (e->level == e_ref->level) { // element 'e' was not refined in space
-                                      // for reference solution
+      // Element 'e' was not refined in space
+      // for reference solution.
+      if (e->level == e_ref->level) {
         e_ref_left = e_ref;
         e_ref_new_left = e_ref_new;
         e_ref_right = NULL;
@@ -1114,22 +1123,18 @@ void adapt(int norm, int adapt_type, double threshold,
         //e->print_cand_list(num_cand, cand_list);
         // reference element was p-refined
         choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
-                                      0, norm, y_prev_ref, 
-                                      mesh->bc_left_dir_values,
-	  		              mesh->bc_right_dir_values);
+                                      0, norm);
       }
-      else { // element 'e' was refined in space for reference solution
+      // Element 'e' was refined in space for reference solution.
+      else {
         e_ref_left = e_ref;
         e_ref_new_left = e_ref_new;
         e_ref_right = I_ref->next_active_element();
         e_ref_new_right = I_ref_new->next_active_element();
         int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, 
                                            e_ref_right->p, cand_list);
-        // reference element was hp-refined
         choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
-                                      num_cand, cand_list, 1, norm, y_prev_ref, 
-                                      mesh->bc_left_dir_values,
-			              mesh->bc_right_dir_values);
+                                      num_cand, cand_list, 1, norm);
       }
 
       // Next we perform the refinement defined by cand_list[choice]
@@ -1186,7 +1191,7 @@ void adapt(int norm, int adapt_type, double threshold,
           mesh_ref_new->n_active_elem++;
 	  e_ref_new_right->refine(1, new_p_right + 1, new_p_right + 1);
           mesh_ref_new->n_active_elem++;
-       }
+        }
       }
     }
     else {
@@ -1205,17 +1210,8 @@ void adapt(int norm, int adapt_type, double threshold,
   int n_dof_ref_new = mesh_ref_new->assign_dofs();
   printf("Coarse mesh refined (%d elem, %d DOF)\n", 
          mesh_new->get_n_active_elem(), n_dof_new);
-  printf("Fine mesh updated (%d elem, %d DOF)\n", 
+  printf("Fine mesh refined (%d elem, %d DOF)\n", 
   	 mesh_ref_new->get_n_active_elem(), n_dof_ref_new);
-
-  // Transfer last coarse and fine mesh solutions to the new coarse and 
-  // fine meshes, respectively. 
-  double *y_prev_new = new double[n_dof_new];
-  double *y_prev_ref_new = new double[n_dof_ref_new];
-  transfer_solution(mesh, mesh_new, y_prev, y_prev_new);
-  printf("Last coarse mesh solution copied to new coarse mesh.\n");
-  transfer_solution(mesh_ref, mesh_ref_new, y_prev_ref, y_prev_ref_new);
-  printf("Last fine mesh solution copied to new fine mesh.\n");
 
   // Delete old meshes and copy the new ones in place of them
   delete mesh;
@@ -1223,45 +1219,155 @@ void adapt(int norm, int adapt_type, double threshold,
   mesh = mesh_new;
   mesh_ref = mesh_ref_new;
 
-  // Do the same with the coefficients vectors.
-  delete [] y_prev;
-  delete [] y_prev_ref;
-  y_prev = y_prev_new;
-  y_prev_ref = y_prev_ref_new;
-
   // Last adjust the number of dofs in each mesh
-  n_dof = n_dof_new;
-  n_dof_ref = n_dof_ref_new;
+  mesh->set_n_dof(n_dof_new);
+  mesh_ref->set_n_dof(n_dof_ref_new);
 }
 
-void adapt_plotting(Mesh *mesh, Mesh *mesh_ref, double *y_prev, 
-              double *y_prev_ref, int norm, int exact_sol_provided, 
-              exact_sol_type exact_sol) 
+// Returns updated coarse mesh, with the last 
+// coarse solution on it. 
+// The coefficient vector and number of degrees of freedom 
+// also is updated. 
+void adapt(int norm, int adapt_type, double threshold, 
+           double *err_array, 
+           Mesh* &mesh, ElemPtr2 *ref_elem_pairs) 
+{
+  int n_elem = mesh->get_n_active_elem();
+  
+  // Use the err_array[] and threshold to create a list of 
+  // elements to be refined.
+  int adapt_list[MAX_ELEM_NUM];
+  int num_to_adapt;
+  create_ref_index_array(threshold, err_array, n_elem, adapt_list, num_to_adapt);
+
+  // Replicate the coarse mesh. The original coarse mesh becomes
+  // backup and refinements will only be done in the new one.
+  Mesh *mesh_new = mesh->replicate();
+
+  // Simultaneous traversal of mesh_new and the ref_elem_pairs[] array.
+  // For each element in mesh_new create a list of refinement 
+  // candidates and select the one that best resembles the reference 
+  // solution in ref_elem_pairs[]. 
+  Iterator *I = new Iterator(mesh);
+  Iterator *I_new = new Iterator(mesh_new);
+  Element *e = I->next_active_element();
+  Element *e_new = I_new->next_active_element();
+  int counter_adapt = 0;
+  while (counter_adapt != num_to_adapt) {
+    if (e->id == adapt_list[counter_adapt]) {
+      counter_adapt++;
+      int choice = 0;
+      // Every refinement candidate consists of three
+      // and then either one or two polynomial degrees
+      int3 cand_list[MAX_CAND_NUM];   
+      Element* e_ref = ref_elem_pairs[e->id][0];
+      Element* e_ref_left;
+      Element* e_ref_right;
+      // Element 'e' was not refined in space
+      // for reference solution.
+      if (e->level == e_ref->level) {
+        e_ref_left = e_ref;
+        e_ref_right = NULL;
+        int num_cand = e->create_cand_list(adapt_type, e_ref->p, -1, cand_list);
+        // debug:
+        //e->print_cand_list(num_cand, cand_list);
+        // reference element was p-refined
+        choice = select_hp_refinement(e, e_ref, NULL, num_cand, cand_list, 
+                                      0, norm);
+      }
+      // Element 'e' was refined in space for reference solution.
+      else {
+        e_ref_left = e_ref;
+        e_ref_right = ref_elem_pairs[e->id][1];
+        int num_cand = e->create_cand_list(adapt_type, e_ref_left->p, 
+                                           e_ref_right->p, cand_list);
+        choice = select_hp_refinement(e, e_ref_left, e_ref_right, 
+                                      num_cand, cand_list, 1, norm);
+      }
+
+      // Next we perform the refinement defined by cand_list[choice]
+      // e_new_last... element in mesh_new that will be refined,
+      // e_ref_left... corresponding element in ref_elem_pairs[] (if reference 
+      //               refinement was p-refinement). In this case 
+      //               e_ref_right == NULL
+      // e_ref_left, e_ref_right... corresponding pair of elements 
+      //               in ref_elem_pairs[] (if reference refinement was hp-refinement)
+      Element *e_new_last = e_new;
+      // moving pointers 'e' and 'e_new' to the next position in coarse meshes
+      e = I->next_active_element();
+      e_new = I_new->next_active_element();
+      // perform the refinement of element e_new_last
+      e_new_last->refine(cand_list[choice]);
+      printf("  Refined element (%g, %g), cand = (%d %d %d)\n", 
+             e_new_last->x1, e_new_last->x2, cand_list[choice][0], 
+             cand_list[choice][1], cand_list[choice][2]);
+      if(cand_list[choice][0] == 1) mesh_new->n_active_elem++;
+    }
+    else {
+      e = I->next_active_element();
+      e_new = I_new->next_active_element();
+    }
+  }
+  // enumerate dofs in both new meshes
+  int n_dof_new = mesh_new->assign_dofs();
+  printf("New mesh has %d elements.\n",
+         mesh_new->get_n_active_elem(), n_dof_new);
+
+  // Delete old coarse mesh
+  delete mesh;
+  mesh = mesh_new;
+
+  // Adjust the number of dofs
+  mesh->set_n_dof(n_dof_new);
+}
+
+void adapt_plotting(Mesh *mesh, Mesh *mesh_ref, 
+                    int norm, int exact_sol_provided, 
+                    exact_sol_type exact_sol) 
 {
   // Plot the coarse mesh solution
   Linearizer l(mesh);
-  const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, y_prev);
+  l.plot_solution("solution.gp");
 
   // Plot the fine mesh solution
-  Linearizer lxx(mesh_ref);
-  const char *out_filename2 = "solution_ref.gp";
-  lxx.plot_solution(out_filename2, y_prev_ref);
+  Linearizer l_ref(mesh_ref);
+  l_ref.plot_solution("solution_ref.gp");
 
   // Plot the coarse and fine meshes
-  const char *mesh_filename = "mesh.gp";
-  mesh->plot(mesh_filename);
-  const char *mesh_ref_filename = "mesh_ref.gp";
-  mesh_ref->plot(mesh_ref_filename);
+  mesh->plot("mesh.gp");
+  mesh_ref->plot("mesh_ref.gp");
 
   // Plot the error estimate (difference between 
   // coarse and fine mesh solutions)
-  const char *err_est_filename = "error_est.gp";
-  mesh->plot_error_est(norm, err_est_filename, mesh_ref, y_prev, y_prev_ref);
+  mesh->plot_error_estimate(norm, mesh_ref, "error_est.gp");
 
   // Plot error wrt. exact solution (if available)
   if (exact_sol_provided) {   
-    const char *err_exact_filename = "error_exact.gp";
-    mesh->plot_error_exact(norm, err_exact_filename, y_prev, exact_sol);
+    mesh->plot_error_exact(norm, exact_sol, "error_exact.gp");
+  }
+}
+
+void adapt_plotting(Mesh *mesh, ElemPtr2 *ref_elem_pairs,
+                    int norm, int exact_sol_provided, 
+                    exact_sol_type exact_sol) 
+{
+  // Plot the coarse mesh solution.
+  Linearizer l(mesh);
+  l.plot_solution("solution.gp");
+
+  // Plot solution stored in the ref_elem_pairs[] array.
+  Linearizer l_ref(mesh);
+  l_ref.plot_ref_elem_pairs(ref_elem_pairs, "solution_ref.gp");
+
+  // Plot the mesh
+  mesh->plot("mesh.gp");
+
+  // Plot the difference between the coarse mesh solution
+  // and the solution stored in the ref_elem_pairs[] array.
+  mesh->plot_error_estimate(norm, ref_elem_pairs, "error_est.gp");
+
+  // Plot error wrt. exact solution (if available).
+  if (exact_sol_provided) {   
+    mesh->plot_error_exact(norm, exact_sol, "error_exact.gp");
   }
 }
