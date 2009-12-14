@@ -192,7 +192,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 4) break;
+    if (adapt_iterations == 1) break;
 
     // Returns updated coarse mesh with the last solution on it. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, elem_errors,

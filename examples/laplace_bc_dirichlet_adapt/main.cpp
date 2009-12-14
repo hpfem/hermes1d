@@ -10,7 +10,7 @@
 
 // General input:
 static int N_eq = 1;
-int N_elem = 2;                         // Number of elements
+int N_elem = 3;                         // Number of elements
 double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
