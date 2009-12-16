@@ -109,7 +109,7 @@ int main() {
 
   // Initial Newton's loop on coarse mesh
   int success, iter_num;
-  success = newton(dp, mesh, TOL_NEWTON_COARSE, iter_num);
+  success = newton(0, dp, mesh, TOL_NEWTON_COARSE, iter_num);
   if (!success) error("Newton's method did not converge."); 
   printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
          iter_num);
@@ -137,7 +137,7 @@ int main() {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
 
     // Newton's loop on fine mesh
-    success = newton(dp, mesh_ref, TOL_NEWTON_REF, iter_num);
+    success = newton(0, dp, mesh_ref, TOL_NEWTON_REF, iter_num);
     if (!success) error("Newton's method did not converge."); 
     printf("Finished fine mesh Newton's iteration (%d iter).\n", 
            iter_num);
@@ -148,7 +148,7 @@ int main() {
     if (adapt_iterations > 1) {
 
       // Newton's loop on coarse mesh
-      success = newton(dp, mesh, TOL_NEWTON_COARSE, iter_num);
+      success = newton(0, dp, mesh, TOL_NEWTON_COARSE, iter_num);
       if (!success) error("Newton's method did not converge."); 
       printf("Finished coarse mesh Newton's iteration (%d iter).\n", 
              iter_num);

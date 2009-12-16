@@ -339,9 +339,15 @@ void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
   assemble(mesh, void_mat, res, 2);
 } 
 
+void solve_linear_system_cg(Matrix* mat, double *res) 
+{
+  error("notimplemented yet.");  
+
+}
+
 // Newton iteration
-int newton(DiscreteProblem *dp, Mesh *mesh, 
-           double tol, int &iter_num) 
+int newton(int solver, DiscreteProblem *dp, Mesh *mesh, 
+           double tol_newton, int &iter_num) 
 {
   iter_num = 1;
   int n_dof = mesh->get_n_dof();
@@ -374,20 +380,24 @@ int newton(DiscreteProblem *dp, Mesh *mesh,
     for(int i=0; i<n_dof; i++) res_norm += res[i]*res[i];
     res_norm = sqrt(res_norm);
 
-    // If residual norm less than 'tol', quit
+    // If residual norm less than 'tol_newton', quit
     // latest solution is in the vector y.
     // CAUTION: at least one full iteration forced
     //          here because sometimes the initial
     //          residual on fine mesh is too small
     printf("Residual norm: %.15f\n", res_norm);
-    if(res_norm < tol && iter_num > 1) break;
+    if(res_norm < tol_newton && iter_num > 1) break;
 
     // changing sign of vector res
     for(int i=0; i<n_dof; i++) res[i]*= -1;
 
     // solving the matrix system
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
-    solve_linear_system_umfpack((CooMatrix*)mat, res);
+    if (solver == 0) solve_linear_system_umfpack((CooMatrix*)mat, res);
+    else {
+      if (solver == 1) solve_linear_system_cg((CooMatrix*)mat, res);
+      else error("unknown matrix solver in newton().");
+    }
 
     // updating vector y by new solution which is in res
     for(int i=0; i<n_dof; i++) y[i] += res[i];

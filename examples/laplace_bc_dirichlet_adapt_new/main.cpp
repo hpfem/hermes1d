@@ -92,7 +92,7 @@ int main() {
  
     // Newton's loop on coarse mesh
     int success, iter_num;
-    success = newton(dp, mesh, TOL_NEWTON_COARSE, iter_num);
+    success = newton(0, dp, mesh, TOL_NEWTON_COARSE, iter_num);
     if (!success) error("Newton's method did not converge."); 
     printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
            iter_num);
@@ -115,7 +115,7 @@ int main() {
              i, mesh_ref_local->assign_dofs());
 
       // Newton's loop on the FTR mesh
-      success = newton(dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
+      success = newton(0, dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
       if (!success) error("Newton's method did not converge."); 
       //printf("Elem [%d]: finished fine mesh Newton's iteration (%d iter).\n", 
       //       i, iter_num);
