@@ -345,7 +345,24 @@ void solve_linear_system_cg(Matrix* mat, double *res)
 
 }
 
-// Newton iteration
+void copy_mesh_to_vector(Mesh *mesh, double *y) {
+  Element *e;
+  Iterator *I = new Iterator(mesh);
+  while ((e = I->next_active_element()) != NULL) {
+    e->copy_coeffs_to_vector(y);
+  }
+  delete I;
+}
+void copy_vector_to_mesh(double *y, Mesh *mesh) {
+  Element *e;
+  Iterator *I = new Iterator(mesh);
+  while ((e = I->next_active_element()) != NULL) {
+    e->get_coeffs_from_vector(y);
+  }
+  delete I;
+}
+
+// Newton's iteration
 int newton(int solver, DiscreteProblem *dp, Mesh *mesh, 
            double tol_newton, int &iter_num) 
 {
@@ -359,11 +376,7 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
 
   // fill vector y using dof and coeffs arrays 
   // in elements
-  Element *e;
-  Iterator *I = new Iterator(mesh);
-  while ((e = I->next_active_element()) != NULL) {
-    e->copy_coeffs_to_vector(y);
-  }
+  copy_mesh_to_vector(mesh, y);
 
   // the iteration
   CooMatrix *mat = NULL;
@@ -403,10 +416,7 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
     for(int i=0; i<n_dof; i++) y[i] += res[i];
 
     // copy coefficients from vector y to elements
-    I->reset();
-    while ((e = I->next_active_element()) != NULL) {
-      e->get_coeffs_from_vector(y);
-    }
+    copy_vector_to_mesh(y, mesh);
 
     iter_num++;
     if (iter_num >= MAX_NEWTON_ITER_NUM) 
