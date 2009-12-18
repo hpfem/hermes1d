@@ -7,6 +7,8 @@ set(SRC
 enable_language(Fortran)
 find_package(UMFPACK REQUIRED)
 find_package(BLAS REQUIRED)
+add_definitions(-DCOMPLEX=std::complex<double>)
+include_directories(SparseLib/include SparseLib/mv/include)
 include_directories(${UMFPACK_INCLUDE_DIR} ${AMD_INCLUDE_DIR})
 
 add_library(${HERMES_BIN} SHARED ${SRC})

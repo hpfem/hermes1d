@@ -5,6 +5,7 @@
 
 #include "discrete.h"
 #include "solver_umfpack.h"
+#include "comprow_double.h"
 
 DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
@@ -339,10 +340,10 @@ void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
   assemble(mesh, void_mat, res, 2);
 } 
 
-void solve_linear_system_cg(Matrix* mat, double *res) 
+void solve_linear_system_iter(int solver, Matrix* mat, double *res)
 {
+  CompRow_Mat_double *m;
   error("notimplemented yet.");  
-
 }
 
 void copy_mesh_to_vector(Mesh *mesh, double *y) {
@@ -407,10 +408,7 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
     // solving the matrix system
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
     if (solver == 0) solve_linear_system_umfpack((CooMatrix*)mat, res);
-    else {
-      if (solver == 1) solve_linear_system_cg((CooMatrix*)mat, res);
-      else error("unknown matrix solver in newton().");
-    }
+    else solve_linear_system_iter(solver, (CooMatrix*)mat, res);
 
     // updating vector y by new solution which is in res
     for(int i=0; i<n_dof; i++) y[i] += res[i];
