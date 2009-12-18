@@ -6,7 +6,7 @@
 
 // This test makes sure that an exact function 
 // sin(K*x), K*cos(K*x) is approximated adaptively 
-// with relative error 1e-1% with less than 60 DOF.
+// with relative error 1e-1% with less than 70 DOF.
 // Adaptivity is done in L2 norm.
 
 #define ERROR_SUCCESS                               0
@@ -235,6 +235,9 @@ int main() {
     // Decide whether the relative error is sufficiently small
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
+    // debug
+    // (adapt_iterations == 2) break;
+ 
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 
     // The coefficient vectors and numbers of degrees of freedom 
@@ -254,7 +257,7 @@ int main() {
 
   int success_test = 1; 
   printf("N_dof = %d\n", mesh->get_n_dof());
-  if (mesh->get_n_dof() > 40) success_test = 0;
+  if (mesh->get_n_dof() > 70) success_test = 0;
 
   if (success_test) {
     printf("Success!\n");
