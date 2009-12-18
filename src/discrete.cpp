@@ -343,7 +343,11 @@ void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
 void solve_linear_system_iter(int solver, Matrix* mat, double *res)
 {
   CompRow_Mat_double *m;
-  error("notimplemented yet.");  
+  double val[12] = {1,2 , 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+  int colind[12] = {0, 1, 4, 0, 1, 2, 1, 2, 4, 3, 0, 4};
+  int rowptr[6] = {0, 3, 6, 9, 10, 12};
+  m = new CompRow_Mat_double(5, 5, 12, val, rowptr, colind);
+  error("notimplemented yet.");
 }
 
 void copy_mesh_to_vector(Mesh *mesh, double *y) {
