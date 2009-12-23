@@ -89,6 +89,7 @@ void element_shapefn(double a, double b,
 void element_shapefn_point(double x_ref, double a, double b, 
 			   int k, double &val, double &der);
 
-int newton(DiscreteProblem *dp, Mesh *mesh, double tol, int &iter_num); 
+int newton(int solver, DiscreteProblem *dp, Mesh *mesh, 
+           double tol_newton, int &iter_num); 
 
 #endif

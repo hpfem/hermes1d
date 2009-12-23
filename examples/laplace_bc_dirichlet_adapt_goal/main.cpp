@@ -15,16 +15,20 @@ double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Stopping criteria for Newton
-double TOL_NEWTON_COARSE = 1e-10;        // Coarse mesh
-double TOL_NEWTON_REF = 1e-10;           // Reference mesh
+double TOL_NEWTON_COARSE = 1e-10;       // Coarse mesh
+double TOL_NEWTON_REF = 1e-10;          // Reference mesh
 
 // Adaptivity
+const int GOAL_ORIENTED = 1;            // 0... standard adaptivity in norm
+                                        // 1... goal-oriented adaptivity 
+const double X_QOI = 0.9*M_PI;          // value of u[0] at X_QOI is the 
+                                        // quantity of interest
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 1... h-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose FTR error
                                         // is greater than THRESHOLD*max_ftr_error
-const double TOL_ERR_FTR = 1e-8;        // Tolerance for the maximum FTR error
+const double TOL_ERR_QOI = 1e-10;       // Tolerance for the maximum FTR error
 const int NORM = 1;                     // To measure errors:
                                         // 1... H1 norm
                                         // 0... L2 norm
@@ -54,6 +58,27 @@ double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
 #include "forms.cpp"
 
 /******************************************************************************/
+
+// Sample quantity of interest - solution value u[0] at 'x'.
+// NOTE: quantity of interest is any linear functional of solution.
+double quantity_of_interest(Mesh *mesh, double x)
+{
+  // Traversal of the mesh  
+  Iterator *I = new Iterator(mesh);
+  Element *e;
+  double val[MAX_EQN_NUM];
+  double der[MAX_EQN_NUM];
+  while ((e = I->next_active_element()) != NULL) {
+    if (e->x1 <= x && x <= e->x2) {
+      e->get_solution_point(x, val, der);
+      return val[0];
+    }
+  }
+
+  error("computation of quantity of interest failed.");
+}
+
+/******************************************************************************/
 int main() {
   // Create coarse mesh, set Dirichlet BC, enumerate 
   // basis functions
@@ -68,11 +93,12 @@ int main() {
   dp->add_vector_form(0, residual);
 
   // Convergence graph wrt. the number of degrees of freedom
-  GnuplotGraph graph;
-  graph.set_log_y();
-  graph.set_captions("Convergence History", "Degrees of Freedom", "Error");
-  graph.add_row("exact error [%]", "k", "-", "o");
-  graph.add_row("max FTR error", "k", "--");
+  // (goal-oriented adaptivity)
+  GnuplotGraph graph_ftr;
+  graph_ftr.set_log_y();
+  graph_ftr.set_captions("Convergence History", "Degrees of Freedom", "QOI error");
+  graph_ftr.add_row("QOI error - FTR (exact)", "k", "-", "o");
+  graph_ftr.add_row("QOI error - FTR (est)", "k", "--");
 
   // Main adaptivity loop
   int adapt_iterations = 1;
@@ -94,14 +120,15 @@ int main() {
     int success, iter_num;
     success = newton(0, dp, mesh, TOL_NEWTON_COARSE, iter_num);
     if (!success) error("Newton's method did not converge."); 
-    printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
-           iter_num);
+    //printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
+    //       iter_num);
 
     // For every element perform its fast trial refinement (FTR),
     // calculate the norm of the difference between the FTR
     // solution and the coarse mesh solution, and store the
     // error in the ftr_errors[] array.
     int n_elem = mesh->get_n_active_elem();
+    double max_qoi_err_est = 0;
     for (int i=0; i < n_elem; i++) {
 
       printf("=== Starting FTR of Elem [%d]\n", i);
@@ -127,14 +154,32 @@ int main() {
       lxx->plot_solution(out_filename);
       delete lxx;
 
-      // Calculate norm of the difference between the coarse mesh 
-      // and FTR solutions.
-      // NOTE: later we want to look at the difference in some quantity 
-      // of interest rather than error in global norm.
-      double err_est_array[MAX_ELEM_NUM];
-      ftr_errors[i] = calc_error_estimate(NORM, mesh, mesh_ref_local, 
-                      err_est_array);
-      //printf("Elem [%d]: absolute error (est) = %g\n", i, ftr_errors[i]);
+      // Calculate FTR errors for refinement purposes
+      if (GOAL_ORIENTED == 1) {
+        // Use quantity of interest.
+        double qoi_est = quantity_of_interest(mesh, X_QOI);
+        double qoi_ref_est = quantity_of_interest(mesh_ref_local, X_QOI);
+        ftr_errors[i] = fabs(qoi_ref_est - qoi_est);
+      }
+      else {
+        // Use global norm
+        double err_est_array[MAX_ELEM_NUM];
+        ftr_errors[i] = calc_error_estimate(NORM, mesh, mesh_ref_local, 
+                                            err_est_array);
+      }
+
+      // Calculating maximum of QOI FTR error for plotting purposes
+      if (GOAL_ORIENTED == 1) {
+        if (ftr_errors[i] > max_qoi_err_est) 
+	  max_qoi_err_est = ftr_errors[i];
+      }
+      else {
+        double qoi_est = quantity_of_interest(mesh, X_QOI);
+        double qoi_ref_est = quantity_of_interest(mesh_ref_local, X_QOI);
+        double err_est = fabs(qoi_ref_est - qoi_est);
+        if (err_est > max_qoi_err_est) 
+	  max_qoi_err_est = err_est;
+      }
 
       // Copy the reference element pair for element 'i'
       // into the ref_ftr_pairs[i][] array
@@ -160,35 +205,20 @@ int main() {
       delete mesh_ref_local;
     }  
 
-    // If exact solution available, also calculate exact error
+    // Add entries to convergence graphs
     if (EXACT_SOL_PROVIDED) {
-      // Calculate element errors wrt. exact solution
-      double err_exact_total = calc_error_exact(NORM, mesh, exact_sol);
-     
-      // Calculate the norm of the exact solution
-      // (using a fine subdivision and high-order quadrature)
-      int subdivision = 500; // heuristic parameter
-      int order = 20;        // heuristic parameter
-      double exact_sol_norm = calc_solution_norm(NORM, exact_sol, N_eq, A, B,
-                                                  subdivision, order);
-      // Calculate an estimate of the global relative error
-      double err_exact_rel = err_exact_total/exact_sol_norm;
-      //printf("Relative error (exact) = %g %%\n", 100.*err_exact_rel);
-      graph.add_values(0, mesh->get_n_dof(), 100 * err_exact_rel);
+      double qoi_est = quantity_of_interest(mesh, X_QOI);
+      double u[MAX_EQN_NUM], dudx[MAX_EQN_NUM];
+      exact_sol(X_QOI, u, dudx);
+      double err_qoi_exact = fabs(u[0] - qoi_est);
+      // plotting error in quantity of interest wrt. exact value
+      graph_ftr.add_values(0, mesh->get_n_dof(), err_qoi_exact);
     }
+    graph_ftr.add_values(1, mesh->get_n_dof(), max_qoi_err_est);
 
-    // Calculate max FTR error
-    double max_ftr_error = 0;
-    for (int i=0; i < mesh->get_n_active_elem(); i++) {
-      if (ftr_errors[i] > max_ftr_error) max_ftr_error = ftr_errors[i];
-    }
-    printf("Max FTR error = %g\n", max_ftr_error);
-
-    // Add entry to DOF convergence graph
-    graph.add_values(1, mesh->get_n_dof(), max_ftr_error);
-
-    // Decide whether the max. FTR error is sufficiently small
-    if(max_ftr_error < TOL_ERR_FTR) break;
+    // Decide whether the max. FTR error in the quantity of interest 
+    // is sufficiently small
+    if(max_qoi_err_est < TOL_ERR_QOI) break;
 
     // debug
     //if (adapt_iterations == 10) break;
@@ -205,7 +235,7 @@ int main() {
                  NORM, EXACT_SOL_PROVIDED, exact_sol);
 
   // Save convergence graph
-  graph.save("conv_dof.gp");
+  graph_ftr.save("conv_dof.gp");
 
   printf("Done.\n");
   return 1;

@@ -69,7 +69,7 @@ int main() {
 
   // Newton's loop
   int success, iter_num;
-  success = newton(dp, mesh, TOL_NEWTON, iter_num);
+  success = newton(0, dp, mesh, TOL_NEWTON, iter_num);
   if (!success) error("Newton's method did not converge."); 
   printf("Finished Newton's iteration (%d iter).\n", iter_num);
 

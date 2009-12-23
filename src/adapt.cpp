@@ -19,7 +19,7 @@ int PLOT_CANDIDATE_PROJECTIONS = 0;
 int PRINT_CANDIDATES = 0;
 
 // debug - prints element errors as they come to adapt()
-int PRINT_ELEM_ERRORS = 1;
+int PRINT_ELEM_ERRORS = 0;
 
 double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref) 
 {
@@ -577,9 +577,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   }
 
   err = sqrt(err_total);
-  int dof_orig = e->p + 1;
-  int dof_new = p_left + p_right + 1; 
-  dof = dof_new - dof_orig; 
+  dof = p_left + p_right + 1;
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -855,9 +853,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   }
 
   err = sqrt(err_total);
-  int dof_orig = e->p + 1;
-  int dof_new = p_left + p_right + 1; 
-  dof = dof_new - dof_orig; 
+  dof = p_left + p_right + 1;
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -1171,9 +1167,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   }
 
   err = sqrt(err_total);
-  int dof_orig = e->p + 1;
-  int dof_new = p + 1; 
-  dof = dof_new - dof_orig; 
+  dof = p + 1;
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -1363,9 +1357,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
     err_total += err_squared[c];
   }
   err = sqrt(err_total);
-  int dof_orig = e->p + 1;
-  int dof_new = p + 1; 
-  dof = dof_new - dof_orig; 
+  dof = p + 1; 
 
   // **************************************************************************
   // Debug - visualizing the reference solution and projection on the candidate
@@ -1543,107 +1535,114 @@ int select_hp_refinement(Element *e, Element *e_ref, Element *e_ref2,
     e_ref_left = e_ref;
     e_ref_right = e_ref2;
   }
+
+  // Calculate projection error and the number of degrees of 
+  // freedom of the original element
+  double err_orig;
+  int dof_orig;
+  // reference solution was p-refined 
+  if (ref_sol_type == 0) {
+    check_cand_coarse_p_fine_p(norm, e, e_ref, e->p, err_orig, dof_orig);
+  }
+  // reference solution was hp-refined 
+  if (ref_sol_type == 1) {
+    check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, e->p,
+      err_orig, dof_orig);
+  }
+  if (PRINT_CANDIDATES) {
+    printf("  Elem (%g, %g): err_orig = %g, dof_orig = %d\n", 
+           e->x1, e->x2, err_orig, dof_orig);
+  }
+
   int choice = -1;
-  double crit_max = -1e10;
+  double crit_min = 1e10;
   double crit;
   // Traverse the list of all refinement candidates,
   // for each calculate the projection of the reference
   // solution on it, and the number of dofs it would 
   // contribute if selected
   for (int i=0; i<num_cand; i++) {
-    double err;
-    int dof;
+    double err_cand;
+    int dof_cand;
     if (cand_list[i][0] == 0 && ref_sol_type == 0) {
       int p_new = cand_list[i][1];
-      check_cand_coarse_p_fine_p(norm, e, e_ref, p_new, err, dof);
+      check_cand_coarse_p_fine_p(norm, e, e_ref, p_new, err_cand, dof_cand);
     }
     if (cand_list[i][0] == 0 && ref_sol_type == 1) {
       int p_new = cand_list[i][1];
       check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, 
-        p_new, err, dof);
+        p_new, err_cand, dof_cand);
     }
     if (cand_list[i][0] == 1 && ref_sol_type == 0) {
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
       check_cand_coarse_hp_fine_p(norm, e, e_ref, p_new_left, 
-        p_new_right, err, dof);
+        p_new_right, err_cand, dof_cand);
     }
     if (cand_list[i][0] == 1 && ref_sol_type == 1) {
       int p_new_left = cand_list[i][1];
       int p_new_right = cand_list[i][2];
       check_cand_coarse_hp_fine_hp(norm, e, e_ref_left, e_ref_right, 
-        p_new_left, p_new_right, err, dof);
+        p_new_left, p_new_right, err_cand, dof_cand);
     }
 
     // The projection error is zero (reference 
     // solution is recovered exactly). 
-    if (fabs(err) < 1e-12) {
+    if (fabs(err_cand) < 1e-12) {
       choice = i;
       if (PRINT_CANDIDATES) {
         printf("  Elem (%g, %g): reference solution recovered, \
                   taking the following candidate:\n", e->x1, e->x2);
-        printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d\n", 
+        printf("  Elem (%g, %g): cand (%d %d %d), err_cand = %g, dof_cand = %d\n", 
                e->x1, e->x2, 
-               cand_list[i][0], cand_list[i][1], cand_list[i][2], err, dof);
+               cand_list[i][0], cand_list[i][1], cand_list[i][2], err_cand, dof_cand);
       }
       return choice;
     }
 
-    // The number of new degrees of freedom is less or equal to 
+    // If the number of new degrees of freedom is less or equal to 
     // the coarse mesh element.
-    if (dof <= 0) {
-      double err_orig;
-      int dof_orig;
-      // reference solution was p-refined 
-      if (ref_sol_type == 0) {
-        check_cand_coarse_p_fine_p(norm, e, e_ref, e->p,
-          err_orig, dof_orig);
-      }
-      // reference solution was hp-refined 
-      if (ref_sol_type == 1) {
-        check_cand_coarse_p_fine_hp(norm, e, e_ref_left, e_ref_right, e->p,
-          err_orig, dof_orig);
-      }  
-      if (err < err_orig) {
+    if (dof_cand - dof_orig <= 0) {
+      if (err_cand < err_orig) {
         if (PRINT_CANDIDATES) {
-          printf("  Elem (%g, %g): cand (%d %d %d) has dof <= 0\n", e->x1, e->x2,
+          printf("  Elem (%g, %g): cand (%d %d %d) has dof_cand <= 0\n", e->x1, e->x2,
                     cand_list[i][0], cand_list[i][1], cand_list[i][2]);
-          printf("               dof = %d, err_orig = %g, err_new = %g (accepting)\n", 
-                 dof, err_orig, err);
+          printf("               dof_cand = %d, err_orig = %g, err_cand = %g (accepting)\n", 
+                 dof_cand, err_orig, err_cand);
         }
         return i;
       }
       else {
         if (PRINT_CANDIDATES) {
-          printf("  Elem (%g, %g): cand (%d %d %d) has dof <= 0\n", e->x1, e->x2,
+          printf("  Elem (%g, %g): cand (%d %d %d) has dof_cand <= 0\n", e->x1, e->x2,
                     cand_list[i][0], cand_list[i][1], cand_list[i][2]);
-          printf("               dof = %d, err_orig = %g, err_new = %g (throwing away)\n", 
-                 dof, err_orig, err);
+          printf("               dof_cand = %d, err_orig = %g, err_new = %g (throwing away)\n", 
+                 dof_cand, err_orig, err_cand);
         }
-        crit = -1e10;  // forget this candidate
+        crit = 1e10;  // forget this candidate
       }
     }
 
-    // Most frequent case of neither err == 0 or dof == 0. Selected is
+    // Most frequent case of neither err_cand == 0 or dof == 0. Selected is
     // candidate resulting into steepest descent of the convergence 
     // curve on semilog scale. Performance of p-candidates is artificially 
     // improved
-    if (dof > 0) {
+    if (dof_cand - dof_orig > 0) {
       // p-candidate (preferred - not penalized by the dof number)
-      if (cand_list[i][0] == 0) crit = -log(err); // / dof; 
+      if (cand_list[i][0] == 0) crit = (log(err_cand) - log(err_orig)) / sqrt(dof_cand - dof_orig); 
       // hp-candidate
-      else crit = -log(err) / dof; 
+      else crit = (log(err_cand) - log(err_orig)) / sqrt(dof_cand - dof_orig); 
     } 
 
     // debug
     if (PRINT_CANDIDATES) {
-      printf("  Elem (%g, %g): cand (%d %d %d), err = %g, dof_added = %d, crit = %g\n", 
+      printf("  Elem (%g, %g): cand (%d %d %d), err_reduction = %g, dof_added = %d, crit = %g\n", 
              e->x1, e->x2, cand_list[i][0], cand_list[i][1], cand_list[i][2], 
-             err, dof, crit);
+             err_orig - err_cand, dof_cand - dof_orig, crit);
     }
 
-    if (crit > crit_max) {
-      crit_max = crit;
+    if (crit < crit_min) {
+      crit_min = crit;
       choice = i;
     }
   }
