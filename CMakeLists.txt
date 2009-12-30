@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-set(WITH_PYTHON yes)
+set(WITH_PYTHON no)
 set(DEBUG no)
 set(RELEASE yes)
 set(WITH_TESTS yes)
