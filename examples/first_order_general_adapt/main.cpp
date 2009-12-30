@@ -100,7 +100,7 @@ int main() {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
 
     // Newton's loop on fine mesh
-    success = newton(0, dp, mesh_ref, TOL_NEWTON_REF, iter_num);
+    success = newton(MATRIX_SOLVER, dp, mesh_ref, TOL_NEWTON_REF, iter_num);
     if (!success) error("Newton's method did not converge."); 
     printf("Finished fine mesh Newton's iteration (%d iter).\n", 
            iter_num);

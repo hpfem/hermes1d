@@ -421,6 +421,8 @@ int solve_linear_system_cg(int solver, Matrix* A, double *b,
   // r = b - A*x0
   mat_dot(A, x, help_vec, n_dof);
   for (int i=0; i < n_dof; i++) r[i] = b[i] - help_vec[i];
+  // storing vector 'x0' in 'b' because 'x' will contain the solution
+  for (int i=0; i < n_dof; i++) b[i] = x[i];
   // p = r
   for (int i=0; i < n_dof; i++) p[i] = r[i];
 
@@ -447,6 +449,11 @@ int solve_linear_system_cg(int solver, Matrix* A, double *b,
   else flag = 0;
   tol = tol_current;
   max_iter = iter;
+  // switching 'x' and 'b' because the user expects solution in 'b'
+  // and 'x' unchanged
+  double *h = x;
+  x = b;
+  b = h;
   return flag;
 }
 
@@ -468,10 +475,11 @@ void copy_vector_to_mesh(double *y, Mesh *mesh) {
 }
 
 // Newton's iteration
-int newton(int solver, DiscreteProblem *dp, Mesh *mesh, 
-           double tol_newton, int &iter_num) 
+int newton(int matrix_solver, DiscreteProblem *dp, Mesh *mesh, 
+           double tol_newton, int &newton_iter_num, 
+           double matrix_solver_tol) 
 {
-  iter_num = 1;
+  newton_iter_num = 1;
   int n_dof = mesh->get_n_dof();
   double *y = new double[n_dof];
   if (y == NULL) error("vector y could not be allocated in newton().");
@@ -504,24 +512,24 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
     //          here because sometimes the initial
     //          residual on fine mesh is too small
     printf("Residual norm: %.15f\n", res_norm);
-    if(res_norm < tol_newton && iter_num > 1) break;
+    if(res_norm < tol_newton && newton_iter_num > 1) break;
 
     // changing sign of vector res
     for(int i=0; i<n_dof; i++) res[i]*= -1;
 
     // solving the matrix system
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
-    if (solver == 0) solve_linear_system_lu((CooMatrix*)mat, res);
-    if (solver == 1) solve_linear_system_umfpack((CooMatrix*)mat, res);
-    if (solver == 2) { 
+    if (matrix_solver == 0) solve_linear_system_lu((CooMatrix*)mat, res);
+    if (matrix_solver == 1) solve_linear_system_umfpack((CooMatrix*)mat, res);
+    if (matrix_solver == 2) { 
       // 'y' corresponds to the last solution. It is used as an 
       // initial condition for the iterative method
-      double tol = 1e-6;
       int max_iter = 150; 
-      int flag = solve_linear_system_cg(solver, (CooMatrix*)mat, 
+      int flag = solve_linear_system_cg(matrix_solver, (CooMatrix*)mat, 
                                         res, y, n_dof, 
-                                        tol, max_iter);
-      printf("CG finished in %d iterations.\n", max_iter);
+                                        matrix_solver_tol, max_iter);
+      printf("CG made %d iterations (tol = %g)\n", max_iter, matrix_solver_tol);
+      if(flag == 0) error("CG did not converge.");
     }
 
     // updating vector y by new solution which is in res
@@ -530,8 +538,8 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
     // copy coefficients from vector y to elements
     copy_vector_to_mesh(y, mesh);
 
-    iter_num++;
-    if (iter_num >= MAX_NEWTON_ITER_NUM) 
+    newton_iter_num++;
+    if (newton_iter_num >= MAX_NEWTON_ITER_NUM) 
       return 0; // no success
   }
 

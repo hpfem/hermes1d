@@ -15,7 +15,7 @@ double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Matrix solver
-const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
+const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
                                         // 1... UMFPACK
                                         // 2... CG (no preconditioning)
 
@@ -147,7 +147,7 @@ int main() {
              i, mesh_ref_local->assign_dofs());
 
       // Newton's loop on the FTR mesh
-      success = newton(0, dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
+      success = newton(MATRIX_SOLVER, dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
       if (!success) error("Newton's method did not converge."); 
       //printf("Elem [%d]: finished fine mesh Newton's iteration (%d iter).\n", 
       //       i, iter_num);

@@ -121,7 +121,7 @@ int main() {
              i, mesh_ref_local->assign_dofs());
 
       // Newton's loop on the FTR mesh
-      success = newton(0, dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
+      success = newton(MATRIX_SOLVER, dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
       if (!success) error("Newton's method did not converge."); 
       printf("Elem [%d]: finished fine mesh Newton's iteration (%d iter).\n", 
              i, iter_num);
