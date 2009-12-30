@@ -55,7 +55,12 @@ double time_ctrl[N_ctrl] =
 double alpha_ctrl[N_ctrl] = {0, 0, 0, 0};
 double zeta_ctrl[N_ctrl] = {0, 0, 0, 0};
 
-// Error tolerance
+// Matrix solver
+const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
+                                        // 1... UMFPACK
+                                        // 2... CG (no preconditioning)
+
+// Stopping criteria for Newton
 const double TOL_NEWTON = 1e-5;        // tolerance for the Newton's method
 
 // ********************************************************************
@@ -74,7 +79,7 @@ void compute_trajectory(Mesh *mesh, DiscreteProblem *dp)
 
   // Newton's loop
   int success, iter_num;
-  success = newton(0, dp, mesh, TOL_NEWTON, iter_num);
+  success = newton(MATRIX_SOLVER, dp, mesh, TOL_NEWTON, iter_num);
   if (!success) error("Newton's method did not converge."); 
   printf("Finished Newton's iteration (%d iter).\n", iter_num);
 }

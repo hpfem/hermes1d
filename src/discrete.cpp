@@ -6,6 +6,8 @@
 #include "discrete.h"
 #include "solver_umfpack.h"
 #include "comprow_double.h"
+#include "ilupre_double.h"
+#include "IML/cg.h"
 
 DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
@@ -340,14 +342,112 @@ void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
   assemble(mesh, void_mat, res, 2);
 } 
 
+/* FAILED ATTEMPT TO USE SparseLib++ and IML++
 void solve_linear_system_iter(int solver, Matrix* mat, double *res)
 {
+  // creating matrix
   CompRow_Mat_double *m;
   double val[12] = {1,2 , 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
   int colind[12] = {0, 1, 4, 0, 1, 2, 1, 2, 4, 3, 0, 4};
   int rowptr[6] = {0, 3, 6, 9, 10, 12};
   m = new CompRow_Mat_double(5, 5, 12, val, rowptr, colind);
+
+  // creating initial guess
+  double* x = new double[5];
+
+  // creating ILU preconditioner
+  CompCol_ILUPreconditioner_double D(*m);
+
+  // solving with CG
+  double tol = 1e-6;
+  int result, max_iter = 150;
+  result = CG(*m, x, res, D, max_iter, tol);
+  
+  printf("CG flag: %d\n", result);
+  printf("CG iterations: %d\n", max_iter);
+  printf("CG tolerance achieved: %g\n", tol);
+
+
   error("notimplemented yet.");
+}
+*/
+
+ // matrix vector multiplication
+void mat_dot(Matrix* A, double* x, double* result, int n_dof)
+{
+  A->times_vector(x, result, n_dof);
+}
+
+// vector vector multiplication
+double vec_dot(double* r, double* s, int n_dof) 
+{
+  double result = 0;
+  for (int i=0; i < n_dof; i++) result += r[i]*s[i];
+  return result;
+}
+
+// LU decomposition (default choice in Hermes1D)
+void solve_linear_system_lu(Matrix* coo_mat, double *res)
+{
+  // initializing dense matrix using a coordinate matrix
+  DenseMatrix *dense_mat = new DenseMatrix((CooMatrix*)coo_mat);
+
+  // replace matrix with its LU decomposition
+  // permutations caused by partial pivoting are 
+  // recorded in the vector indx
+  int size = coo_mat->get_size();
+  int *indx = new int[size];
+  double d;
+  ludcmp(dense_mat->mat, size, indx, &d);
+
+  // solve system
+  lubksb(dense_mat->mat, size, indx, res);
+}
+
+
+// Standard CG method 
+// NOTE: The choice of the initial vector x0 matters a lot, 
+// this should always be the last solution
+int solve_linear_system_cg(int solver, Matrix* A, double *b, 
+                              double *x, int n_dof, double &tol, 
+                              int &max_iter)
+{
+  double *r = new double[n_dof];
+  double *p = new double[n_dof];
+  double *help_vec = new double[n_dof];
+  if (r == NULL || p == NULL || help_vec == NULL) {
+    error("a vector could not be allocated in solve_linear_system_iter().");
+  }
+  // r = b - A*x0
+  mat_dot(A, x, help_vec, n_dof);
+  for (int i=0; i < n_dof; i++) r[i] = b[i] - help_vec[i];
+  // p = r
+  for (int i=0; i < n_dof; i++) p[i] = r[i];
+
+  // CG iteration
+  int iter = 0;
+  double tol_current;
+  while (1) {
+    mat_dot(A, p, help_vec, n_dof);
+    double r_times_r = vec_dot(r, r, n_dof);
+    double alpha = r_times_r / vec_dot(p, help_vec, n_dof); 
+    for (int i=0; i < n_dof; i++) {
+      x[i] += alpha*p[i];
+      r[i] -= alpha*help_vec[i];
+    }
+    double r_times_r_new = vec_dot(r, r, n_dof);
+    iter++;
+    tol_current = sqrt(r_times_r_new);
+    if (tol_current < tol || iter >= max_iter) break;
+    double beta = r_times_r_new/r_times_r;
+    for (int i=0; i < n_dof; i++) p[i] = r[i] + beta*p[i];
+  }
+  int flag;
+  if (tol_current <= tol) flag = 1;
+  else flag = 0;
+  tol = tol_current;
+  max_iter = iter;
+  return flag;
 }
 
 void copy_mesh_to_vector(Mesh *mesh, double *y) {
@@ -411,8 +511,18 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
 
     // solving the matrix system
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
-    if (solver == 0) solve_linear_system_umfpack((CooMatrix*)mat, res);
-    else solve_linear_system_iter(solver, (CooMatrix*)mat, res);
+    if (solver == 0) solve_linear_system_lu((CooMatrix*)mat, res);
+    if (solver == 1) solve_linear_system_umfpack((CooMatrix*)mat, res);
+    if (solver == 2) { 
+      // 'y' corresponds to the last solution. It is used as an 
+      // initial condition for the iterative method
+      double tol = 1e-6;
+      int max_iter = 150; 
+      int flag = solve_linear_system_cg(solver, (CooMatrix*)mat, 
+                                        res, y, n_dof, 
+                                        tol, max_iter);
+      printf("CG finished in %d iterations.\n", max_iter);
+    }
 
     // updating vector y by new solution which is in res
     for(int i=0; i<n_dof; i++) y[i] += res[i];

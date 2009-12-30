@@ -14,6 +14,11 @@ int N_elem = 3;                         // Number of elements
 double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
+// Matrix solver
+const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
+                                        // 1... UMFPACK
+                                        // 2... CG (no preconditioning)
+
 // Stopping criteria for Newton
 double TOL_NEWTON_COARSE = 1e-10;        // Coarse mesh
 double TOL_NEWTON_REF = 1e-10;           // Reference mesh
@@ -92,7 +97,7 @@ int main() {
  
     // Newton's loop on coarse mesh
     int success, iter_num;
-    success = newton(0, dp, mesh, TOL_NEWTON_COARSE, iter_num);
+    success = newton(MATRIX_SOLVER, dp, mesh, TOL_NEWTON_COARSE, iter_num);
     if (!success) error("Newton's method did not converge."); 
     printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
            iter_num);

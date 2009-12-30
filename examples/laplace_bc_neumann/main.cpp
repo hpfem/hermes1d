@@ -17,6 +17,12 @@ int P_init = 1;                        // initial polynomal degree
 double Val_dir_left = 0;               // Dirichlet condition left
 double Val_neum_right = 0;             // Neumann condition right
                                        // (derivative at end point)
+
+// Matrix solver
+const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
+                                        // 1... UMFPACK
+                                        // 2... CG (no preconditioning)
+
 // Tolerance for the Newton's method
 double TOL_NEWTON = 1e-5;
 
@@ -45,7 +51,7 @@ int main() {
 
   // Newton's loop
   int success, iter_num;
-  success = newton(0, dp, mesh, TOL_NEWTON, iter_num);
+  success = newton(MATRIX_SOLVER, dp, mesh, TOL_NEWTON, iter_num);
   if (!success) error("Newton's method did not converge."); 
   printf("Finished Newton's iteration (%d iter).\n", iter_num);
 

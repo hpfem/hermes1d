@@ -34,7 +34,12 @@ int N_elem = 1000;          // number of elements
 double A = 0, B = l;        // domain end points
 int P_init = 2;             // initial polynomal degree
 
-// Error tolerance
+// Matrix solver
+const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
+                                        // 1... UMFPACK
+                                        // 2... CG (no preconditioning)
+
+// Stopping criterion for Newton
 double TOL_NEWTON = 1e-2;   // tolerance for the Newton's method on basic mesh
 
 // Boundary conditions
@@ -83,7 +88,7 @@ int main() {
 
     // Newton's loop
     int success, iter_num;
-    success = newton(0, dp, mesh, TOL_NEWTON, iter_num);
+    success = newton(MATRIX_SOLVER, dp, mesh, TOL_NEWTON, iter_num);
     if (!success) error("Newton's method did not converge."); 
     printf("Finished Newton's iteration (%d iter).\n", iter_num);
 

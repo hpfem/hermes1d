@@ -27,8 +27,13 @@ double DAMPING;          // DAMPING is an artificial param. used to
                          // reduce the strength of the nonlinearity. 
                          // (The nonlinearity is multiplied with it.)
 
+// Matrix solver
+const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
+                                        // 1... UMFPACK
+                                        // 2... CG (no preconditioning)
+
 // Error tolerance
-double TOL_NEWTON = 1e-5;// tolerance for the Newton's method 
+double TOL_NEWTON = 1e-5; // tolerance for the Newton's method 
 
 // Boundary conditions
 double Val_dir_left_1 = 1;
@@ -69,7 +74,7 @@ int main() {
 
   // Newton's loop
   int success, iter_num;
-  success = newton(0, dp, mesh, TOL_NEWTON, iter_num);
+  success = newton(MATRIX_SOLVER, dp, mesh, TOL_NEWTON, iter_num);
   if (!success) error("Newton's method did not converge."); 
   printf("Finished Newton's iteration (%d iter).\n", iter_num);
 
