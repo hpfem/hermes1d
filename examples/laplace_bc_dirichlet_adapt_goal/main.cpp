@@ -14,20 +14,29 @@ int N_elem = 3;                         // Number of elements
 double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
-// Matrix solver
+// JFNK or classical Newton?
+const int JFNK = 1;                     // 0... classical Newton
+                                        // 1... JFNK  
+                                        // Only relevant for JFNK:
+const double JFNK_EPSILON = 1e-6;       // Parameter in the JFNK finite difference
+
+// Matrix solver                        // Used if JFNK == 0
 const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
                                         // 1... UMFPACK
                                         // 2... CG (no preconditioning)
-
+                                        // Only relevant for iterative matrix solvers:
+const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
+const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
+ 
 // Stopping criteria for Newton
-double TOL_NEWTON_COARSE = 1e-10;       // Coarse mesh
-double TOL_NEWTON_REF = 1e-10;          // Reference mesh
+double TOL_NEWTON_COARSE = 1e-7;       // Coarse mesh
+double TOL_NEWTON_REF = 1e-6;          // Reference mesh
 
 // Adaptivity
 const int GOAL_ORIENTED = 1;            // 0... standard adaptivity in norm
                                         // 1... goal-oriented adaptivity 
-const double X_QOI = 0.9*M_PI;          // value of u[0] at X_QOI is the 
-                                        // quantity of interest
+const double X_QOI = 0.9*M_PI;          // Value of u[0] at X_QOI is the 
+                                        // Quantity of interest
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 1... h-adaptivity
                                         // 2... p-adaptivity
@@ -122,12 +131,20 @@ int main() {
     printf("N_dof = %d\n", mesh->get_n_dof());
  
     // Newton's loop on coarse mesh
-    int success, iter_num;
-    success = newton(MATRIX_SOLVER, dp, mesh, TOL_NEWTON_COARSE, iter_num);
-    if (!success) error("Newton's method did not converge."); 
-    //printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
-    //       iter_num);
+    int success;
+    if(JFNK == 0) {
+      success = newton(dp, mesh, 
+                       MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+                       TOL_NEWTON_COARSE);
+      if (!success) error("Newton's method did not converge.");
+    }
+    else {
+      success = jfnk_cg(dp, mesh, 
+                        MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
+                        TOL_NEWTON_COARSE, JFNK_EPSILON);
+      if (!success) error("JFNK did not converge.");
 
+    }
     // For every element perform its fast trial refinement (FTR),
     // calculate the norm of the difference between the FTR
     // solution and the coarse mesh solution, and store the
@@ -147,10 +164,18 @@ int main() {
              i, mesh_ref_local->assign_dofs());
 
       // Newton's loop on the FTR mesh
-      success = newton(MATRIX_SOLVER, dp, mesh_ref_local, TOL_NEWTON_REF, iter_num);
-      if (!success) error("Newton's method did not converge."); 
-      //printf("Elem [%d]: finished fine mesh Newton's iteration (%d iter).\n", 
-      //       i, iter_num);
+      if(JFNK == 0) {
+        success = newton(dp, mesh_ref_local, 
+                         MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
+                         TOL_NEWTON_COARSE);
+        if (!success) error("Newton's method did not converge.");
+      }
+      else {
+        success = jfnk_cg(dp, mesh_ref_local, 
+			  MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
+                          TOL_NEWTON_REF, JFNK_EPSILON);
+        if (!success) error("JFNK did not converge.");
+      }
 
       // Print FTR solution (enumerated) 
       Linearizer *lxx = new Linearizer(mesh_ref_local);

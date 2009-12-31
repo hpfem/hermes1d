@@ -18,6 +18,14 @@ int N_elem = 2;                         // Number of elements
 double A = -M_PI, B = M_PI;              // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
+// Matrix solver                        // Used if JFNK == 0
+const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
+                                        // 1... UMFPACK
+                                        // 2... CG (no preconditioning)
+                                        // Only relevant for iterative matrix solvers:
+const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
+const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
+
 // Stopping criteria for Newton
 double TOL_NEWTON_COARSE = 1e-6;        // Coarse mesh
 double TOL_NEWTON_REF = 1e-6;           // Reference mesh
@@ -107,11 +115,10 @@ int main() {
   dp->add_vector_form(0, residual);
 
   // Initial Newton's loop on coarse mesh
-  int success, iter_num;
-  success = newton(0, dp, mesh, TOL_NEWTON_COARSE, iter_num);
+  int success = newton(dp, mesh, 
+                       MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+                       TOL_NEWTON_COARSE);
   if (!success) error("Newton's method did not converge."); 
-  printf("Finished initial coarse mesh Newton's iteration (%d iter).\n", 
-         iter_num);
 
   // Replicate coarse mesh including dof arrays
   Mesh *mesh_ref = mesh->replicate();
@@ -135,10 +142,10 @@ int main() {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
 
     // Newton's loop on fine mesh
-    success = newton(0, dp, mesh_ref, TOL_NEWTON_REF, iter_num);
+    success = newton(dp, mesh_ref, 
+                     MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+                     TOL_NEWTON_REF);
     if (!success) error("Newton's method did not converge."); 
-    printf("Finished fine mesh Newton's iteration (%d iter).\n", 
-           iter_num);
 
     // Starting with second adaptivity step, obtain new coarse 
     // mesh solution via Newton's method. Initial condition is 
@@ -146,10 +153,10 @@ int main() {
     if (adapt_iterations > 1) {
 
       // Newton's loop on coarse mesh
-      success = newton(0, dp, mesh, TOL_NEWTON_COARSE, iter_num);
-      if (!success) error("Newton's method did not converge."); 
-      printf("Finished coarse mesh Newton's iteration (%d iter).\n", 
-             iter_num);
+      success = newton(dp, mesh, 
+                       MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+                       TOL_NEWTON_COARSE);
+      if (!success) error("Newton's method did not converge.");
     }
 
     // In the next step, estimate element errors based on 

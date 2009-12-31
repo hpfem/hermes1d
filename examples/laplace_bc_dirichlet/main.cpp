@@ -21,6 +21,9 @@ double Val_dir_right = 1;               // Dirichlet condition right
 const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
                                         // 1... UMFPACK
                                         // 2... CG (no preconditioning)
+                                        // Only relevant for iterative matrix solvers:
+const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
+const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
 
 // Tolerance for the Newton's method
 double TOL_NEWTON = 1e-5;
@@ -49,10 +52,10 @@ int main() {
   dp->add_vector_form(0, residual);
 
   // Newton's loop
-  int success, iter_num;
-  success = newton(MATRIX_SOLVER, dp, mesh, TOL_NEWTON, iter_num);
+  int success = newton(dp, mesh, 
+                       MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+                       TOL_NEWTON);
   if (!success) error("Newton's method did not converge."); 
-  printf("Finished Newton's iteration (%d iter).\n", iter_num);
 
   // Plot the solution
   Linearizer l(mesh);
