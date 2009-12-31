@@ -23,8 +23,9 @@ const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
 const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
 
 // Stopping criteria for Newton
-double TOL_NEWTON_COARSE = 1e-10;        // Coarse mesh
-double TOL_NEWTON_REF = 1e-10;           // Reference mesh
+const double NEWTON_TOL_COARSE = 1e-10;        // Coarse mesh
+const double NEWTON_TOL_REF = 1e-10;           // Reference mesh
+const int NEWTON_MAXITER = 150;
 
 // Adaptivity
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
@@ -99,10 +100,8 @@ int main() {
     printf("N_dof = %d\n", mesh->get_n_dof());
  
     // Newton's loop on coarse mesh
-    int success = newton(dp, mesh, 
-                         MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-                         TOL_NEWTON_COARSE);
-    if (!success) error("Newton's method did not converge."); 
+    newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+           NEWTON_TOL_COARSE, NEWTON_MAXITER);
 
     // For every element perform its fast trial refinement (FTR),
     // calculate the norm of the difference between the FTR
@@ -122,10 +121,8 @@ int main() {
              i, mesh_ref_local->assign_dofs());
 
       // Newton's loop on the FTR mesh
-      success = newton(dp, mesh_ref_local, 
-                       MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-                       TOL_NEWTON_REF);
-      if (!success) error("Newton's method did not converge."); 
+      newton(dp, mesh_ref_local, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+             NEWTON_TOL_REF, NEWTON_MAXITER);
 
       // Print FTR solution (enumerated) 
       Linearizer *lxx = new Linearizer(mesh_ref_local);

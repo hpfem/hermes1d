@@ -475,10 +475,10 @@ void copy_vector_to_mesh(double *y, Mesh *mesh) {
 }
 
 // Newton's iteration
-int newton(DiscreteProblem *dp, Mesh *mesh, 
-           int matrix_solver, double matrix_solver_tol, 
-           int matrix_solver_maxiter,
-           double newton_tol) 
+void newton(DiscreteProblem *dp, Mesh *mesh, 
+            int matrix_solver, double matrix_solver_tol, 
+            int matrix_solver_maxiter,
+            double newton_tol, int newton_maxiter) 
 {
   int newton_iter_num = 0;
   int n_dof = mesh->get_n_dof();
@@ -539,16 +539,14 @@ int newton(DiscreteProblem *dp, Mesh *mesh,
     copy_vector_to_mesh(y, mesh);
 
     newton_iter_num++;
-    if (newton_iter_num >= MAX_NEWTON_ITER_NUM) 
-      return 0; // no success
+    if (newton_iter_num >= newton_maxiter) {
+      error("Newton's iteration did not converge.");
+    }
   }
 
   if (mat != NULL) delete mat;
   if (y != NULL) delete [] y;
   if (res != NULL) delete [] res;
-
-  // finished successfully
-  return 1;
 }
 
 void mat_dot_jfnk(DiscreteProblem *dp, Mesh *mesh, double* x,
@@ -571,9 +569,9 @@ void mat_dot_jfnk(DiscreteProblem *dp, Mesh *mesh, double* x,
 // CG method adjusted for JFNK
 // NOTE: The choice of the initial vector x0 matters a lot, 
 // this should always be the last solution
-int jfnk_cg(DiscreteProblem *dp, Mesh *mesh, 
+void jfnk_cg(DiscreteProblem *dp, Mesh *mesh, 
             double matrix_solver_tol, int matrix_solver_maxiter, 
-            double tol_jfnk, double jfnk_epsilon)
+	     double jfnk_epsilon, double tol_jfnk, int jfnk_maxiter)
 {
   int n_dof = mesh->get_n_dof();
   // allocation for JFNK
@@ -664,9 +662,8 @@ int jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
     copy_vector_to_mesh(y_orig, mesh);
 
     jfnk_iter_num++;
-    if (jfnk_iter_num >= MAX_NEWTON_ITER_NUM) {
+    if (jfnk_iter_num >= jfnk_maxiter) {
       error("JFNK did not converge.");
-      return 0; // no success
     }
   }
 
@@ -684,8 +681,5 @@ int jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
   if (r != NULL) delete [] r;
   if (p != NULL) delete [] p;
   if (help_vec != NULL) delete [] help_vec;
-
-  // success
-  return 1;
 }
 

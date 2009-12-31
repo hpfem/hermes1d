@@ -23,8 +23,9 @@ const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
 const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
 const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
 
-// Tolerance for the Newton's method
-double TOL_NEWTON = 1e-5;
+// Newton's method
+const double NEWTON_TOL = 1e-5;
+const int NEWTON_MAXITER = 150;
 
 // Function f(y, x)
 double f(double y, double x) {
@@ -53,10 +54,8 @@ int main() {
   dp->add_vector_form(0, residual);
 
   // Newton's loop
-  int success = newton(dp, mesh, 
-                        MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-                        TOL_NEWTON);
-  if (!success) error("Newton's method did not converge."); 
+  newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+         NEWTON_TOL, NEWTON_MAXITER);
 
   // Plot the solution
   Linearizer l(mesh);

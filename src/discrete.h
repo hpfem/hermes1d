@@ -89,13 +89,13 @@ void element_shapefn(double a, double b,
 void element_shapefn_point(double x_ref, double a, double b, 
 			   int k, double &val, double &der);
 
-int newton(DiscreteProblem *dp, Mesh *mesh, 
-           int matrix_solver, double matrix_solver_tol, 
-           int matrix_solver_maxiter,
-           double newton_tol); 
+void newton(DiscreteProblem *dp, Mesh *mesh, 
+            int matrix_solver, double matrix_solver_tol, 
+            int matrix_solver_maxiter,
+            double newton_tol, int newton_maxiter); 
 
-int jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
-            double matrix_solver_tol, int matrix_solver_maxiter,  
-            double jfnk_tol, double jfnk_epsilon);
+void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
+             double matrix_solver_tol, int matrix_solver_maxiter,  
+	     double jfnk_epsilon, double jfnk_tol, int jfnk_maxiter);
 
 #endif

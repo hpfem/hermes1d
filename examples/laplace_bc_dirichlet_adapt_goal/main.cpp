@@ -28,9 +28,10 @@ const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
 const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
 const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
  
-// Stopping criteria for Newton
-double TOL_NEWTON_COARSE = 1e-7;       // Coarse mesh
-double TOL_NEWTON_REF = 1e-6;          // Reference mesh
+// Newton's method
+double NEWTON_TOL_COARSE = 1e-7;       // Coarse mesh
+double NEWTON_TOL_REF = 1e-6;          // Reference mesh
+const int NEWTON_MAXITER = 150;
 
 // Adaptivity
 const int GOAL_ORIENTED = 1;            // 0... standard adaptivity in norm
@@ -133,17 +134,12 @@ int main() {
     // Newton's loop on coarse mesh
     int success;
     if(JFNK == 0) {
-      success = newton(dp, mesh, 
-                       MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-                       TOL_NEWTON_COARSE);
-      if (!success) error("Newton's method did not converge.");
+      newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+             NEWTON_TOL_COARSE, NEWTON_MAXITER);
     }
     else {
-      success = jfnk_cg(dp, mesh, 
-                        MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
-                        TOL_NEWTON_COARSE, JFNK_EPSILON);
-      if (!success) error("JFNK did not converge.");
-
+      jfnk_cg(dp, mesh, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
+              JFNK_EPSILON, NEWTON_TOL_COARSE, NEWTON_MAXITER);
     }
     // For every element perform its fast trial refinement (FTR),
     // calculate the norm of the difference between the FTR
@@ -165,16 +161,12 @@ int main() {
 
       // Newton's loop on the FTR mesh
       if(JFNK == 0) {
-        success = newton(dp, mesh_ref_local, 
-                         MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
-                         TOL_NEWTON_COARSE);
-        if (!success) error("Newton's method did not converge.");
+        newton(dp, mesh_ref_local, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
+               NEWTON_TOL_COARSE, NEWTON_MAXITER);
       }
       else {
-        success = jfnk_cg(dp, mesh_ref_local, 
-			  MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
-                          TOL_NEWTON_REF, JFNK_EPSILON);
-        if (!success) error("JFNK did not converge.");
+        jfnk_cg(dp, mesh_ref_local, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
+                JFNK_EPSILON, NEWTON_TOL_REF, NEWTON_MAXITER);
       }
 
       // Print FTR solution (enumerated) 
