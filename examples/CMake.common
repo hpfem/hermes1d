@@ -5,3 +5,5 @@ include_directories(${UMFPACK_INCLUDE_DIR} ${AMD_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} ${HERMES_BIN})
 target_link_libraries(${PROJECT_NAME} ${UMFPACK_LIBRARY}
             ${AMD_LIBRARY} ${BLAS_LIBRARIES})
+
+target_link_libraries(${PROJECT_NAME} sparse mv spblas)

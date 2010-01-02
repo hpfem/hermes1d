@@ -7,9 +7,12 @@ set(SRC
 enable_language(Fortran)
 find_package(UMFPACK REQUIRED)
 find_package(BLAS REQUIRED)
+add_definitions(-DCOMPLEX=std::complex<double>)
+include_directories(SparseLib/include SparseLib/mv/include)
 include_directories(${UMFPACK_INCLUDE_DIR} ${AMD_INCLUDE_DIR})
 
 add_library(${HERMES_BIN} SHARED ${SRC})
+target_link_libraries(${HERMES_BIN} ${UMFPACK_LIBRARY} ${AMD_LIBRARY} ${BLAS_LIBRARIES})
 if(DEBUG)
     set_target_properties(hermes1d-debug PROPERTIES COMPILE_FLAGS
         ${CMAKE_CXX_FLAGS_DEBUG})

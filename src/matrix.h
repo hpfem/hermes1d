@@ -147,6 +147,7 @@ public:
     virtual double get(int m, int n) = 0;
     virtual void copy_into(Matrix *m) = 0;
     virtual void print() = 0;
+    virtual void times_vector(double* vec, double* result, int rank) = 0;
 };
 
 class Triple {
@@ -245,6 +246,15 @@ class CooMatrix : public Matrix {
             }
         }
 
+        virtual void times_vector(double* vec, double* result, int rank) {
+	    for (int i=0; i < rank; i++) result[i] = 0;
+            Triple *t = this->list;
+            while (t != NULL) {
+                result[t->i] += t->v * vec[t->j];
+                t = t->next;
+            }
+        }
+
     private:
         int size;
         /*
@@ -319,14 +329,18 @@ class DenseMatrix : public Matrix {
             }
         }
 
+        virtual void times_vector(double* vec, double* result, int rank) {
+	    error("times_vector() in dense matrix not implemented yet.");
+        }
+
         // Return the internal matrix.
         double **get_mat() {
             return this->mat;
         }
+        double **mat;
 
     private:
         int size;
-        double **mat;
 
 };
 
@@ -401,6 +415,10 @@ class CSRMatrix : public Matrix {
                 printf("%d ", this->IA[i]);
             }
             printf("\n");
+        }
+
+        virtual void times_vector(double* vec, double* result, int rank) {
+	    error("times_vector() in CSR matrix not implemented yet.");
         }
 
         int *get_IA() {

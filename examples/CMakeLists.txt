@@ -1,6 +1,7 @@
 enable_language(Fortran)
 find_package(UMFPACK REQUIRED)
 find_package(BLAS REQUIRED)
+link_directories(../../src/SparseLib/lib/)
 
 add_subdirectory(first_order_general)
 add_subdirectory(laplace_bc_dirichlet)

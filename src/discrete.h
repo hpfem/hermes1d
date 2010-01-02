@@ -49,9 +49,9 @@ public:
     void process_surf_forms(Mesh *mesh, Matrix *mat, double *res, 
                             int matrix_flag, int bdy_index);
     void assemble(Mesh *mesh, Matrix *mat, double *res, int matrix_flag);
-    void assemble_matrix_and_vector(Mesh *mesh, Matrix *mat, double *res); 
-    void assemble_matrix(Mesh *mesh, Matrix *mat);
-    void assemble_vector(Mesh *mesh, double *res);
+    void assemble_jacobian_and_residual(Mesh *mesh, Matrix *mat, double *res); 
+    void assemble_jacobian(Mesh *mesh, Matrix *mat);
+    void assemble_residual(Mesh *mesh, double *res);
 
 private:
 	struct MatrixFormVol {
@@ -89,7 +89,13 @@ void element_shapefn(double a, double b,
 void element_shapefn_point(double x_ref, double a, double b, 
 			   int k, double &val, double &der);
 
-int newton(int solver, DiscreteProblem *dp, Mesh *mesh, 
-           double tol_newton, int &iter_num); 
+void newton(DiscreteProblem *dp, Mesh *mesh, 
+            int matrix_solver, double matrix_solver_tol, 
+            int matrix_solver_maxiter,
+            double newton_tol, int newton_maxiter); 
+
+void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
+             double matrix_solver_tol, int matrix_solver_maxiter,  
+	     double jfnk_epsilon, double jfnk_tol, int jfnk_maxiter);
 
 #endif

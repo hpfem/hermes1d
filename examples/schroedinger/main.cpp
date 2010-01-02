@@ -11,8 +11,8 @@ double l = 0;
 
 double lhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                 void *user_data)
 {
     double val = 0;
@@ -27,8 +27,8 @@ double lhs(int num, double *x, double *weights,
 
 double rhs(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                 void *user_data)
 {
   double val = 0;
@@ -41,8 +41,8 @@ double rhs(int num, double *x, double *weights,
 double E;
 
 double residual(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_PTS_NUM], 
+                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                 double *v, double *dvdx, void *user_data)
 {
     double *u = &u_prev[0][0];
@@ -97,11 +97,8 @@ int main(int argc, char* argv[]) {
   DenseMatrix *mat2 = new DenseMatrix(N_dof);
   double *y_prev = new double[N_dof];
 
-  // zero initial condition for the Newton's method
-  for(int i=0; i<N_dof; i++) y_prev[i] = 0; 
-
-  dp1->assemble_matrix(mesh, mat1, y_prev);
-  dp2->assemble_matrix(mesh, mat2, y_prev);
+  dp1->assemble_matrix(mesh, mat1);
+  dp2->assemble_matrix(mesh, mat2);
 
   printf("Importing hermes1d\n");
   // Initialize Python
@@ -118,15 +115,15 @@ int main(int argc, char* argv[]) {
   cmd("E, v = eigs[0]");
   //cmd("print 'v[0]', v[0]");
   //cmd("print E");
-  double *v;
+  //double *v;
   int n;
-  numpy2c_double_inplace(get_object("v"), &v, &n);
+  //numpy2c_double_inplace(get_object("v"), &v, &n);
 
   double *res = new double[N_dof];
   E = py2c_double(get_object("E"));
   printf("E=%.10f\n", E);
   E = -0.5;
-  dp3->assemble_vector(mesh, res, v);
+  dp3->assemble_vector(mesh, res);
   // calculate L2 norm of residual vector
   double res_norm = 0;
   for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
@@ -136,10 +133,10 @@ int main(int argc, char* argv[]) {
 
   Linearizer l(mesh);
   const char *out_filename = "solution.gp";
-  l.plot_solution(out_filename, v);
+  l.plot_solution(out_filename);
 
   printf("still ok\n");
-  insert_object("mesh", c2py_mesh(&mesh));
+  insert_object("mesh", c2py_mesh(mesh));
   printf("2\n");
   cmd("from plot import plot_eigs, plot_file");
   cmd("plot_eigs(mesh, eigs)");

@@ -5,6 +5,9 @@
 
 #include "discrete.h"
 #include "solver_umfpack.h"
+#include "comprow_double.h"
+#include "ilupre_double.h"
+#include "IML/cg.h"
 
 DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
@@ -322,27 +325,136 @@ void DiscreteProblem::assemble(Mesh *mesh, Matrix *mat, double *res,
 } 
 
 // construct both the Jacobi matrix and the residual vector
-void DiscreteProblem::assemble_matrix_and_vector(Mesh *mesh, 
+void DiscreteProblem::assemble_jacobian_and_residual(Mesh *mesh, 
                       Matrix *mat, double *res) {
   assemble(mesh, mat, res, 0);
 } 
 
 // construct Jacobi matrix only
-void DiscreteProblem::assemble_matrix(Mesh *mesh, Matrix *mat) {
+void DiscreteProblem::assemble_jacobian(Mesh *mesh, Matrix *mat) {
   double *void_res = NULL;
   assemble(mesh, mat, void_res, 1);
 } 
 
 // construct residual vector only
-void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
+void DiscreteProblem::assemble_residual(Mesh *mesh, double *res) {
   Matrix *void_mat = NULL;
   assemble(mesh, void_mat, res, 2);
 } 
 
-void solve_linear_system_cg(Matrix* mat, double *res) 
+/* FAILED ATTEMPT TO USE SparseLib++ and IML++
+void solve_linear_system_iter(int solver, Matrix* mat, double *res)
 {
-  error("notimplemented yet.");  
+  // creating matrix
+  CompRow_Mat_double *m;
+  double val[12] = {1,2 , 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+  int colind[12] = {0, 1, 4, 0, 1, 2, 1, 2, 4, 3, 0, 4};
+  int rowptr[6] = {0, 3, 6, 9, 10, 12};
+  m = new CompRow_Mat_double(5, 5, 12, val, rowptr, colind);
 
+  // creating initial guess
+  double* x = new double[5];
+
+  // creating ILU preconditioner
+  CompCol_ILUPreconditioner_double D(*m);
+
+  // solving with CG
+  double tol = 1e-6;
+  int result, max_iter = 150;
+  result = CG(*m, x, res, D, max_iter, tol);
+  
+  printf("CG flag: %d\n", result);
+  printf("CG iterations: %d\n", max_iter);
+  printf("CG tolerance achieved: %g\n", tol);
+
+
+  error("notimplemented yet.");
+}
+*/
+
+ // matrix vector multiplication
+void mat_dot(Matrix* A, double* x, double* result, int n_dof)
+{
+  A->times_vector(x, result, n_dof);
+}
+
+// vector vector multiplication
+double vec_dot(double* r, double* s, int n_dof) 
+{
+  double result = 0;
+  for (int i=0; i < n_dof; i++) result += r[i]*s[i];
+  return result;
+}
+
+// LU decomposition (default choice in Hermes1D)
+void solve_linear_system_lu(Matrix* coo_mat, double *res)
+{
+  // initializing dense matrix using a coordinate matrix
+  DenseMatrix *dense_mat = new DenseMatrix((CooMatrix*)coo_mat);
+
+  // replace matrix with its LU decomposition
+  // permutations caused by partial pivoting are 
+  // recorded in the vector indx
+  int size = coo_mat->get_size();
+  int *indx = new int[size];
+  double d;
+  ludcmp(dense_mat->mat, size, indx, &d);
+
+  // solve system
+  lubksb(dense_mat->mat, size, indx, res);
+}
+
+// Standard CG method starting from zero vector
+// (because we solve for the increment)
+// x... comes as right-hand side, leaves as solution
+int solve_linear_system_cg(Matrix* A, double *x, 
+                           int n_dof, double matrix_solver_tol, 
+                           int matrix_solver_maxiter)
+{
+  double *r = new double[n_dof];
+  double *p = new double[n_dof];
+  double *help_vec = new double[n_dof];
+  if (r == NULL || p == NULL || help_vec == NULL) {
+    error("a vector could not be allocated in solve_linear_system_iter().");
+  }
+  // r = b - A*x0  (where b is x and x0 = 0)
+  for (int i=0; i < n_dof; i++) r[i] = x[i];
+  // p = r
+  for (int i=0; i < n_dof; i++) p[i] = r[i];
+
+  // setting initial condition x = 0
+  for (int i=0; i < n_dof; i++) x[i] = 0;
+
+  // CG iteration
+  int iter_current = 0;
+  double tol_current;
+  while (1) {
+    mat_dot(A, p, help_vec, n_dof);
+    double r_times_r = vec_dot(r, r, n_dof);
+    double alpha = r_times_r / vec_dot(p, help_vec, n_dof); 
+    for (int i=0; i < n_dof; i++) {
+      x[i] += alpha*p[i];
+      r[i] -= alpha*help_vec[i];
+    }
+    double r_times_r_new = vec_dot(r, r, n_dof);
+    iter_current++;
+    tol_current = sqrt(r_times_r_new);
+    if (tol_current < matrix_solver_tol 
+        || iter_current >= matrix_solver_maxiter) break;
+    double beta = r_times_r_new/r_times_r;
+    for (int i=0; i < n_dof; i++) p[i] = r[i] + beta*p[i];
+  }
+  int flag;
+  if (tol_current <= matrix_solver_tol) flag = 1;
+  else flag = 0;
+  if (r != NULL) delete [] r;
+  if (p != NULL) delete [] p;
+  if (help_vec != NULL) delete [] help_vec;
+
+  printf("CG (regular) made %d iteration(s) (tol = %g)\n", 
+         iter_current, tol_current);
+
+  return flag;
 }
 
 void copy_mesh_to_vector(Mesh *mesh, double *y) {
@@ -363,22 +475,24 @@ void copy_vector_to_mesh(double *y, Mesh *mesh) {
 }
 
 // Newton's iteration
-int newton(int solver, DiscreteProblem *dp, Mesh *mesh, 
-           double tol_newton, int &iter_num) 
+void newton(DiscreteProblem *dp, Mesh *mesh, 
+            int matrix_solver, double matrix_solver_tol, 
+            int matrix_solver_maxiter,
+            double newton_tol, int newton_maxiter) 
 {
-  iter_num = 1;
+  int newton_iter_num = 0;
   int n_dof = mesh->get_n_dof();
   double *y = new double[n_dof];
   if (y == NULL) error("vector y could not be allocated in newton().");
   double *res = new double[n_dof];
   if (res == NULL)
-    error("res could not be allocated in newton().");
+    error("vector res could not be allocated in newton().");
 
   // fill vector y using dof and coeffs arrays 
   // in elements
   copy_mesh_to_vector(mesh, y);
 
-  // the iteration
+  // Newton iteration
   CooMatrix *mat = NULL;
   while (1) {
     // Reset the matrix:
@@ -386,30 +500,36 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
     mat = new CooMatrix();
 
     // construct matrix and residual vector
-    dp->assemble_matrix_and_vector(mesh, mat, res); 
+    dp->assemble_jacobian_and_residual(mesh, mat, res); 
 
     // calculate L2 norm of residual vector
     double res_norm = 0;
     for(int i=0; i<n_dof; i++) res_norm += res[i]*res[i];
     res_norm = sqrt(res_norm);
 
-    // If residual norm less than 'tol_newton', quit
+    // If residual norm less than 'newton_tol', quit
     // latest solution is in the vector y.
-    // CAUTION: at least one full iteration forced
-    //          here because sometimes the initial
-    //          residual on fine mesh is too small
+    // NOTE: at least one full iteration forced
+    //       here because sometimes the initial
+    //       residual on fine mesh is too small
     printf("Residual norm: %.15f\n", res_norm);
-    if(res_norm < tol_newton && iter_num > 1) break;
+    if(res_norm < newton_tol && newton_iter_num > 1) break;
 
     // changing sign of vector res
     for(int i=0; i<n_dof; i++) res[i]*= -1;
 
     // solving the matrix system
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
-    if (solver == 0) solve_linear_system_umfpack((CooMatrix*)mat, res);
-    else {
-      if (solver == 1) solve_linear_system_cg((CooMatrix*)mat, res);
-      else error("unknown matrix solver in newton().");
+    if (matrix_solver == 0) solve_linear_system_lu((CooMatrix*)mat, res);
+    if (matrix_solver == 1) solve_linear_system_umfpack((CooMatrix*)mat, res);
+    if (matrix_solver == 2) { 
+      // 'y' corresponds to the last solution. It is used as an 
+      // initial condition for the iterative method
+      int flag = solve_linear_system_cg((CooMatrix*)mat, 
+                                        res, n_dof, 
+                                        matrix_solver_tol, 
+                                        matrix_solver_maxiter);
+      if(flag == 0) error("CG (regular) did not converge.");
     }
 
     // updating vector y by new solution which is in res
@@ -418,19 +538,148 @@ int newton(int solver, DiscreteProblem *dp, Mesh *mesh,
     // copy coefficients from vector y to elements
     copy_vector_to_mesh(y, mesh);
 
-    iter_num++;
-    if (iter_num >= MAX_NEWTON_ITER_NUM) 
-      return 0; // no success
+    newton_iter_num++;
+    if (newton_iter_num >= newton_maxiter) {
+      error("Newton's iteration did not converge.");
+    }
   }
 
   if (mat != NULL) delete mat;
   if (y != NULL) delete [] y;
   if (res != NULL) delete [] res;
+}
 
-  // finished successfully
-  return 1;
+void mat_dot_jfnk(DiscreteProblem *dp, Mesh *mesh, double* x,
+                  double* y_orig, double* f_orig,
+                  double* y_new, double* f_new, 
+                  double* help_vec,
+                  double jfnk_epsilon, int n_dof) 
+{
+  for (int i=0; i<n_dof; i++) {
+    y_new[i] = y_orig[i] + jfnk_epsilon*x[i];
+  }
+  copy_vector_to_mesh(y_new, mesh);
+  dp->assemble_residual(mesh, f_new); 
+  for (int i=0; i<n_dof; i++) {
+    help_vec[i] = (f_new[i] - f_orig[i])/jfnk_epsilon;
+  }
 }
 
 
+// CG method adjusted for JFNK
+// NOTE: The choice of the initial vector x0 matters a lot, 
+// this should always be the last solution
+void jfnk_cg(DiscreteProblem *dp, Mesh *mesh, 
+            double matrix_solver_tol, int matrix_solver_maxiter, 
+	     double jfnk_epsilon, double tol_jfnk, int jfnk_maxiter)
+{
+  int n_dof = mesh->get_n_dof();
+  // allocation for JFNK
+  double *f_orig = new double[n_dof];
+  double *f_new = new double[n_dof];
+  double *y_orig = new double[n_dof];
+  double *y_new = new double[n_dof];
+  double *x = new double[n_dof];
+  double *rhs = new double[n_dof];
+  if (f_orig == NULL || y_orig == NULL || 
+      f_new == NULL || y_new == NULL || 
+      x == NULL || rhs == NULL) {
+    error("a vector could not be allocated in solve_linear_system_iter().");
+  }
+  // allocation for the CG method
+  double *r = new double[n_dof];
+  double *p = new double[n_dof];
+  double *help_vec = new double[n_dof];
+  if (r == NULL || p == NULL || help_vec == NULL) {
+    error("a vector could not be allocated in solve_linear_system_iter().");
+  }
 
+  // fill vector y_orig using dof and coeffs arrays in elements
+  copy_mesh_to_vector(mesh, y_orig);
+
+  // JFNK loop
+  int jfnk_iter_num = 1;
+  while (1) {
+    printf("JFNK iteration: %d\n", jfnk_iter_num);
+
+    // construct residual vector f_orig corresponding to y_orig
+    // (f_orig stays unchanged through the CG loop)
+    dp->assemble_residual(mesh, f_orig); 
+
+    // calculate L2 norm of f_orig
+    double res_norm = 0;
+    for(int i=0; i<n_dof; i++) res_norm += f_orig[i]*f_orig[i];
+    res_norm = sqrt(res_norm);
+
+    // If residual norm less than 'newton_tol', quit
+    // latest solution is in the vector y_orig.
+    printf("Residual norm: %.15f\n", res_norm);
+    if(res_norm < tol_jfnk) break;
+
+    // right-hand side is negative residual
+    // (rhs stays unchanged through the CG loop)
+    for(int i=0; i<n_dof; i++) rhs[i] = -f_orig[i];
+
+    // beginning CG method
+    // r = rhs - A*x0 (where the initial vector x0 = 0)
+    for (int i=0; i < n_dof; i++) r[i] = rhs[i];
+    // p = r
+    for (int i=0; i < n_dof; i++) p[i] = r[i];
+
+    // CG loop
+    int iter_current = 0;
+    double tol_current;
+    // initializing the solution vector with zero
+    for(int i=0; i<n_dof; i++) x[i] = 0;
+    while (1) {
+      mat_dot_jfnk(dp, mesh, p, y_orig, f_orig, y_new, f_new, 
+                   help_vec, jfnk_epsilon, n_dof);
+      double r_times_r = vec_dot(r, r, n_dof);
+      double alpha = r_times_r / vec_dot(p, help_vec, n_dof); 
+      for (int i=0; i < n_dof; i++) {
+        x[i] += alpha*p[i];
+        r[i] -= alpha*help_vec[i];
+      }
+      double r_times_r_new = vec_dot(r, r, n_dof);
+      iter_current++;
+      tol_current = sqrt(r_times_r_new);
+      if (tol_current < matrix_solver_tol 
+          || iter_current >= matrix_solver_maxiter) break;
+      double beta = r_times_r_new/r_times_r;
+      for (int i=0; i < n_dof; i++) p[i] = r[i] + beta*p[i];
+    }
+    // check whether CG converged
+    printf("CG (JFNK) made %d iteration(s) (tol = %g)\n", 
+           iter_current, tol_current);
+    if(tol_current > matrix_solver_tol) {
+      error("CG (JFNK) did not converge.");
+    }
+
+    // updating vector y_orig by new solution which is in x
+    for(int i=0; i<n_dof; i++) y_orig[i] += x[i];
+
+    // copying vector y_orig to mesh elements
+    copy_vector_to_mesh(y_orig, mesh);
+
+    jfnk_iter_num++;
+    if (jfnk_iter_num >= jfnk_maxiter) {
+      error("JFNK did not converge.");
+    }
+  }
+
+  // copy updated vector y_orig to mesh
+  copy_vector_to_mesh(y_orig, mesh);
+
+  // delete JFNK vectors
+  if (y_orig != NULL) delete [] y_orig;
+  if (y_new != NULL) delete [] y_new;
+  if (f_orig != NULL) delete [] f_orig;
+  if (f_new != NULL) delete [] f_new;
+  if (x != NULL) delete [] x;
+  if (rhs != NULL) delete [] rhs;
+  // delete CG vectors
+  if (r != NULL) delete [] r;
+  if (p != NULL) delete [] p;
+  if (help_vec != NULL) delete [] help_vec;
+}
 

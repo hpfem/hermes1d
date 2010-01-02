@@ -33,25 +33,25 @@ cdef class Linearizer:
     def __cinit__(self, Mesh mesh):
         self.thisptr = new_Linearizer(mesh.thisptr)
 
-    def plot_solution(self, out_filename, y_prev, plotting_elem_subdivision):
-        cdef double *A
+    def plot_solution(self, out_filename, plotting_elem_subdivision):
+        #cdef double *A
         cdef int n
-        numpy2c_double_inplace(y_prev, &A, &n)
-        self.thisptr.plot_solution(out_filename, A, plotting_elem_subdivision)
+        #numpy2c_double_inplace(y_prev, &A, &n)
+        self.thisptr.plot_solution(out_filename, plotting_elem_subdivision)
 
-    def get_xy(self, y_prev, int comp, int plotting_elem_subdivision):
+    def get_xy(self, int comp, int plotting_elem_subdivision):
         """
         Returns (x, y), where x, y are arrays of points.
 
         y_prev is the input array of points.
         """
-        cdef double *A
-        cdef int nA
-        numpy2c_double_inplace(y_prev, &A, &nA)
+        #cdef double *A
+        #cdef int nA
+        #numpy2c_double_inplace(y_prev, &A, &nA)
         cdef double *x
         cdef double *y
         cdef int n
-        self.thisptr.get_xy(A, comp, plotting_elem_subdivision,
+        self.thisptr.get_xy_mesh(comp, plotting_elem_subdivision,
                 &x, &y, &n)
         x_numpy = c2numpy_double(x, n)
         y_numpy = c2numpy_double(y, n)

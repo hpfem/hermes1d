@@ -28,7 +28,6 @@ const int MAX_P = 30;                  // max poly degree allowed in elements
 // When you change this, run tests.
 const int MAX_QUAD_ORDER = 200;        // max order of Gaussian quadrature implemented
 const int MAX_QUAD_PTS_NUM = 101;      // max number of quadrature points
-const int MAX_NEWTON_ITER_NUM = 100;   // maximum allowed number of Newton's iterations
 
 const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
                                        // candidates of an element

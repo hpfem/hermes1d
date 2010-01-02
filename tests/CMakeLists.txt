@@ -1,3 +1,4 @@
+link_directories(../../src/SparseLib/lib/)
 add_subdirectory(legendre-1)
 add_subdirectory(legendre-2)
 add_subdirectory(legendre-3)
