@@ -32,7 +32,8 @@ const int MAX_QUAD_PTS_NUM = 101;      // max number of quadrature points
 const int MAX_CAND_NUM = 100;          // maximum allowed number of hp-refinement
                                        // candidates of an element
 
-const int MAX_ELEM_NUM = 100000;       // maximum number of elements
+const int MAX_ELEM_NUM = 10000;        // maximum number of elements
+const int MAX_N_DOF = 10000;           // maximum number of degrees of freedom
 const int MAX_EQN_NUM = 10;            // maximum number of equations in the system
 const int MAX_PLOT_PTS_NUM = 501;      // finest plotting subdivision 
 const int MAX_COEFFS_NUM = MAX_P + 1;  // this is the maximum number of 
