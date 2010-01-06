@@ -6,56 +6,64 @@
 // -u'' - f = 0 in an interval (A, B), equipped with Dirichlet 
 // boundary conditions on both end points. A series of small reference 
 // solutions (we call tehm fast trial refinements, FTR) is used both 
-// to decide what elements will be refined, and how they will be refined. 
+// to decide what elements will be refined, and how they will be refined.
+// One has to define a goal of computation (quantity of interest) which 
+// is any linear functional of the solution. Adaptivity can be guided either
+// by the error in global norm or by the error in the quantity of interest. 
+// One can use either standard Newton's method or JFNK to solve discrete 
+// problems for trial refinements.
 
 // General input:
-static int N_eq = 1;
-int N_elem = 3;                         // Number of elements
-double A = -M_PI, B = M_PI;             // Domain end points
-int P_init = 1;                         // Initial polynomal degree
+const int N_eq = 1;
+const int N_elem = 3;                   // Number of elements
+//const double A = -M_PI, B = M_PI;      // Domain end points
+const double EPSILON = 0.01;            // Equation parameter
+const double A = 0, B = 1;              // Domain end points
+const int P_init = 1;                   // Initial polynomal degree
 
 // JFNK or classical Newton?
 const int JFNK = 1;                     // 0... classical Newton
                                         // 1... JFNK  
                                         // Only relevant for JFNK:
-const double JFNK_EPSILON = 1e-6;       // Parameter in the JFNK finite difference
+const double JFNK_EPSILON = 1e-4;       // Parameter in the JFNK finite difference
 
 // Matrix solver                        // Used if JFNK == 0
 const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
                                         // 1... UMFPACK
                                         // 2... CG (no preconditioning)
                                         // Only relevant for iterative matrix solvers:
-const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
+const double MATRIX_SOLVER_TOL = 1e-8;  // Tolerance for residual in L2 norm
 const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
  
 // Newton's method
-double NEWTON_TOL_COARSE = 1e-7;       // Coarse mesh
-double NEWTON_TOL_REF = 1e-6;          // Reference mesh
+const double NEWTON_TOL_COARSE = 1e-8;  // Coarse mesh
+const double NEWTON_TOL_REF = 1e-8;     // Reference mesh
 const int NEWTON_MAXITER = 150;
 
 // Adaptivity
 const int GOAL_ORIENTED = 1;            // 0... standard adaptivity in norm
                                         // 1... goal-oriented adaptivity 
-const double X_QOI = 0.9*M_PI;          // Value of u[0] at X_QOI is the 
+const double X_QOI = 0.9*B;             // Value of u[0] at X_QOI is the 
                                         // Quantity of interest
+const double TOL_ERR_QOI = 1e-8;        // Tolerance for the maximum FTR error
 const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 1... h-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose FTR error
                                         // is greater than THRESHOLD*max_ftr_error
-const double TOL_ERR_QOI = 1e-10;       // Tolerance for the maximum FTR error
 const int NORM = 1;                     // To measure errors:
                                         // 1... H1 norm
                                         // 0... L2 norm
 
 // Boundary conditions
-double Val_dir_left = 0;                // Dirichlet condition left
-double Val_dir_right = 0;               // Dirichlet condition right
+double Val_dir_left = pow(A + EPSILON, 1./3.);   // Dirichlet condition left
+double Val_dir_right = pow(B + EPSILON, 1./3.);  // Dirichlet condition right
 
 // Function f(x)
 double f(double x) {
-  return sin(x);
+  //return sin(x);
   //return 2;
+  return 2./9. * pow(x + EPSILON, -5./3.);
 }
 
 // Exact solution:
@@ -63,10 +71,12 @@ double f(double x) {
 // forget to update interval accordingly
 const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
-  u[0] = sin(x);
-  dudx[0] = cos(x);
+  //u[0] = sin(x);
+  //dudx[0] = cos(x);
   //u[0] = 1. - x*x;
   //dudx[0] = -2.*x;
+  u[0] = pow(x + EPSILON, 1./3.);
+  dudx[0] = 1./3. * pow(x + EPSILON, -2./3.);
 }
 
 // Weak forms for Jacobi matrix and residual
@@ -243,7 +253,7 @@ int main() {
     if(max_qoi_err_est < TOL_ERR_QOI) break;
 
     // debug
-    //if (adapt_iterations == 10) break;
+    //if (adapt_iterations == 3) break;
 
     // Returns updated coarse mesh with the last solution on it. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, ftr_errors,

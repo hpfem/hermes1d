@@ -502,18 +502,21 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
     // construct matrix and residual vector
     dp->assemble_jacobian_and_residual(mesh, mat, res); 
 
+    // debug
+    //mat->print();
+    //exit(0);
+
     // calculate L2 norm of residual vector
-    double res_norm = 0;
-    for(int i=0; i<n_dof; i++) res_norm += res[i]*res[i];
-    res_norm = sqrt(res_norm);
+    double res_norm_squared = 0;
+    for(int i=0; i<n_dof; i++) res_norm_squared += res[i]*res[i];
 
     // If residual norm less than 'newton_tol', quit
     // latest solution is in the vector y.
     // NOTE: at least one full iteration forced
     //       here because sometimes the initial
     //       residual on fine mesh is too small
-    printf("Residual norm: %.15f\n", res_norm);
-    if(res_norm < newton_tol && newton_iter_num > 1) break;
+    printf("Residual norm: %.15f\n", sqrt(res_norm_squared));
+    if(res_norm_squared < newton_tol*newton_tol && newton_iter_num > 1) break;
 
     // changing sign of vector res
     for(int i=0; i<n_dof; i++) res[i]*= -1;
@@ -549,114 +552,129 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
   if (res != NULL) delete [] res;
 }
 
-void mat_dot_jfnk(DiscreteProblem *dp, Mesh *mesh, double* x,
-                  double* y_orig, double* f_orig,
-                  double* y_new, double* f_new, 
-                  double* help_vec,
-                  double jfnk_epsilon, int n_dof) 
+void J_dot_vec_jfnk(DiscreteProblem *dp, Mesh *mesh, double* vec,
+                    double* y_orig, double* f_orig, 
+                    double* J_dot_vec,
+                    double jfnk_epsilon, int n_dof) 
 {
+  double y_perturbed[MAX_N_DOF];
+  double f_perturbed[MAX_N_DOF];
   for (int i=0; i<n_dof; i++) {
-    y_new[i] = y_orig[i] + jfnk_epsilon*x[i];
+    y_perturbed[i] = y_orig[i] + jfnk_epsilon*vec[i];
   }
-  copy_vector_to_mesh(y_new, mesh);
-  dp->assemble_residual(mesh, f_new); 
+  copy_vector_to_mesh(y_perturbed, mesh);
+  dp->assemble_residual(mesh, f_perturbed); 
+  copy_vector_to_mesh(y_orig, mesh);
   for (int i=0; i<n_dof; i++) {
-    help_vec[i] = (f_new[i] - f_orig[i])/jfnk_epsilon;
+    J_dot_vec[i] = (f_perturbed[i] - f_orig[i])/jfnk_epsilon;
   }
 }
 
-
 // CG method adjusted for JFNK
-// NOTE: The choice of the initial vector x0 matters a lot, 
-// this should always be the last solution
+// NOTE: 
 void jfnk_cg(DiscreteProblem *dp, Mesh *mesh, 
-            double matrix_solver_tol, int matrix_solver_maxiter, 
+             double matrix_solver_tol, int matrix_solver_maxiter, 
 	     double jfnk_epsilon, double tol_jfnk, int jfnk_maxiter)
 {
   int n_dof = mesh->get_n_dof();
-  // allocation for JFNK
-  double *f_orig = new double[n_dof];
-  double *f_new = new double[n_dof];
-  double *y_orig = new double[n_dof];
-  double *y_new = new double[n_dof];
-  double *x = new double[n_dof];
-  double *rhs = new double[n_dof];
-  if (f_orig == NULL || y_orig == NULL || 
-      f_new == NULL || y_new == NULL || 
-      x == NULL || rhs == NULL) {
-    error("a vector could not be allocated in solve_linear_system_iter().");
-  }
-  // allocation for the CG method
-  double *r = new double[n_dof];
-  double *p = new double[n_dof];
-  double *help_vec = new double[n_dof];
-  if (r == NULL || p == NULL || help_vec == NULL) {
-    error("a vector could not be allocated in solve_linear_system_iter().");
-  }
+  // vectors for JFNK
+  double f_orig[MAX_N_DOF];
+  double y_orig[MAX_N_DOF];
+  double vec[MAX_N_DOF];
+  double rhs[MAX_N_DOF];
 
+  // vectors for the CG method
+  double r[MAX_N_DOF];
+  double p[MAX_N_DOF];
+  double J_dot_vec[MAX_N_DOF];
+
+  /*
+  // debug
   // fill vector y_orig using dof and coeffs arrays in elements
   copy_mesh_to_vector(mesh, y_orig);
+  dp->assemble_residual(mesh, f_orig); 
+  double *w = new double[n_dof];
+  for(int i=0; i<n_dof; i++) w[i] = 0;
+  w[0] = 1;
+  J_dot_vec_jfnk(dp, mesh, w, y_orig, f_orig, 
+                 J_dot_vec, jfnk_epsilon, n_dof);
+  printf("   J_dot_vec = ");
+  for (int i=0; i < n_dof; i++) {
+    printf("%g ", J_dot_vec[i]);
+  }
+  printf("\n\n");
+  */
 
   // JFNK loop
   int jfnk_iter_num = 1;
   while (1) {
-    printf("JFNK iteration: %d\n", jfnk_iter_num);
+    // fill vector y_orig using dof and coeffs arrays in elements
+    copy_mesh_to_vector(mesh, y_orig);
 
     // construct residual vector f_orig corresponding to y_orig
-    // (f_orig stays unchanged through the CG loop)
+    // (f_orig stays unchanged through the entire CG loop)
     dp->assemble_residual(mesh, f_orig); 
 
     // calculate L2 norm of f_orig
-    double res_norm = 0;
-    for(int i=0; i<n_dof; i++) res_norm += f_orig[i]*f_orig[i];
-    res_norm = sqrt(res_norm);
+    double res_norm_squared = 0;
+    for(int i=0; i<n_dof; i++) res_norm_squared += f_orig[i]*f_orig[i];
 
-    // If residual norm less than 'newton_tol', quit
-    // latest solution is in the vector y_orig.
-    printf("Residual norm: %.15f\n", res_norm);
-    if(res_norm < tol_jfnk) break;
+    // If residual norm less than 'tol_jfnk', break
+    printf("Residual norm: %.15f\n", sqrt(res_norm_squared));
+    if(res_norm_squared < tol_jfnk*tol_jfnk) break;
+
+    printf("JFNK iteration: %d\n", jfnk_iter_num);
 
     // right-hand side is negative residual
     // (rhs stays unchanged through the CG loop)
     for(int i=0; i<n_dof; i++) rhs[i] = -f_orig[i];
 
     // beginning CG method
-    // r = rhs - A*x0 (where the initial vector x0 = 0)
+    // r = rhs - A*vec0 (where the initial vector vec0 = 0)
     for (int i=0; i < n_dof; i++) r[i] = rhs[i];
     // p = r
     for (int i=0; i < n_dof; i++) p[i] = r[i];
 
     // CG loop
     int iter_current = 0;
-    double tol_current;
+    double tol_current_squared;
     // initializing the solution vector with zero
-    for(int i=0; i<n_dof; i++) x[i] = 0;
+    for(int i=0; i<n_dof; i++) vec[i] = 0;
     while (1) {
-      mat_dot_jfnk(dp, mesh, p, y_orig, f_orig, y_new, f_new, 
-                   help_vec, jfnk_epsilon, n_dof);
+      J_dot_vec_jfnk(dp, mesh, p, y_orig, f_orig,
+                     J_dot_vec, jfnk_epsilon, n_dof);
       double r_times_r = vec_dot(r, r, n_dof);
-      double alpha = r_times_r / vec_dot(p, help_vec, n_dof); 
+      double alpha = r_times_r / vec_dot(p, J_dot_vec, n_dof); 
       for (int i=0; i < n_dof; i++) {
-        x[i] += alpha*p[i];
-        r[i] -= alpha*help_vec[i];
+        vec[i] += alpha*p[i];
+        r[i] -= alpha*J_dot_vec[i];
       }
+      /*
+      // debug - output of solution vector
+      printf("   vec = ");
+      for (int i=0; i < n_dof; i++) {
+        printf("%g ", vec[i]);
+      }
+      printf("\n");
+      */
+
       double r_times_r_new = vec_dot(r, r, n_dof);
       iter_current++;
-      tol_current = sqrt(r_times_r_new);
-      if (tol_current < matrix_solver_tol 
+      tol_current_squared = r_times_r_new;
+      if (tol_current_squared < matrix_solver_tol*matrix_solver_tol 
           || iter_current >= matrix_solver_maxiter) break;
       double beta = r_times_r_new/r_times_r;
       for (int i=0; i < n_dof; i++) p[i] = r[i] + beta*p[i];
     }
     // check whether CG converged
     printf("CG (JFNK) made %d iteration(s) (tol = %g)\n", 
-           iter_current, tol_current);
-    if(tol_current > matrix_solver_tol) {
+           iter_current, sqrt(tol_current_squared));
+    if(tol_current_squared > matrix_solver_tol*matrix_solver_tol) {
       error("CG (JFNK) did not converge.");
     }
 
     // updating vector y_orig by new solution which is in x
-    for(int i=0; i<n_dof; i++) y_orig[i] += x[i];
+    for(int i=0; i<n_dof; i++) y_orig[i] += vec[i];
 
     // copying vector y_orig to mesh elements
     copy_vector_to_mesh(y_orig, mesh);
@@ -670,16 +688,5 @@ void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
   // copy updated vector y_orig to mesh
   copy_vector_to_mesh(y_orig, mesh);
 
-  // delete JFNK vectors
-  if (y_orig != NULL) delete [] y_orig;
-  if (y_new != NULL) delete [] y_new;
-  if (f_orig != NULL) delete [] f_orig;
-  if (f_new != NULL) delete [] f_new;
-  if (x != NULL) delete [] x;
-  if (rhs != NULL) delete [] rhs;
-  // delete CG vectors
-  if (r != NULL) delete [] r;
-  if (p != NULL) delete [] p;
-  if (help_vec != NULL) delete [] help_vec;
 }
 

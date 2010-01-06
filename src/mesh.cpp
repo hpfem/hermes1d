@@ -1318,6 +1318,9 @@ void adapt(int norm, int adapt_type, double threshold,
   delete mesh;
   mesh = mesh_new;
 
+  // check on DOF overflow
+  if (n_dof_new > MAX_N_DOF) error("MAX_N_DOF exceeded in adapt().");
+
   // Adjust the number of dofs
   mesh->set_n_dof(n_dof_new);
 }
