@@ -28,15 +28,17 @@ DiscreteProblem::DiscreteProblem() {
   fprintf(stderr, "done.\n");
 }
 
-void DiscreteProblem::add_matrix_form(int i, int j, matrix_form fn)
+void DiscreteProblem::add_matrix_form(int i, int j, matrix_form fn, int marker)
 {
-    MatrixFormVol form = {i, j, fn};
+    if (marker != ANY && marker < 0) error("Invalid element marker.");
+    MatrixFormVol form = {i, j, fn, marker};
     this->matrix_forms_vol.push_back(form);
 }
 
-void DiscreteProblem::add_vector_form(int i, vector_form fn)
+void DiscreteProblem::add_vector_form(int i, vector_form fn, int marker)
 {
-    VectorFormVol form = {i, fn};
+    if (marker != ANY && marker < 0) error("Invalid element marker.");
+	VectorFormVol form = {i, fn, marker};
     this->vector_forms_vol.push_back(form);
 }
 
@@ -95,85 +97,91 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
       for (int ww = 0; ww < this->matrix_forms_vol.size(); ww++)
       {
 	MatrixFormVol *mfv = &this->matrix_forms_vol[ww];
-	int c_i = mfv->i;  
-	int c_j = mfv->j;  
+	if (e->marker == mfv->marker ||  mfv->marker == ANY) {
+  	  int c_i = mfv->i;  
+	  int c_j = mfv->j;  
 
-	// loop over test functions (rows)
-	for(int i=0; i<e->p + 1; i++) {
-	  // if i-th test function is active
-	  int pos_i = e->dof[c_i][i]; // row in matrix
-          //printf("elem (%g, %g): pos_i = %d\n", e->x1, e->x2, pos_i);
-	  if(pos_i != -1) {
-	    // transform i-th test function to element 'm'
-            //printf("Elem (%g, %g): i = %d, order = %d\n", e->x1, e->x2, i, order);
-	    element_shapefn(e->x1, e->x2,  
-			    i, order, phys_v, phys_dvdx); 
-	    // if we are constructing the matrix
-	    if(matrix_flag == 0 || matrix_flag == 1) {
-	      // loop over basis functions (columns)
-	      for(int j=0; j < e->p + 1; j++) {
-		int pos_j = e->dof[c_j][j]; // matrix column
-                //printf("elem (%g, %g): pos_j = %d\n", e->x1, e->x2, pos_j);
-		// if j-th basis function is active
-		if(pos_j != -1) {
-		  // transform j-th basis function to element 'm'
-		  element_shapefn(e->x1, e->x2,  
-				  j, order, phys_u, phys_dudx); 
-		  // evaluate the bilinear form
-		  double val_ji = mfv->fn(pts_num, phys_pts,
-			    phys_weights, phys_u, phys_dudx, phys_v, phys_dvdx,
-			    phys_u_prev, phys_du_prevdx, NULL); 
-		  //truncating
-		  if (fabs(val_ji) < 1e-12) val_ji = 0.0; 
-		  // add the result to the matrix
-		  if (val_ji != 0) mat->add(pos_j, pos_i, val_ji);
-		  if (DEBUG) {
-		    printf("Adding to matrix pos %d, %d value %g (comp %d, %d)\n", 
-		    pos_i, pos_j, val_ji, c_i, c_j);
-		}
+	  // loop over test functions (rows)
+	  for(int i=0; i<e->p + 1; i++) {
+	    // if i-th test function is active
+	    int pos_i = e->dof[c_i][i]; // row in matrix
+            //printf("elem (%g, %g): pos_i = %d\n", e->x1, e->x2, pos_i);
+	    if(pos_i != -1) {
+	      // transform i-th test function to element 'm'
+              //printf("Elem (%g, %g): i = %d, order = %d\n", e->x1, e->x2, i, order);
+	      element_shapefn(e->x1, e->x2,  
+			      i, order, phys_v, phys_dvdx); 
+	      // if we are constructing the matrix
+	      if(matrix_flag == 0 || matrix_flag == 1) {
+	        // loop over basis functions (columns)
+	        for(int j=0; j < e->p + 1; j++) {
+		  int pos_j = e->dof[c_j][j]; // matrix column
+                  //printf("elem (%g, %g): pos_j = %d\n", e->x1, e->x2, pos_j);
+		  // if j-th basis function is active
+		  if(pos_j != -1) {
+		    // transform j-th basis function to element 'm'
+		    element_shapefn(e->x1, e->x2,  
+				    j, order, phys_u, phys_dudx); 
+		    // evaluate the bilinear form
+		    double val_ji = mfv->fn(pts_num, phys_pts,
+			      phys_weights, phys_u, phys_dudx, phys_v, phys_dvdx,
+			      phys_u_prev, phys_du_prevdx, NULL); 
+		    //truncating
+		    if (fabs(val_ji) < 1e-12) val_ji = 0.0; 
+		    // add the result to the matrix
+		    if (val_ji != 0) mat->add(pos_j, pos_i, val_ji);
+		    if (DEBUG) {
+		      printf("Adding to matrix pos %d, %d value %g (comp %d, %d)\n", 
+		      pos_i, pos_j, val_ji, c_i, c_j);
+		    }
+	          }
+	        }
 	      }
 	    }
-	  }
+          }
 	}
       }
-      }}
+    }
 
     // volumetric part of residual
     if(matrix_flag == 0 || matrix_flag == 2) {
       for (int ww = 0; ww < this->vector_forms_vol.size(); ww++)
       {
         VectorFormVol *vfv = &this->vector_forms_vol[ww];
-        int c_i = vfv->i;  
+	if (e->marker == vfv->marker ||  vfv->marker == ANY) {
+          int c_i = vfv->i;  
 
-        // loop over test functions (rows)
-        for(int i=0; i<e->p + 1; i++) {
-	  // if i-th test function is active
-	  int pos_i = e->dof[c_i][i]; // row in residual vector
-	  if(pos_i != -1) {
-	    // transform i-th test function to element 'm'
-	    element_shapefn(e->x1, e->x2,  
-			    i, order, phys_v, phys_dvdx); 
-	    // contribute to residual vector
-	    if(matrix_flag == 0 || matrix_flag == 2) {
-	      double val_i = vfv->fn(pts_num, phys_pts, phys_weights, 
-				   phys_u_prev, phys_du_prevdx, phys_v,
-				   phys_dvdx, NULL);
-	      // truncating
-	      if(fabs(val_i) < 1e-12) val_i = 0.0; 
-	      // add the contribution to the residual vector
- 	      if (val_i != 0) res[pos_i] += val_i;
-	      if (DEBUG) {
-		if (val_i != 0) {
-	          printf("Adding to residual pos %d value %g (comp %d)\n", 
-                  pos_i, val_i, c_i);
+          // loop over test functions (rows)
+          for(int i=0; i<e->p + 1; i++) {
+	    // if i-th test function is active
+	    int pos_i = e->dof[c_i][i]; // row in residual vector
+	    if(pos_i != -1) {
+	      // transform i-th test function to element 'm'
+	      element_shapefn(e->x1, e->x2,  
+			      i, order, phys_v, phys_dvdx); 
+	      // contribute to residual vector
+	      if(matrix_flag == 0 || matrix_flag == 2) {
+	        double val_i = vfv->fn(pts_num, phys_pts, phys_weights, 
+				       phys_u_prev, phys_du_prevdx, phys_v,
+				       phys_dvdx, NULL);
+	        // truncating
+	        if(fabs(val_i) < 1e-12) val_i = 0.0; 
+	        // add the contribution to the residual vector
+ 	        if (val_i != 0) res[pos_i] += val_i;
+	        if (DEBUG) {
+		  if (val_i != 0) {
+	            printf("Adding to residual pos %d value %g (comp %d)\n", 
+                    pos_i, val_i, c_i);
+                  }
                 }
               }
-            }
+	    }
 	  }
-	}
+        }
       }
     }
   } // end while
+
   delete I;
 }
 

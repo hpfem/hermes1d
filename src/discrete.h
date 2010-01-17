@@ -38,8 +38,8 @@ class DiscreteProblem {
 
 public:
     DiscreteProblem();
-    void add_matrix_form(int i, int j, matrix_form fn);
-    void add_vector_form(int i, vector_form fn);
+    void add_matrix_form(int i, int j, matrix_form fn, int marker=ANY);
+    void add_vector_form(int i, vector_form fn, int marker=ANY);
     void add_matrix_form_surf(int i, int j, matrix_form_surf fn, int bdy_index);
     void add_vector_form_surf(int i, vector_form_surf fn, int bdy_index);
     // c is solution component
@@ -57,6 +57,7 @@ private:
 	struct MatrixFormVol {
 		int i, j;
 		matrix_form fn;
+	        int marker;
 	};
 	struct MatrixFormSurf {
 		int i, j, bdy_index;
@@ -65,6 +66,7 @@ private:
 	struct VectorFormVol {
 		int i;
 		vector_form fn;
+	        int marker;
 	};
 	struct VectorFormSurf {
 		int i, bdy_index;

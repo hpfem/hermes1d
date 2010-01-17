@@ -385,10 +385,13 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   }
 }
 
-// Creates mesh using a given array of n_base_elem+1 points (pts_array),
-// array of element polynomial degrees (p_array), and array of element
-// markers (m_array).
-Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int *m_array, int n_eq)
+// Creates a general mesh (used, e.g., in example "neutronics").
+// n_macro_elem... number of macro elements
+// pts_array[]...  array of macroelement grid points
+// p_array[]...    array of macroelement poly degrees
+// m_array[]...    array of macroelement material markers
+// div_array[]...  array of macroelement equidistant divisions
+Mesh::Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int *div_array, int n_eq)
 {
   // print the banner (only once)
   static int n_calls = 0;
@@ -399,27 +402,42 @@ Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int *m_array, int n
   if(n_eq > MAX_EQN_NUM) 
   error("Maximum number of equations exceeded (set in common.h)");
 
-  // all Mesh class variables
+  // calculate n_base_elem
+  int n_base_elem = 0;
+  for (int i=0; i < n_macro_elem; i++) {
+    if(div_array[i] <= 0) error("Inadmissible macroelement subdivision.");
+    if(p_array[i] <= 0) error("Inadmissible macroelement poly degree.");
+    if (p_array[i] > MAX_P) error("Max element order exceeded (set in common.h).");
+    if(m_array[i] < 0) error("Inadmissible macroelement material marker.");
+    if(pts_array[i] >= pts_array[i+1]) error("Inadmissible macroelement grid point.");
+    n_base_elem += div_array[i];
+  }
+  printf("Number of elements: %d\n", n_base_elem);
+
+  // define all Mesh class variables
   this->left_endpoint = pts_array[0];
-  this->right_endpoint = pts_array[n_base_elem];
+  this->right_endpoint = pts_array[n_macro_elem];
   this->n_base_elem = n_base_elem;
   this->n_eq = n_eq;
   this->n_active_elem = n_base_elem;
 
-  // allocate element array
+  // allocate base element array
   this->base_elems = new Element[this->n_base_elem];     
-  if (base_elems == NULL) error("Not enough memory in Mesh::create().");
+  if (base_elems == NULL) error("Not enough memory for base element array in Mesh::create().");
 
   // initialize element array
-  for(int i=0; i<this->n_base_elem; i++) {
-    if (p_array[i] > MAX_P) {
-      error("Max element order exceeded (set in common.h).");
+  int count = 0;
+  for(int i=0; i < n_macro_elem; i++) {
+    double length = (pts_array[i+1] - pts_array[i])/div_array[i];
+    for(int j=0; j < div_array[i]; j++) {
+      int id = count;
+      int active = 1;
+      int level = 0;
+      double x_left = pts_array[i] + length * j;
+      double x_right = x_left + length;
+      this->base_elems[count].init(x_left, x_right, p_array[i], id, active, level, n_eq, m_array[i]);
+      count++;
     }
-    int id = i;
-    int active = 1;
-    int level = 0; 
-    this->base_elems[i].init(pts_array[i], pts_array[i+1], 
-                             p_array[i], id, active, level, n_eq, m_array[i]);
   }
 }
 

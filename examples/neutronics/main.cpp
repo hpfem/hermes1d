@@ -22,15 +22,21 @@ using std::endl;
 bool flag = false;				// flag for debugging purposes
 
 // General input:
-int N_elem = 60;          // number of elements
-int P_init = 3;           // initial polynomal degree
-int max_SI = 1000;        // Max. number of the eigenvalue iteration
+int N_subdiv_inner = 2;     // Equidistant subdivision of the inner core macroelement
+int N_subdiv_outer = 2;     // Equidistant subdivision of the outer core macroelement
+int N_subdiv_vacuum = 1;     // Equidistant subdivision of the vacuum macroelement
+int P_init_inner = 3;        // Initial polynomal degree in inner core (material 0)
+int P_init_outer = 3;        // Initial polynomal degree in outer core (material 1)
+int P_init_vacuum = 3;       // Initial polynomal degree in vacuum (material 2)
+int Max_SI = 1000;           // Max. number of eigenvalue iterations
 
 // Geometry and materials
-const int N_MAT = 3;			           // number of materials
-const int N_GRP = 1;			           // number of energy groups in multigroup approximation
+const int N_MAT = 3;			           // Number of macroelements with different materials
+const int N_GRP = 1;			           // Number of energy groups in multigroup approximation
 double interfaces[N_MAT+1] = { 0, 50, 100, 125 };  // Coordinates of material regions interfaces [cm]
-
+int Marker_inner = 0;                              // Material marker for inner core elements
+int Marker_outer = 1;                              // Material marker for outer core elements
+int Marker_vacuum = 2;                             // Material marker for vacuum elements
 
 // Matrix solver
 const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
@@ -60,8 +66,8 @@ static double chi[N_GRP] =
 	{ 1.0 };				// fission spectrum (for multigroup calc.)
 
 // Other physical properties
-static double nu = 2.43; 		// mean number of neutrons released by fission
-static double eps = 3.204e-11;		// mean energy release of each fission evt [J]
+static double nu = 2.43; 		// Nean number of neutrons released by fission
+static double eps = 3.204e-11;		// Nean energy release of each fission evt [J]
 
 // Table defining the fission sources distribution in each step of the source
 // iteration; in the case of multigroup approximation, one such table for each 
@@ -116,7 +122,7 @@ double calc_fission_yield(Mesh* mesh)
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
     //if (flag) printf("%d : (%f,%f) \n", e->id, e->x1, e->x2);
-    if (flag) cout << e->id << " : (" << e->x1 << "," << e->x2 << ")" << endl;
+    //if (flag) cout << e->id << " : (" << e->x1 << "," << e->x2 << ")" << endl;
     //if (flag) cout << "hi";
     fis_yield += calc_elem_fission_yield(e);
   }
@@ -146,8 +152,7 @@ void fis_src_distribution(Mesh* mesh, double keff, map<double, double>* fs)
     double phys_pts[MAX_QUAD_PTS_NUM];          // quad points
     double phys_weights[MAX_QUAD_PTS_NUM];      // quad weights
 
-    create_phys_element_quadrature( e->x1, e->x2, order, phys_pts, phys_weights,
-    															  &pts_num ); 
+    create_phys_element_quadrature( e->x1, e->x2, order, phys_pts, phys_weights, &pts_num); 
  
     // append contribution from this element to the fission sources table                                                	
     double u[MAX_EQN_NUM];              // neutron flux
@@ -214,96 +219,42 @@ void normalize_to_power(Mesh* mesh, double desired_power)
   multiply_solution(mesh, c);
 }
 
-  
-/******************************************************************************/
-// Weak forms for Jacobi matrix and residual
-
-// bilinear form for the Jacobi matrix 
-// num...number of Gauss points in element
-// x[]...Gauss points
-// weights[]...Gauss weights for points in x[]
-// u...basis function
-// v...test function
-// u_prev...previous solution
-double jacobian_vol(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],  
-                void *user_data)
-{
-  double val = 0;
-  int m;
-	
-  for(int i = 0; i<num; i++) {
-	  m = get_material_number(x[i]);
-	  assert(m >= 0);
-    val += ( 	D[0][m]*dudx[i]*dvdx[i] + Sa[0][m]*u[i]*v[i]  ) * weights[i];
-  }
-  
-  return val;
-}
-
-double residual_vol(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                double *v, double *dvdx, void *user_data)
-{
-  double val = 0;
-  int m;
- 	
-  for(int i = 0; i<num; i++) {
-	  m = get_material_number(x[i]); 
-	  assert(m >= 0);
-    val += (	D[0][m] * du_prevdx[0][i]*dvdx[i] + Sa[0][m] * u_prev[0][i]*v[i] 
-    				- fs[x[i]]*v[i] )*weights[i];
-  }
-
-  return val;
-}
-
-double residual_surf_left(double x, double u_prev[MAX_EQN_NUM], 
-        double du_prevdx[MAX_EQN_NUM], double v,
-        double dvdx, void *user_data)
-{
-  return Val_neumann_left * v; 
-}
-
-double jacobian_surf_right(double x, double u, double dudx,
-        double v, double dvdx, double u_prev[MAX_EQN_NUM], 
-        double du_prevdx[MAX_EQN_NUM], void *user_data)
-{
-  return Val_albedo_right*u*v;
-}
-
-double residual_surf_right(double x, double u_prev[MAX_EQN_NUM], 
-        double du_prevdx[MAX_EQN_NUM], double v,
-        double dvdx, void *user_data)
-{
-  return Val_albedo_right * u_prev[0] * v; 
-}
-
+// Weak forms
+#include "forms.cpp"
 
 /******************************************************************************/
 
 int main() {
+  // Three macroelements are defined above via the interfaces[] array
+  // poly_orders[]... initial poly degrees of macroelements
+  // material_markers[]... material markers of macroelements
+  // subdivisions[]... equidistant subdivision of macroelements
+  int poly_orders[N_MAT] = {P_init_inner, P_init_outer, P_init_vacuum };
+  int material_markers[N_MAT] = {Marker_inner, Marker_outer, Marker_vacuum };
+  int subdivisions[N_MAT] = {N_subdiv_inner, N_subdiv_outer, N_subdiv_vacuum };
+
   // Create coarse mesh, enumerate basis functions
-  Mesh *mesh = new Mesh(interfaces[0],interfaces[N_MAT],N_elem,P_init,N_GRP);
+  Mesh *mesh = new Mesh(N_MAT, interfaces, poly_orders, material_markers, subdivisions, N_GRP);
   printf("N_dof = %d\n", mesh->assign_dofs());
 
-	// Initial approximation: keff = 1, u = 1
-	double keff = 1.0, keff_old;
+  // Initial approximation: keff = 1, u = 1
+  double keff = 1.0, keff_old;
   set_const_flux(mesh, 1.0);
   
   // Register weak forms
   DiscreteProblem *dp = new DiscreteProblem();
-  dp->add_matrix_form(0, 0, jacobian_vol);
-  dp->add_vector_form(0, residual_vol);
+  dp->add_matrix_form(0, 0, jacobian_vol_inner, Marker_inner);
+  dp->add_matrix_form(0, 0, jacobian_vol_outer, Marker_outer);
+  dp->add_matrix_form(0, 0, jacobian_vol_vacuum, Marker_vacuum);
+  dp->add_vector_form(0, residual_vol_inner, Marker_inner);
+  dp->add_vector_form(0, residual_vol_outer, Marker_outer);
+  dp->add_vector_form(0, residual_vol_vacuum, Marker_vacuum);
   dp->add_vector_form_surf(0, residual_surf_left, BOUNDARY_LEFT);
   dp->add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
   dp->add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
   // Source iteration (power method)
-  for (int i = 0; i < max_SI; i++)
+  for (int i = 0; i < Max_SI; i++)
   {	
     // Obtain fission source
     fis_src_distribution(mesh, keff, &fs);
