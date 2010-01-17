@@ -21,11 +21,12 @@ Element::Element()
   sons[0] = sons[1] = NULL; 
   active = 1;
   level = 0;
+  marker = -1;
   id = -1;
   dof_size = 0;
 }
 
-Element::Element(double x_left, double x_right, int lev, int deg, int n_eq) 
+Element::Element(double x_left, double x_right, int level, int deg, int n_eq, int marker) 
 {
   x1 = x_left;
   x2 = x_right;
@@ -35,7 +36,8 @@ Element::Element(double x_left, double x_right, int lev, int deg, int n_eq)
   if (dof == NULL) error("Not enough memory in Element().");
   sons[0] = sons[1] = NULL; 
   active = 1;
-  level = lev;
+  this->level = level;
+  this->marker = marker;
   id = -1;
 }
 
@@ -59,9 +61,9 @@ void Element::refine(int type, int p_left, int p_right)
     double x1 = this->x1;
     double x2 = this->x2;
     double midpoint = (x1 + x2)/2.; 
-    this->sons[0] = new Element(x1, midpoint, this->level + 1, p_left, dof_size);
+    this->sons[0] = new Element(x1, midpoint, this->level + 1, p_left, dof_size, this->marker);
     this->sons[1] = new Element(midpoint, x2, this->level + 1, 
-                                p_right, dof_size);
+                                p_right, dof_size, this->marker);
     // Copy Dirichtel boundary conditions to sons
     for(int c=0; c<dof_size; c++) {
       if (this->dof[c][0] < 0) {
@@ -90,7 +92,7 @@ void Element::refine(int3 cand)
 // initialize element and allocate dof and coeffs 
 // arrays for all solution components
 void Element::init(double x1, double x2, int p_init, 
-                   int id, int active, int level, int n_eq)
+                   int id, int active, int level, int n_eq, int marker)
 {
   this->x1 = x1;
   this->x2 = x2;
@@ -98,6 +100,7 @@ void Element::init(double x1, double x2, int p_init,
   this->id = id;
   this->active = active;
   this->level = level;
+  this->marker = marker;
   this->dof_size = n_eq;
   this->alloc_arrays();
 }
@@ -297,7 +300,7 @@ void Element::copy_into(Element *e_trg)
 {
   // copy all variables of Element class
   e_trg->init(this->x1, this->x2, this->p, this->id, 
-              this->active, this->level, this->dof_size);
+              this->active, this->level, this->dof_size, this->marker);
 
   // copy dof arrays for all solution components
   for(int c=0; c < dof_size; c++) {
@@ -344,7 +347,8 @@ Mesh::Mesh() {
   base_elems = NULL;
 }
 
-// creates equidistant mesh with uniform polynomial degree of elements
+// Creates equidistant mesh with uniform polynomial degree of elements.
+// All elements will have the same (zero) marker.
 Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
 {
   // print the banner (only once)
@@ -369,20 +373,22 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   if (p_init > MAX_P) 
     error("Max element order exceeded (set in common.h).");
   // element length
-  double h = (b - a)/this->n_base_elem;          
+  double h = (b - a)/this->n_base_elem;
+  int marker_default = 0;       
   // fill initial element array
   for(int i=0; i<this->n_base_elem; i++) { 
     int id = i;         
     int active = 1;
     int level = 0; 
     this->base_elems[i].init(a + i*h, a + i*h + h, p_init, 
-                             id, active, level, n_eq);
+                             id, active, level, n_eq, marker_default);
   }
 }
 
-// creates mesh using a given array of n_base_elem+1 points (pts_array)
-// and an array of n_base_elem polynomial degrees (p_array)
-Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
+// Creates mesh using a given array of n_base_elem+1 points (pts_array),
+// array of element polynomial degrees (p_array), and array of element
+// markers (m_array).
+Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int *m_array, int n_eq)
 {
   // print the banner (only once)
   static int n_calls = 0;
@@ -413,7 +419,7 @@ Mesh::Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq)
     int active = 1;
     int level = 0; 
     this->base_elems[i].init(pts_array[i], pts_array[i+1], 
-                             p_array[i], id, active, level, n_eq);
+                             p_array[i], id, active, level, n_eq, m_array[i]);
   }
 }
 
