@@ -100,4 +100,14 @@ void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
              double matrix_solver_tol, int matrix_solver_maxiter,  
 	     double jfnk_epsilon, double jfnk_tol, int jfnk_maxiter);
 
+// Set component "comp" of the solution to be a constant "val" everywhere
+// Note: This function does not touch Dirichlet boundary 
+// conditions, those must be set to "val" separately.
+void set_solution_constant(Mesh* mesh, int comp, double val);
+
+// Multiply (all components) of the solution at all points by 'val'.
+// Caution: This does not work when Dirichlet conditions 
+// are present - the lifts must be multiplied separately.
+void multiply_solution(Mesh* mesh, double val);
+
 #endif
