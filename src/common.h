@@ -19,6 +19,9 @@
 #define BOUNDARY_LEFT 0
 #define BOUNDARY_RIGHT 1
 
+// for material flags
+const int ANY = -1234;
+
 // Up to 100 is currently implemented.
 // When you change this, run tests.
 const int MAX_P = 30;                  // max poly degree allowed in elements

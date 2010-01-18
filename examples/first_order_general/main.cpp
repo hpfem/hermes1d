@@ -61,6 +61,9 @@ int main() {
   Linearizer l(mesh);
   l.plot_solution("solution.gp");
 
+  // Plot the mesh
+  mesh->plot("mesh.gp");
+
   printf("Done.\n");
   return 1;
 }

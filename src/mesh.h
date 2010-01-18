@@ -13,7 +13,7 @@
 class Element {
 public:
     Element();
-    Element(double x_left, double x_right, int lev, int deg, int n_eq);
+    Element(double x_left, double x_right, int level, int deg, int n_eq, int marker);
     void free_element() {
         if (this->sons[0] != NULL) delete this->sons[0];
         if (this->sons[1] != NULL) delete this->sons[1];
@@ -31,7 +31,7 @@ public:
     }
     virtual void alloc_arrays();
     void init(double x1, double x2, int p_init, 
-                   int id, int active, int level, int n_eq);
+	      int id, int active, int level, int n_eq, int marker);
     void copy_into(Element *e_trg);
     void copy_recursively_into(Element *e_trg);
     double get_x_phys(double x_ref); // gets physical coordinate of a reference poin
@@ -54,6 +54,7 @@ public:
     unsigned active;   // flag used by assembling algorithm
     double x1, x2;     // endpoints
     int p;             // poly degrees
+    int marker;        // can be used to distinguish between material parameters
     int dof_size;      // size of the dof[] array
     int **dof;         // connectivity array of length p+1 
                        // for every solution component
@@ -69,8 +70,16 @@ typedef Element* ElemPtr2[2];
 class Mesh {
     public:
         Mesh();
+        // Creates equidistant mesh with uniform polynomial degree of elements.
+        // All elements will have the same (zero) marker.
         Mesh(double a, double b, int n_elem, int p_init, int n_eq);
-        Mesh(int n_base_elem, double *pts_array, int *p_array, int n_eq);
+        // Creates a general mesh (used, e.g., in example "neutronics").
+        // n_macro_elem... number of macro elements
+        // pts_array[]...  array of macroelement grid points
+        // p_array[]...    array of macroelement poly degrees
+        // m_array[]...    array of macroelement material markers
+        // div_array[]...  array of macroelement equidistant divisions
+        Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int *div_array, int n_eq);
         ~Mesh() {
             if (this->base_elems != NULL) {
                 delete[] this->base_elems;
