@@ -17,21 +17,21 @@
 
 typedef double (*matrix_form) (int num, double *x, double *weights,
         double *u, double *dudx, double *v, double *dvdx, 
-        double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
-        double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], void *user_data);
+        double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+        double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], void *user_data);
 
 typedef double (*vector_form) (int num, double *x, double *weights,
-        double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-               double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+        double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+               double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                double *v, double *dvdx,
         void *user_data);
 
 typedef double (*matrix_form_surf) (double x, double u, double dudx, 
-        double v, double dvdx, double *u_prev, double *du_prevdx, 
-        void *user_data);
+        double v, double dvdx, double u_prev[MAX_SLN_NUM][MAX_EQN_NUM], 
+        double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM], void *user_data);
 
-typedef double (*vector_form_surf) (double x, double *u_prev, 
-        double *du_prevdx, double v, double dvdx,
+typedef double (*vector_form_surf) (double x, double u_prev[MAX_SLN_NUM][MAX_EQN_NUM], 
+        double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM], double v, double dvdx,
         void *user_data);
 
 class DiscreteProblem {
@@ -94,20 +94,12 @@ void element_shapefn_point(double x_ref, double a, double b,
 void newton(DiscreteProblem *dp, Mesh *mesh, 
             int matrix_solver, double matrix_solver_tol, 
             int matrix_solver_maxiter,
-            double newton_tol, int newton_maxiter); 
+            double newton_tol, int newton_maxiter, bool verbose=true); 
 
 void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
              double matrix_solver_tol, int matrix_solver_maxiter,  
-	     double jfnk_epsilon, double jfnk_tol, int jfnk_maxiter);
+	     double jfnk_epsilon, double jfnk_tol, int jfnk_maxiter, bool verbose=true);
 
-// Set component "comp" of the solution to be a constant "val" everywhere
-// Note: This function does not touch Dirichlet boundary 
-// conditions, those must be set to "val" separately.
-void set_solution_constant(Mesh* mesh, int comp, double val);
 
-// Multiply (all components) of the solution at all points by 'val'.
-// Caution: This does not work when Dirichlet conditions 
-// are present - the lifts must be multiplied separately.
-void multiply_solution(Mesh* mesh, double val);
 
 #endif

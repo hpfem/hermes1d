@@ -4,6 +4,7 @@
 // Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
 #include "discrete.h"
+#include "mesh.h"
 #include "solver_umfpack.h"
 #include "comprow_double.h"
 #include "ilupre_double.h"
@@ -73,8 +74,10 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
     double phys_v[MAX_QUAD_PTS_NUM];                    // test function
     double phys_dvdx[MAX_QUAD_PTS_NUM];                 // test function x-derivative
     if (n_eq > MAX_EQN_NUM) error("number of equations exceeded in process_vol_forms().");
-    double phys_u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];     // previous solution, all components
-    double phys_du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];  // previous solution x-derivative, all components
+    // all previous solutions (all components)
+    double phys_u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM];     
+    // x-derivatives of all previous solutions (all components)
+    double phys_du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM];  
     // decide quadrature order and set up 
     // quadrature weights and points in element m
     // CAUTION: This is heuristic
@@ -88,8 +91,9 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
     // at all quadrature points in the element, 
     // for every solution component
     // 0... in the entire element
-    e->get_solution_quad(0, order,
-                         phys_u_prev, phys_du_prevdx); 
+    for(int sln=0; sln < e->n_sln; sln++) {
+      e->get_solution_quad(0, order, phys_u_prev[sln], phys_du_prevdx[sln], sln); 
+    }
 
     // volumetric bilinear forms
     if(matrix_flag == 0 || matrix_flag == 1) 
@@ -193,8 +197,8 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
 
   // evaluate previous solution and its derivative at the end point
   // FIXME: maximum number of equations limited by [MAX_EQN_NUM][MAX_QUAD_PTS_NUM]
-  double phys_u_prev[MAX_EQN_NUM], 
-         phys_du_prevdx[MAX_EQN_NUM]; // at the end point
+  double phys_u_prev[MAX_SLN_NUM][MAX_EQN_NUM], 
+         phys_du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM]; // at the end point
 
   // decide whether we are on the left-most or right-most one
   double x_ref, x_phys; 
@@ -210,7 +214,9 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
   }
 
   // get solution value and derivative at the boundary point
-  e->get_solution_point(x_phys, phys_u_prev, phys_du_prevdx); 
+  for(int sln=0; sln < e->n_sln; sln++) {
+    e->get_solution_point(x_phys, phys_u_prev[sln], phys_du_prevdx[sln], sln); 
+  }
 
   // surface bilinear forms
   if(matrix_flag == 0 || matrix_flag == 1) {
@@ -465,28 +471,11 @@ int solve_linear_system_cg(Matrix* A, double *x,
   return flag;
 }
 
-void copy_mesh_to_vector(Mesh *mesh, double *y) {
-  Element *e;
-  Iterator *I = new Iterator(mesh);
-  while ((e = I->next_active_element()) != NULL) {
-    e->copy_coeffs_to_vector(y);
-  }
-  delete I;
-}
-void copy_vector_to_mesh(double *y, Mesh *mesh) {
-  Element *e;
-  Iterator *I = new Iterator(mesh);
-  while ((e = I->next_active_element()) != NULL) {
-    e->get_coeffs_from_vector(y);
-  }
-  delete I;
-}
-
 // Newton's iteration
 void newton(DiscreteProblem *dp, Mesh *mesh, 
             int matrix_solver, double matrix_solver_tol, 
             int matrix_solver_maxiter,
-            double newton_tol, int newton_maxiter) 
+            double newton_tol, int newton_maxiter, bool verbose) 
 {
   int newton_iter_num = 0;
   int n_dof = mesh->get_n_dof();
@@ -523,7 +512,7 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
     // NOTE: at least one full iteration forced
     //       here because sometimes the initial
     //       residual on fine mesh is too small
-    printf("Residual norm: %.15f\n", sqrt(res_norm_squared));
+    if (verbose) printf("Residual norm: %.15f\n", sqrt(res_norm_squared));
     if(res_norm_squared < newton_tol*newton_tol && newton_iter_num > 1) break;
 
     // changing sign of vector res
@@ -582,7 +571,7 @@ void J_dot_vec_jfnk(DiscreteProblem *dp, Mesh *mesh, double* vec,
 // NOTE: 
 void jfnk_cg(DiscreteProblem *dp, Mesh *mesh, 
              double matrix_solver_tol, int matrix_solver_maxiter, 
-	     double jfnk_epsilon, double tol_jfnk, int jfnk_maxiter)
+	     double jfnk_epsilon, double tol_jfnk, int jfnk_maxiter, bool verbose)
 {
   int n_dof = mesh->get_n_dof();
   // vectors for JFNK
@@ -628,10 +617,10 @@ void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
     for(int i=0; i<n_dof; i++) res_norm_squared += f_orig[i]*f_orig[i];
 
     // If residual norm less than 'tol_jfnk', break
-    printf("Residual norm: %.15f\n", sqrt(res_norm_squared));
+    if (verbose) printf("Residual norm: %.15f\n", sqrt(res_norm_squared));
     if(res_norm_squared < tol_jfnk*tol_jfnk) break;
 
-    printf("JFNK iteration: %d\n", jfnk_iter_num);
+    if (verbose) printf("JFNK iteration: %d\n", jfnk_iter_num);
 
     // right-hand side is negative residual
     // (rhs stays unchanged through the CG loop)
@@ -675,7 +664,7 @@ void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
       for (int i=0; i < n_dof; i++) p[i] = r[i] + beta*p[i];
     }
     // check whether CG converged
-    printf("CG (JFNK) made %d iteration(s) (tol = %g)\n", 
+    if (verbose) printf("CG (JFNK) made %d iteration(s) (tol = %g)\n", 
            iter_current, sqrt(tol_current_squared));
     if(tol_current_squared > matrix_solver_tol*matrix_solver_tol) {
       error("CG (JFNK) did not converge.");
@@ -695,38 +684,5 @@ void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
 
   // copy updated vector y_orig to mesh
   copy_vector_to_mesh(y_orig, mesh);
-
-}
-
-// Set component "comp" of the solution to be a constant "val" everywhere
-// Note: This function does not touch Dirichlet boundary 
-// conditions, those must be set to "val" separately.
-void set_solution_constant(Mesh* mesh, int comp, double val)
-{
-  Iterator *I = new Iterator(mesh);
-  Element *e;
-  while ((e = I->next_active_element()) != NULL) {
-    e->coeffs[comp][0] = val;
-    e->coeffs[comp][1] = val;
-  }
-  delete I;
-}
-
-// Multiply (all components) of the solution at all points by 'val'.
-// Caution: This does not work when Dirichlet conditions 
-// are present - the lifts must be multiplied separately.
-void multiply_solution(Mesh* mesh, double val)
-{
-  int n_dof = mesh->get_n_dof();
-  double *y = new double[n_dof];
-  Iterator *I = new Iterator(mesh);
-  Element *e;
-  while ((e = I->next_active_element()) != NULL) e->copy_coeffs_to_vector(y);
-  for (int i = 0; i < n_dof; i++) y[i] *= val;
-  I->reset();	
-  while ((e = I->next_active_element()) != NULL)
-    e->get_coeffs_from_vector(y);  
-  delete I; 
-  delete [] y;
 }
 

@@ -13,39 +13,32 @@
 class Element {
 public:
     Element();
-    Element(double x_left, double x_right, int level, int deg, int n_eq, int marker);
+    Element(double x_left, double x_right, int level, int deg, 
+            int n_eq, int n_sln, int marker);
     void free_element() {
         if (this->sons[0] != NULL) delete this->sons[0];
         if (this->sons[1] != NULL) delete this->sons[1];
-        if (this->dof != NULL) {
-            for(int c=0; c < this->dof_size; c++)
-                delete[] this->dof[c];
-            if (this->dof != NULL)
-                free(this->dof);
-            if (this->coeffs != NULL)
-                free(this->coeffs);
-        }
     }
     ~Element() {
         this->free_element();
     }
-    virtual void alloc_arrays();
     void init(double x1, double x2, int p_init, 
-	      int id, int active, int level, int n_eq, int marker);
+	      int id, int active, int level, int n_eq, int n_sln, int marker);
     void copy_into(Element *e_trg);
     void copy_recursively_into(Element *e_trg);
     double get_x_phys(double x_ref); // gets physical coordinate of a reference poin
     double calc_elem_norm_squared(int norm);
-    void get_coeffs_from_vector(double *y);
-    void copy_coeffs_to_vector(double *y);
+    void get_coeffs_from_vector(double *y, int sln=0);
+    void copy_coeffs_to_vector(double *y, int sln=0);
+    void copy_dofs(int sln_src, int sln_trg);
     void get_solution_quad(int flag, int quad_order, 
                            double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-			   double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM]);
+			   double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], int sln=0);
     void get_solution_plot(double x_phys[MAX_PLOT_PTS_NUM], int pts_num,
          double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
-         double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM]);
+			   double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], int sln=0);
     void get_solution_point(double x_phys, 
-	 double val[MAX_EQN_NUM], double der[MAX_EQN_NUM]);
+			    double val[MAX_EQN_NUM], double der[MAX_EQN_NUM], int sln=0);
     int create_cand_list(int adapt_type, int p_ref_left, int p_ref_right, int3 *cand_list);
     void print_cand_list(int num_cand, int3 *cand_list);
     void refine(int3 cand);
@@ -55,11 +48,12 @@ public:
     double x1, x2;     // endpoints
     int p;             // poly degrees
     int marker;        // can be used to distinguish between material parameters
-    int dof_size;      // size of the dof[] array
-    int **dof;         // connectivity array of length p+1 
-                       // for every solution component
-    double **coeffs;   // solution coefficient array of length p+1 
-                       // for every solution component
+    int n_eq;          // number of equations (= number of solution components)
+    int n_sln;         // number of solution copies
+    int dof[MAX_EQN_NUM][MAX_P + 1];   // connectivity array of length p+1 
+                                       // for every solution component
+    double coeffs[MAX_SLN_NUM][MAX_EQN_NUM][MAX_P + 1];   // solution coefficient array of length p+1 
+                                                          // for every component and every solution 
     int id;
     unsigned level;    // refinement level (zero for initial mesh elements) 
     Element *sons[2];  // for refinement
@@ -72,14 +66,15 @@ class Mesh {
         Mesh();
         // Creates equidistant mesh with uniform polynomial degree of elements.
         // All elements will have the same (zero) marker.
-        Mesh(double a, double b, int n_elem, int p_init, int n_eq);
+        Mesh(double a, double b, int n_elem, int p_init=1, int n_eq=1, int n_sln=1);
         // Creates a general mesh (used, e.g., in example "neutronics").
         // n_macro_elem... number of macro elements
         // pts_array[]...  array of macroelement grid points
         // p_array[]...    array of macroelement poly degrees
         // m_array[]...    array of macroelement material markers
         // div_array[]...  array of macroelement equidistant divisions
-        Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int *div_array, int n_eq);
+        Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, 
+             int *div_array, int n_eq=1, int n_sln=1);
         ~Mesh() {
             if (this->base_elems != NULL) {
                 delete[] this->base_elems;
@@ -115,8 +110,14 @@ class Mesh {
         int get_n_eq() {
             return this->n_eq;
         }
-        void set_n_eq(int n_eq) {
+        int set_n_eq(int n_eq) {
             this->n_eq = n_eq;
+        }
+        int get_n_sln() {
+            return this->n_sln;
+        }
+        void set_n_sln(int n_sln) {
+            this->n_sln = n_sln;
         }
         double get_left_endpoint() {
             return this->left_endpoint; 
@@ -132,8 +133,8 @@ class Mesh {
         }
         Element* first_active_element();
         Element* last_active_element();
-        void set_bc_left_dirichlet(int eq_n, double val);
-        void set_bc_right_dirichlet(int eq_n, double val);
+        void set_bc_left_dirichlet(int eqn, double val);
+        void set_bc_right_dirichlet(int eqn, double val);
         void refine_single_elem(int id, int3 cand);
         void refine_elems(int elem_num, int *id_array, int3 *cand_array);
         void reference_refinement(int start_elem_id, int elem_num);
@@ -160,10 +161,11 @@ class Mesh {
 
     private:
         double left_endpoint, right_endpoint;
-        int n_eq;
-        int n_base_elem;
-        int n_dof;
-        Element *base_elems;
+        int n_eq;            // number of equations in the system
+        int n_sln;           // number of solution copies
+        int n_base_elem;     // number of elements in the base mesh
+        int n_dof;           // number of DOF (in each solution copy)
+        Element *base_elems; // base mesh
 
 };
 
@@ -191,4 +193,6 @@ void adapt_plotting(Mesh *mesh, ElemPtr2* ref_elem_pairs,
                     int norm, int exact_sol_provided, 
                     exact_sol_type exact_sol); 
 
+void copy_mesh_to_vector(Mesh *mesh, double *y, int sln=0);
+void copy_vector_to_mesh(double *y, Mesh *mesh, int sln=0);
 #endif

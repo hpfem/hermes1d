@@ -16,23 +16,30 @@ Element::Element()
 {
   x1 = x2 = 0;
   p = 0; 
-  dof = NULL;
-  coeffs = NULL;
+  for (int j=0; j < MAX_EQN_NUM; j++) {
+    for (int k=0; k < MAX_P + 1; k++) {
+      dof[j][k] = 0;
+      for (int sln=0; sln < MAX_SLN_NUM; sln++) {
+        coeffs[sln][j][k] = 0;
+      }
+    }
+  }
   sons[0] = sons[1] = NULL; 
   active = 1;
   level = 0;
   marker = -1;
   id = -1;
-  dof_size = 0;
+  n_eq = 0;
+  n_sln = 0;
 }
 
-Element::Element(double x_left, double x_right, int level, int deg, int n_eq, int marker) 
+Element::Element(double x_left, double x_right, int level, int deg, int n_eq, int n_sln, int marker) 
 {
   x1 = x_left;
   x2 = x_right;
   p = deg; 
-  dof_size = n_eq;
-  this->alloc_arrays();
+  this->n_eq = n_eq;
+  this->n_sln = n_sln;
   if (dof == NULL) error("Not enough memory in Element().");
   sons[0] = sons[1] = NULL; 
   active = 1;
@@ -61,24 +68,27 @@ void Element::refine(int type, int p_left, int p_right)
     double x1 = this->x1;
     double x2 = this->x2;
     double midpoint = (x1 + x2)/2.; 
-    this->sons[0] = new Element(x1, midpoint, this->level + 1, p_left, dof_size, this->marker);
+    this->sons[0] = new Element(x1, midpoint, this->level + 1, p_left, this->n_eq, this->n_sln, this->marker);
     this->sons[1] = new Element(midpoint, x2, this->level + 1, 
-                                p_right, dof_size, this->marker);
+                                p_right, this->n_eq, this->n_sln, this->marker);
     // Copy Dirichtel boundary conditions to sons
-    for(int c=0; c<dof_size; c++) {
+    for(int c=0; c<this->n_eq; c++) {
       if (this->dof[c][0] < 0) {
         this->sons[0]->dof[c][0] = this->dof[c][0];
-        this->sons[0]->coeffs[c][0] = this->coeffs[c][0];
+        for(int sln=0; sln<this->n_sln; sln++) {
+          this->sons[0]->coeffs[sln][c][0] = this->coeffs[sln][c][0];
+        }
       }
       if (this->dof[c][1] < 0) {
         this->sons[1]->dof[c][1] = this->dof[c][1];
-        this->sons[1]->coeffs[c][1] = this->coeffs[c][1];
+        for(int sln=0; sln<this->n_sln; sln++) {
+          this->sons[1]->coeffs[sln][c][1] = this->coeffs[sln][c][1];
+        }
       }
     }
     // Transfer solution to sons
-    for(int c=0; c<dof_size; c++) {
-      transform_element_refined_forward(c, this, 
-					this->sons[0], this->sons[1]);
+    for(int c=0; c<this->n_eq; c++) {
+      transform_element_refined_forward(c, this, this->sons[0], this->sons[1]);
     }
     this->active = 0;
   }
@@ -92,7 +102,7 @@ void Element::refine(int3 cand)
 // initialize element and allocate dof and coeffs 
 // arrays for all solution components
 void Element::init(double x1, double x2, int p_init, 
-                   int id, int active, int level, int n_eq, int marker)
+                   int id, int active, int level, int n_eq, int n_sln, int marker)
 {
   this->x1 = x1;
   this->x2 = x2;
@@ -101,53 +111,41 @@ void Element::init(double x1, double x2, int p_init,
   this->active = active;
   this->level = level;
   this->marker = marker;
-  this->dof_size = n_eq;
-  this->alloc_arrays();
-}
-
-void Element::alloc_arrays() 
-{
-  // first dof arrays
-  this->dof = (int**)malloc(dof_size*sizeof(int*));
-  if(this->dof == NULL) error("Element alloc_arrays() failed.");
-  // c is solution component
-  for(int c=0; c<dof_size; c++) {
-    this->dof[c] = new int[MAX_P + 1];
-    // important for the treatment of boundary conditions
-    for(int i=0; i<MAX_P + 1; i++) this->dof[c][i] = 0;
-  }
-  // second coeffs arrays
-  this->coeffs = (double**)malloc(dof_size*sizeof(double*));
-  if(this->coeffs == NULL) error("Element alloc_arrays() failed.");
-  // c is solution component
-  for(int c=0; c<dof_size; c++) {
-    this->coeffs[c] = new double[MAX_P + 1];
-    for(int i=0; i<MAX_P + 1; i++) this->coeffs[c][i] = 0;
-  }
+  this->n_eq = n_eq;
+  this->n_sln = n_sln;
 }
 
 // Copies coefficients from the solution vector into element.
 // Assumes that Dirichlet boundary conditions have been set. 
-void Element::get_coeffs_from_vector(double *y)
+void Element::get_coeffs_from_vector(double *y, int sln)
 {
   if (!this->is_active()) error("Internal in get_coeffs_from_vector().");
-  int dof_size = this->dof_size;
-  for(int c=0; c<dof_size; c++) {
+  for(int c=0; c<this->n_eq; c++) {
     for (int j=0; j < this->p + 1; j++) {
-      if (this->dof[c][j] != -1) this->coeffs[c][j] = y[this->dof[c][j]];
+      if (this->dof[c][j] != -1) this->coeffs[sln][c][j] = y[this->dof[c][j]];
     }
   }
 }
 
 // Copies coefficients from element coeffs arrays to the solution vector.
 // Assumes that Dirichlet boundary conditions have been set. 
-void Element::copy_coeffs_to_vector(double *y)
+void Element::copy_coeffs_to_vector(double *y, int sln)
 {
   if (!this->is_active()) error("Internal in copy_coeffs_to_vector().");
-  int dof_size = this->dof_size;
-  for(int c=0; c<dof_size; c++) {
+  for(int c=0; c<this->n_eq; c++) {
     for (int j=0; j < this->p + 1; j++) {
-      if (this->dof[c][j] != -1) y[this->dof[c][j]] = this->coeffs[c][j];
+      if (this->dof[c][j] != -1) y[this->dof[c][j]] = this->coeffs[sln][c][j];
+    }
+  }
+}
+
+void Element::copy_dofs(int sln_src, int sln_trg)
+{
+  for (int c = 0; c < this -> n_eq; c++) {    // loop over solution components
+    for (int i = 0; i < this -> p + 1; i++) {     // loop over coefficients
+      if (this->dof[c][i] >= 0) {
+        coeffs[sln_trg][c][i] = coeffs[sln_src][c][i];
+      }
     }
   }
 }
@@ -156,7 +154,7 @@ void Element::copy_coeffs_to_vector(double *y)
 // of order 'quad_order' in the element.
 void Element::get_solution_quad(int flag, int quad_order, 
                                 double val_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-				double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM])
+				double der_phys[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], int sln)
 {
   double phys_x[MAX_QUAD_PTS_NUM];          // quad points
   double phys_w[MAX_QUAD_PTS_NUM];          // quad weights
@@ -166,41 +164,40 @@ void Element::get_solution_quad(int flag, int quad_order,
                                  &pts_num); 
 
   double jac = (this->x2 - this->x1)/2.; // Jacobian of reference map
-  int dof_size = this->dof_size;
   int p = this->p;
   double x_ref[MAX_QUAD_PTS_NUM];
   // filling the values and derivatives
   if (flag == 0) { // integration points in the whole element
-    for(int c=0; c<dof_size; c++) { 
+    for(int c=0; c<this->n_eq; c++) { 
       for (int i=0 ; i < pts_num; i++) {
         der_phys[c][i] = val_phys[c][i] = 0;
         for(int j=0; j<=p; j++) {
-          val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref_tab[quad_order][i][j];
-          der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref_tab[quad_order][i][j];
+          val_phys[c][i] += this->coeffs[sln][c][j]*lobatto_val_ref_tab[quad_order][i][j];
+          der_phys[c][i] += this->coeffs[sln][c][j]*lobatto_der_ref_tab[quad_order][i][j];
         }
         der_phys[c][i] /= jac;
       }
     }
   }
   if (flag == -1) { // integration points in the left half of element
-    for(int c=0; c<dof_size; c++) { 
+    for(int c=0; c<this->n_eq; c++) { 
       for (int i=0 ; i < pts_num; i++) {
         der_phys[c][i] = val_phys[c][i] = 0;
         for(int j=0; j<=p; j++) {
-          val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref_tab_left[quad_order][i][j];
-          der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref_tab_left[quad_order][i][j];
+          val_phys[c][i] += this->coeffs[sln][c][j]*lobatto_val_ref_tab_left[quad_order][i][j];
+          der_phys[c][i] += this->coeffs[sln][c][j]*lobatto_der_ref_tab_left[quad_order][i][j];
         }
         der_phys[c][i] /= jac;
       }
     }
   }
   if (flag == 1) { // integration points in the right half of element
-    for(int c=0; c<dof_size; c++) { 
+    for(int c=0; c<this->n_eq; c++) { 
       for (int i=0 ; i < pts_num; i++) {
         der_phys[c][i] = val_phys[c][i] = 0;
         for(int j=0; j<=p; j++) {
-          val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref_tab_right[quad_order][i][j];
-          der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref_tab_right[quad_order][i][j];
+          val_phys[c][i] += this->coeffs[sln][c][j]*lobatto_val_ref_tab_right[quad_order][i][j];
+          der_phys[c][i] += this->coeffs[sln][c][j]*lobatto_der_ref_tab_right[quad_order][i][j];
         }
         der_phys[c][i] /= jac;
       }
@@ -212,23 +209,22 @@ void Element::get_solution_quad(int flag, int quad_order,
 // in the element.
 void Element::get_solution_plot(double x_phys[MAX_PLOT_PTS_NUM], int pts_num,
                                 double val_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], 
-                                double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM])
+                                double der_phys[MAX_EQN_NUM][MAX_PLOT_PTS_NUM], int sln)
 {
   double x1 = this->x1;
   double x2 = this->x2;
   double jac = (x2-x1)/2.; // Jacobian of reference map
-  int dof_size = this->dof_size;
   int p = this->p;
   double x_ref[MAX_PLOT_PTS_NUM];
   // transforming points to (-1, 1)
   for (int i=0 ; i < pts_num; i++) x_ref[i] = inverse_map(x1, x2, x_phys[i]);
   // filling the values and derivatives
-  for(int c=0; c<dof_size; c++) { 
+  for(int c=0; c<this->n_eq; c++) { 
     for (int i=0 ; i < pts_num; i++) {
       der_phys[c][i] = val_phys[c][i] = 0;
       for(int j=0; j<=p; j++) {
-        val_phys[c][i] += this->coeffs[c][j]*lobatto_val_ref(x_ref[i], j);
-        der_phys[c][i] += this->coeffs[c][j]*lobatto_der_ref(x_ref[i], j);
+        val_phys[c][i] += this->coeffs[sln][c][j]*lobatto_val_ref(x_ref[i], j);
+        der_phys[c][i] += this->coeffs[sln][c][j]*lobatto_der_ref(x_ref[i], j);
       }
       der_phys[c][i] /= jac;
     }
@@ -250,7 +246,7 @@ double Element::calc_elem_norm_squared(int norm)
                                  &pts_num); 
 
   // integrate square over (-1, 1)
-  int n_eq = this->dof_size;
+  int n_eq = this->n_eq;
   double norm_squared[MAX_EQN_NUM];
   for (int c=0; c<n_eq; c++) {
     norm_squared[c] = 0;
@@ -275,20 +271,19 @@ double Element::calc_elem_norm_squared(int norm)
 // Evaluate solution and its derivative at point x_phys.
 void Element::get_solution_point(double x_phys, 
                                  double val[MAX_EQN_NUM], 
-                                 double der[MAX_EQN_NUM])
+                                 double der[MAX_EQN_NUM], int sln)
 {
   double x1 = this->x1;
   double x2 = this->x2;
   double jac = (x2-x1)/2.;
-  int dof_size = this->dof_size; 
   int p = this->p;
   // transforming point x_phys to (-1, 1)
   double x_ref = inverse_map(x1, x2, x_phys);
-  for(int c=0; c < dof_size; c++) {
+  for(int c=0; c < this->n_eq; c++) {
     der[c] = val[c] = 0;
     for(int j=0; j<=p; j++) {
-      val[c] += this->coeffs[c][j]*lobatto_val_ref(x_ref, j);
-      der[c] += this->coeffs[c][j]*lobatto_der_ref(x_ref, j);
+      val[c] += this->coeffs[sln][c][j]*lobatto_val_ref(x_ref, j);
+      der[c] += this->coeffs[sln][c][j]*lobatto_der_ref(x_ref, j);
     }
     der[c] /= jac;
   }
@@ -300,12 +295,16 @@ void Element::copy_into(Element *e_trg)
 {
   // copy all variables of Element class
   e_trg->init(this->x1, this->x2, this->p, this->id, 
-              this->active, this->level, this->dof_size, this->marker);
+              this->active, this->level, this->n_eq, this->n_sln, this->marker);
 
   // copy dof arrays for all solution components
-  for(int c=0; c < dof_size; c++) {
-    for(int i=0; i < MAX_P + 1; i++) e_trg->dof[c][i] = this->dof[c][i];
-    for(int i=0; i < MAX_P + 1; i++) e_trg->coeffs[c][i] = this->coeffs[c][i];
+  for(int c=0; c < this->n_eq; c++) {
+    for(int i=0; i < MAX_P + 1; i++) {
+      e_trg->dof[c][i] = this->dof[c][i];
+      for(int sln=0; sln < this->n_sln; sln++) {
+        e_trg->coeffs[sln][c][i] = this->coeffs[sln][c][i];
+      }
+    }
   }
 }
 
@@ -341,6 +340,7 @@ double Element::get_x_phys(double x_ref)
 
 Mesh::Mesh() {
   n_eq = 0;
+  n_sln = 0;
   n_base_elem = 0;
   n_active_elem = 0;
   n_dof = 0;
@@ -349,7 +349,7 @@ Mesh::Mesh() {
 
 // Creates equidistant mesh with uniform polynomial degree of elements.
 // All elements will have the same (zero) marker.
-Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
+Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq, int n_sln)
 {
   // print the banner (only once)
   static int n_calls = 0;
@@ -365,6 +365,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
   this->right_endpoint = b;
   this->n_base_elem = n_base_elem;
   this->n_eq = n_eq;
+  this->n_sln = n_sln;
   this->n_active_elem = n_base_elem;
 
   // allocate element array
@@ -381,7 +382,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
     int active = 1;
     int level = 0; 
     this->base_elems[i].init(a + i*h, a + i*h + h, p_init, 
-                             id, active, level, n_eq, marker_default);
+                             id, active, level, n_eq, n_sln, marker_default);
   }
 }
 
@@ -391,7 +392,7 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq)
 // p_array[]...    array of macroelement poly degrees
 // m_array[]...    array of macroelement material markers
 // div_array[]...  array of macroelement equidistant divisions
-Mesh::Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int *div_array, int n_eq)
+Mesh::Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int *div_array, int n_eq, int n_sln)
 {
   // print the banner (only once)
   static int n_calls = 0;
@@ -419,6 +420,7 @@ Mesh::Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int 
   this->right_endpoint = pts_array[n_macro_elem];
   this->n_base_elem = n_base_elem;
   this->n_eq = n_eq;
+  this->n_sln = n_sln;
   this->n_active_elem = n_base_elem;
 
   // allocate base element array
@@ -435,7 +437,7 @@ Mesh::Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int 
       int level = 0;
       double x_left = pts_array[i] + length * j;
       double x_right = x_left + length;
-      this->base_elems[count].init(x_left, x_right, p_array[i], id, active, level, n_eq, m_array[i]);
+      this->base_elems[count].init(x_left, x_right, p_array[i], id, active, level, n_eq, n_sln, m_array[i]);
       count++;
     }
   }
@@ -498,31 +500,34 @@ void Mesh::reference_refinement(int start_elem_id, int elem_num)
     this->assign_dofs();
 }
 
-void Mesh::set_bc_left_dirichlet(int eq_n, double val)
+void Mesh::set_bc_left_dirichlet(int eqn, double val)
 {
   // deactivate the corresponding dof for the left-most
   // element and all his descendants adjacent to the 
   // left boundary, and fill the coeffs array entry
   Element *e = this->base_elems + 0;
   do {
-    e->dof[eq_n][0] = -1;
-    e->coeffs[eq_n][0] = val;
+    e->dof[eqn][0] = -1;
+    for (int sln=0; sln < this->n_sln; sln++) {
+      e->coeffs[sln][eqn][0] = val;
+    }
     e = e->sons[0];
   } while (e != NULL);
 }
 
-void Mesh::set_bc_right_dirichlet(int eq_n, double val)
+void Mesh::set_bc_right_dirichlet(int eqn, double val)
 {
   // deactivate the corresponding dof for the right-most
   // element and all his descendants adjacent to the 
   // right boundary, and fill the coeffs array entry
   Element *e = this->base_elems + this->n_base_elem - 1;
   do {
-    e->dof[eq_n][1] = -1;
-    e->coeffs[eq_n][1] = val;
+    e->dof[eqn][1] = -1;
+    for (int sln=0; sln < this->n_sln; sln++) {
+      e->coeffs[sln][eqn][1] = val;
+    }
     e = e->sons[1];
   } while (e != NULL);
-
 }
 
 // define element connectivities (dof arrays)
@@ -731,7 +736,7 @@ Mesh *Mesh::replicate()
   // (poly degrees in base mesh may have changed since initialization)
   int p_dummy = -1; 
   Mesh *mesh_new = new Mesh(this->left_endpoint, this->right_endpoint, 
-			    this->n_base_elem, p_dummy, this->n_eq);
+			    this->n_base_elem, p_dummy, this->n_eq, this->n_sln);
 
   // copy all Mesh class variables
   mesh_new->set_n_eq(this->n_eq);
@@ -1178,9 +1183,9 @@ void adapt(int norm, int adapt_type, double threshold,
       e_ref_new = I_ref_new->next_active_element();
       // perform the refinement of element e_new_last
       e_new_last->refine(cand_list[choice]);
-      printf("  Refined element (%g, %g), cand = (%d %d %d)\n", 
-             e_new_last->x1, e_new_last->x2, cand_list[choice][0], 
-             cand_list[choice][1], cand_list[choice][2]);
+      //printf("  Refined element (%g, %g), cand = (%d %d %d)\n", 
+      //       e_new_last->x1, e_new_last->x2, cand_list[choice][0], 
+      //       cand_list[choice][1], cand_list[choice][2]);
       if(cand_list[choice][0] == 1) mesh_new->n_active_elem++; 
       // perform corresponding refinement(s) in the new fine mesh
       if (e_new_last->level == e_ref_left->level) { // ref. refinement of 'e_last' was 
@@ -1400,3 +1405,21 @@ void adapt_plotting(Mesh *mesh, ElemPtr2 *ref_elem_pairs,
   }
 }
 
+void copy_mesh_to_vector(Mesh *mesh, double *y, int sln) {
+  Element *e;
+  Iterator *I = new Iterator(mesh);
+  while ((e = I->next_active_element()) != NULL) {
+    e->copy_coeffs_to_vector(y, sln);
+  }
+  delete I;
+}
+
+void copy_vector_to_mesh(double *y, Mesh *mesh, int sln) 
+{
+  Element *e;
+  Iterator *I = new Iterator(mesh);
+  while ((e = I->next_active_element()) != NULL) {
+    e->get_coeffs_from_vector(y, sln);
+  }
+  delete I;
+}

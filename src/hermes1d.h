@@ -20,6 +20,7 @@
 #include "legendre.h"
 #include "lobatto.h"
 #include "discrete.h"
+#include "solution.h"
 #include "linearizer.h"
 #include "transforms.h"
 #include "adapt.h"

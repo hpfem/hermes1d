@@ -14,7 +14,7 @@
 // General input:
 static int N_eq = 4;
 int N_elem = 500;           // number of elements
-double A = 0, B = 20;       // domain end points
+double A = 0, B = 10;       // domain end points
 int P_init = 2;             // initial polynomal degree
 
 // Damping parameter
@@ -23,7 +23,7 @@ int DAMPING_STEPS = 20;  // Number of damping steps. The entire problem
                          // increased from 0 to 1 in DAMPING_STEPS. Every time, 
                          // the last result is used as initial cond. for the 
                          // new computation.   
-double DAMPING;          // DAMPING is an artificial param. used to 
+double DAMPING = 1.0;    // DAMPING is an artificial param. used to 
                          // reduce the strength of the nonlinearity. 
                          // (The nonlinearity is multiplied with it.)
 
