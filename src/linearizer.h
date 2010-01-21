@@ -18,7 +18,9 @@ class Linearizer {
 
         // evaluate approximate solution at element 'm' at reference
         // point 'x_ref'. Here 'y' is the global vector of coefficients
-        void eval_approx(Element *e, double x_ref, double *x_phys,
+        void eval_approx(int sln, Element *e, double x_ref, double *x_phys,
+			 double *val);
+        void eval_approx(Element *e, double x_ref, double *x_phys, // default for sln=0
 			 double *val);
 
         void plot_solution(const char *out_filename, 

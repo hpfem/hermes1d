@@ -46,7 +46,7 @@ double calc_elem_est_error_squared_p(int norm, Element *e, Element *e_ref)
 
   // integrate over 'e'
   double norm_squared[MAX_EQN_NUM];
-  int n_eq = e->dof_size;
+  int n_eq = e->n_eq;
   for (int c=0; c<n_eq; c++) {
     norm_squared[c] = 0;
     for (int i=0; i<pts_num; i++) {
@@ -93,7 +93,7 @@ double calc_elem_est_error_squared_hp(int norm, Element *e,
 
   // integrate over 'e_ref_left'
   double norm_squared_left[MAX_EQN_NUM];
-  int n_eq = e->dof_size;
+  int n_eq = e->n_eq;
   for (int c=0; c<n_eq; c++) {
     norm_squared_left[c] = 0;
     for (int i=0; i<pts_num_left; i++) {
@@ -406,7 +406,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
                                     int p_left, int p_right,
                                     double &err, int &dof)
 {
-  int n_eq = e->dof_size;
+  int n_eq = e->n_eq;
 
   // First in 'e_ref_left': 
   // Calculate L2 or H1 projection of the reference solution on 
@@ -684,7 +684,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
                                    int p_left, int p_right,
                                    double &err, int &dof)
 {
-  int n_eq = e->dof_size;
+  int n_eq = e->n_eq;
 
   // First in the left half of 'e': 
   // Calculate L2 or H1 projection of the reference solution on 
@@ -958,7 +958,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
                                    Element *e_ref_right, int p,
                                    double &err, int &dof)
 {
-  int n_eq = e->dof_size;
+  int n_eq = e->n_eq;
 
   // create Gauss quadrature on 'e_ref_left'
   int order_left = 2*max(e_ref_left->p, p);
@@ -1273,7 +1273,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
 double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
                                   int p, double &err, int &dof)
 {
-  int n_eq = e->dof_size;
+  int n_eq = e->n_eq;
 
   // Calculate L2 or H1 projection of the reference solution on 
   // (original) Legendre polynomials of degree 'p'
@@ -1470,7 +1470,7 @@ double calc_elem_exact_error_squared(int norm, exact_sol_type exact_sol,
   e->get_solution_quad(0, order, phys_u, phys_dudx); 
 
   // get exact solution values and derivatives
-  int n_eq = e->dof_size;
+  int n_eq = e->n_eq;
   double phys_u_exact[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
          phys_dudx_exact[MAX_EQN_NUM][MAX_QUAD_PTS_NUM];
   for (int j=0; j < pts_num; j++) {

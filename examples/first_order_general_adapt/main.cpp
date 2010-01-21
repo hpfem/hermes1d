@@ -152,7 +152,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    //if (adapt_iterations == 8) break;
+    if (adapt_iterations == 4) break;
 
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 

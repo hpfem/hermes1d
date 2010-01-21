@@ -141,8 +141,8 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
 // new solution coefficients on 'e_ref_left' and 'e_ref_right'. 
 // CAUTION: For this to work, element DOF must be assigned correctly 
 // in all three elements 'e', 'e_ref_left' and 'e_ref_right'!
-void transform_element_refined_forward(int comp, Element *e, Element *e_ref_left, 
-                               Element *e_ref_right)
+void transform_element_refined_forward(int sln, int comp, Element *e, Element *e_ref_left, 
+                                       Element *e_ref_right)
 {
   // checking whether elements match
   if (fabs(e->x1 - e_ref_left->x1) > 1e-10 ||
@@ -164,7 +164,7 @@ void transform_element_refined_forward(int comp, Element *e, Element *e_ref_left
   double y_prev_loc_trans_right[MAX_P+1];
   int fns_num_coarse = e->p + 1;
   for (int i=0; i < fns_num_coarse; i++)
-      y_prev_loc[i] = e->coeffs[comp][i];  
+      y_prev_loc[i] = e->coeffs[sln][comp][i];  
   //debug
   if (DEBUG_SOLUTION_TRANSFER) {
     for (int i=0; i < fns_num_coarse; i++) {
@@ -210,22 +210,28 @@ void transform_element_refined_forward(int comp, Element *e, Element *e_ref_left
   // Copying computed coefficients into the elements e_ref_left and e_ref_right.
   // low-order part left:
   if (e->dof[comp][0] != -1)
-    e_ref_left->coeffs[comp][0] = y_prev_loc_trans_left[0];
-  else e_ref_left->coeffs[comp][0] = e->coeffs[comp][0];
-  e_ref_left->coeffs[comp][1] = y_prev_loc_trans_left[1];
+    e_ref_left->coeffs[sln][comp][0] = y_prev_loc_trans_left[0];
+  else e_ref_left->coeffs[sln][comp][0] = e->coeffs[sln][comp][0];
+  e_ref_left->coeffs[sln][comp][1] = y_prev_loc_trans_left[1];
   // low-order part right:
-  e_ref_right->coeffs[comp][0] = y_prev_loc_trans_right[0];
+  e_ref_right->coeffs[sln][comp][0] = y_prev_loc_trans_right[0];
   if (e->dof[comp][1] != -1)
-    e_ref_right->coeffs[comp][1] = y_prev_loc_trans_right[1];
-  else e_ref_right->coeffs[comp][1] = e->coeffs[comp][1];
+    e_ref_right->coeffs[sln][comp][1] = y_prev_loc_trans_right[1];
+  else e_ref_right->coeffs[sln][comp][1] = e->coeffs[sln][comp][1];
   // higher-order part left:
   for (int p=2; p < fns_num_ref_left; p++) {
-    e_ref_left->coeffs[comp][p] = y_prev_loc_trans_left[p];
+    e_ref_left->coeffs[sln][comp][p] = y_prev_loc_trans_left[p];
   }
   // higher-order part right:
   for (int p=2; p < fns_num_ref_right; p++) {
-    e_ref_right->coeffs[comp][p] = y_prev_loc_trans_right[p];
+    e_ref_right->coeffs[sln][comp][p] = y_prev_loc_trans_right[p];
   }
+}
+// default for sln=0
+void transform_element_refined_forward(int comp, Element *e, Element *e_ref_left, 
+                                       Element *e_ref_right)
+{
+  transform_element_refined_forward(0, comp, e, e_ref_left, e_ref_right);
 }
 
 // Transfers solution from coarse mesh element 'e' to fine mesh element 'e_ref' 
@@ -233,7 +239,7 @@ void transform_element_refined_forward(int comp, Element *e, Element *e_ref_left
 // 'e_ref'.
 // CAUTION: For this to work, element DOF must be assigned correctly 
 // in both elements 'e' and 'e_ref'!
-void transform_element_unrefined_forward(int comp, Element *e, Element *e_ref)
+void transform_element_unrefined_forward(int sln, int comp, Element *e, Element *e_ref)
 {
   // checking whether elements match
   if (fabs(e->x1 - e_ref->x1) > 1e-10 ||
@@ -248,12 +254,17 @@ void transform_element_unrefined_forward(int comp, Element *e, Element *e_ref)
   }
   int fns_num = e->p + 1; 
   for (int p=0; p < fns_num; p++) {
-    e_ref->coeffs[comp][p] = e->coeffs[comp][p];
+    e_ref->coeffs[sln][comp][p] = e->coeffs[sln][comp][p];
   }
   int fns_num_ref = e_ref->p + 1;
   for (int p = fns_num; p < fns_num_ref; p++) {
-    e_ref->coeffs[comp][p] = 0.;
+    e_ref->coeffs[sln][comp][p] = 0.;
   }
+}
+// default for sln=0
+void transform_element_unrefined_forward(int comp, Element *e, Element* e_ref)
+{
+  transform_element_unrefined_forward(0, comp, e, e_ref);
 }
 
 // Transfers solution from the coarse mesh to the reference one. The

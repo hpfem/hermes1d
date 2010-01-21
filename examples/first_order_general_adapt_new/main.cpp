@@ -196,7 +196,7 @@ int main() {
     if(max_ftr_error < TOL_ERR_FTR) break;
 
     // debug
-    //if (adapt_iterations == 10) break;
+    if (adapt_iterations == 4) break;
 
     // Returns updated coarse mesh with the last solution on it. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, elem_errors,

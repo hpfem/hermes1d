@@ -22,13 +22,13 @@ const double A = 0, B = 1;              // Domain end points
 const int P_init = 1;                   // Initial polynomal degree
 
 // JFNK or classical Newton?
-const int JFNK = 1;                     // 0... classical Newton
+const int JFNK = 0;                     // 0... classical Newton
                                         // 1... JFNK  
                                         // Only relevant for JFNK:
 const double JFNK_EPSILON = 1e-4;       // Parameter in the JFNK finite difference
 
 // Matrix solver                        // Used if JFNK == 0
-const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
+const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
                                         // 1... UMFPACK
                                         // 2... CG (no preconditioning)
                                         // Only relevant for iterative matrix solvers:
@@ -62,8 +62,8 @@ double Val_dir_right = pow(B + EPSILON, 1./3.);  // Dirichlet condition right
 // Function f(x)
 double f(double x) {
   //return sin(x);
-  //return 2;
-  return 2./9. * pow(x + EPSILON, -5./3.);
+  return 2;
+  //return 2./9. * pow(x + EPSILON, -5./3.);
 }
 
 // Exact solution:
@@ -73,10 +73,10 @@ const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
   //u[0] = sin(x);
   //dudx[0] = cos(x);
-  //u[0] = 1. - x*x;
-  //dudx[0] = -2.*x;
-  u[0] = pow(x + EPSILON, 1./3.);
-  dudx[0] = 1./3. * pow(x + EPSILON, -2./3.);
+  u[0] = 1. - x*x;
+  dudx[0] = -2.*x;
+  //u[0] = pow(x + EPSILON, 1./3.);
+  //dudx[0] = 1./3. * pow(x + EPSILON, -2./3.);
 }
 
 // Weak forms for Jacobi matrix and residual
@@ -253,7 +253,7 @@ int main() {
     if(max_qoi_err_est < TOL_ERR_QOI) break;
 
     // debug
-    //if (adapt_iterations == 3) break;
+    if (adapt_iterations == 3) break;
 
     // Returns updated coarse mesh with the last solution on it. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, ftr_errors,
