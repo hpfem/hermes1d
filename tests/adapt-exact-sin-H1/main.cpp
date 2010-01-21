@@ -19,7 +19,7 @@ double A = -M_PI, B = M_PI;              // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Matrix solver                        // Used if JFNK == 0
-const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
+const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
                                         // 1... UMFPACK
                                         // 2... CG (no preconditioning)
                                         // Only relevant for iterative matrix solvers:
@@ -72,8 +72,8 @@ double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
 // u_prev...previous solution (all solution components)
 double jacobian(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                 void *user_data)
 {
   double val = 0;
@@ -91,13 +91,14 @@ double jacobian(int num, double *x, double *weights,
 // v...test function
 // u_prev...previous solution (all solution components)
 double residual(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],  
+                double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+                double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],  
                 double *v, double *dvdx, void *user_data)
 {
   double val = 0;
+  int si = 0;      // solution index (only 0 is relevant for this example)
   for(int i = 0; i<num; i++) {
-    val += (du_prevdx[0][i]*dvdx[i] - f(x[i])*v[i])*weights[i];
+    val += (du_prevdx[si][0][i]*dvdx[i] - f(x[i])*v[i])*weights[i];
   }
   return val;
 };
