@@ -6,9 +6,6 @@
 #include "discrete.h"
 #include "mesh.h"
 #include "solver_umfpack.h"
-#include "comprow_double.h"
-#include "ilupre_double.h"
-#include "IML/cg.h"
 
 DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
