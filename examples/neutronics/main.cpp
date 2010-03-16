@@ -24,10 +24,10 @@ bool verbose = false;
 // General input:
 int N_subdiv_inner = 2;      // Equidistant subdivision of the inner core macroelement
 int N_subdiv_outer = 2;      // Equidistant subdivision of the outer core macroelement
-int N_subdiv_vacuum = 1;     // Equidistant subdivision of the vacuum macroelement
+int N_subdiv_reflector = 1;     // Equidistant subdivision of the reflector macroelement
 int P_init_inner = 3;        // Initial polynomal degree in inner core (material 0)
 int P_init_outer = 3;        // Initial polynomal degree in outer core (material 1)
-int P_init_vacuum = 3;       // Initial polynomal degree in vacuum (material 2)
+int P_init_reflector = 3;       // Initial polynomal degree in reflector (material 2)
 int Max_SI = 1000;           // Max. number of eigenvalue iterations
 int N_SLN = 2;               // Number of solutions
 double K_EFF = 1.0;          // Initial approximation
@@ -38,7 +38,7 @@ const int N_GRP = 1;			           // Number of energy groups in multigroup appro
 double interfaces[N_MAT+1] = { 0, 50, 100, 125 };  // Coordinates of material regions interfaces [cm]
 int Marker_inner = 0;                              // Material marker for inner core elements
 int Marker_outer = 1;                              // Material marker for outer core elements
-int Marker_vacuum = 2;                             // Material marker for vacuum elements
+int Marker_reflector = 2;                             // Material marker for reflector elements
 
 // Matrix solver
 const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
@@ -140,9 +140,9 @@ int main() {
   // poly_orders[]... initial poly degrees of macroelements
   // material_markers[]... material markers of macroelements
   // subdivisions[]... equidistant subdivision of macroelements
-  int poly_orders[N_MAT] = {P_init_inner, P_init_outer, P_init_vacuum };
-  int material_markers[N_MAT] = {Marker_inner, Marker_outer, Marker_vacuum };
-  int subdivisions[N_MAT] = {N_subdiv_inner, N_subdiv_outer, N_subdiv_vacuum };
+  int poly_orders[N_MAT] = {P_init_inner, P_init_outer, P_init_reflector };
+  int material_markers[N_MAT] = {Marker_inner, Marker_outer, Marker_reflector };
+  int subdivisions[N_MAT] = {N_subdiv_inner, N_subdiv_outer, N_subdiv_reflector };
 
   // Create coarse mesh, enumerate basis functions
   Mesh *mesh = new Mesh(N_MAT, interfaces, poly_orders, material_markers, subdivisions, N_GRP, N_SLN);
@@ -157,10 +157,10 @@ int main() {
   DiscreteProblem *dp = new DiscreteProblem();
   dp->add_matrix_form(0, 0, jacobian_vol_inner, Marker_inner);
   dp->add_matrix_form(0, 0, jacobian_vol_outer, Marker_outer);
-  dp->add_matrix_form(0, 0, jacobian_vol_vacuum, Marker_vacuum);
+  dp->add_matrix_form(0, 0, jacobian_vol_reflector, Marker_reflector);
   dp->add_vector_form(0, residual_vol_inner, Marker_inner);
   dp->add_vector_form(0, residual_vol_outer, Marker_outer);
-  dp->add_vector_form(0, residual_vol_vacuum, Marker_vacuum);
+  dp->add_vector_form(0, residual_vol_reflector, Marker_reflector);
   dp->add_vector_form_surf(0, residual_surf_left, BOUNDARY_LEFT);
   dp->add_matrix_form_surf(0, 0, jacobian_surf_right, BOUNDARY_RIGHT);
   dp->add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);

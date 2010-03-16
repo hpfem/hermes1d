@@ -33,7 +33,7 @@ double jacobian_vol_outer(int num, double *x, double *weights,
   }
   return val;
 }
-double jacobian_vol_vacuum(int num, double *x, double *weights, 
+double jacobian_vol_reflector(int num, double *x, double *weights, 
                 double *u, double *dudx, double *v, double *dvdx, 
                 double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                 double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],  
@@ -43,7 +43,7 @@ double jacobian_vol_vacuum(int num, double *x, double *weights,
   double val = 0;
   int comp = 0;    // solution component
   for(int i = 0; i<num; i++) {
-    val += (D[comp][m] * dudx[i] * dvdx[i] + Sa[comp][m] * u[i] * v[i]) * weights[i]; // vacuum
+    val += (D[comp][m] * dudx[i] * dvdx[i] + Sa[comp][m] * u[i] * v[i]) * weights[i]; // reflector
   }
   return val;
 }
@@ -78,7 +78,7 @@ double residual_vol_outer(int num, double *x, double *weights,
   }
   return val;
 }
-double residual_vol_vacuum(int num, double *x, double *weights, 
+double residual_vol_reflector(int num, double *x, double *weights, 
                 double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                 double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
                 double *v, double *dvdx, void *user_data)
@@ -88,7 +88,7 @@ double residual_vol_vacuum(int num, double *x, double *weights,
   int comp = 0;    // solution component
   int last_newton = 0, last_global = 1;   // solution indices
   for(int i = 0; i<num; i++) {
-    val += (D[comp][m] * du_prevdx[last_newton][comp][i] * dvdx[i] + Sa[comp][m] * u_prev[last_newton][comp][i] * v[i] // vacuum
+    val += (D[comp][m] * du_prevdx[last_newton][comp][i] * dvdx[i] + Sa[comp][m] * u_prev[last_newton][comp][i] * v[i] // reflector
     				- chi[comp] / K_EFF * nSf[comp][m] * u_prev[last_global][comp][i] * v[i]) * weights[i];
   }
   return val;
