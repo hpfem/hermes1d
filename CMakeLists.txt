@@ -24,7 +24,12 @@ if(RELEASE)
 endif(RELEASE)
 
 
+add_subdirectory(hermes_common)
 add_subdirectory(src)
+
+find_package(PythonLibs REQUIRED)
+find_package(NumPy REQUIRED)
+
 if(WITH_PYTHON)
     add_subdirectory(python)
 endif(WITH_PYTHON)

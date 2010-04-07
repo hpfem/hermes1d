@@ -1,6 +1,6 @@
 set(SRC
     common.cpp iterator.cpp qsort.cpp
-    lobatto.cpp legendre.cpp  matrix.cpp
+    lobatto.cpp legendre.cpp
     discrete.cpp solution.cpp mesh.cpp
     linearizer.cpp quad_std.cpp transforms.cpp
     adapt.cpp graph.cpp h1_polys.cpp
@@ -12,6 +12,9 @@ find_package(BLAS REQUIRED)
 add_definitions(-DCOMPLEX=std::complex<double>)
 include_directories(SparseLib/include SparseLib/mv/include)
 include_directories(${UMFPACK_INCLUDE_DIR} ${AMD_INCLUDE_DIR})
+
+include_directories(${hermes1d_SOURCE_DIR}/hermes_common/)
+include_directories(${PYTHON_INCLUDE_PATH} ${NUMPY_INCLUDE_PATH})
 
 add_library(${HERMES_BIN} SHARED ${SRC})
 target_link_libraries(${HERMES_BIN} ${UMFPACK_LIBRARY} ${AMD_LIBRARY} ${BLAS_LIBRARIES})
