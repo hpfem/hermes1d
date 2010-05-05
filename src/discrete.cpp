@@ -3,9 +3,10 @@
 // file for the exact terms).
 // Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
+#include "matrix.h"
 #include "discrete.h"
 #include "mesh.h"
-#include "solver_umfpack.h"
+#include "python_solvers.h"
 
 DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
@@ -432,14 +433,13 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
 
     // solving the matrix system
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
-    if (matrix_solver == 0) solve_linear_system_lu((CooMatrix*)mat, res);
-    if (matrix_solver == 1) solve_linear_system_umfpack((CooMatrix*)mat, res);
+    if (matrix_solver == 0) solve_linear_system_dense_lu(mat, res);
+    if (matrix_solver == 1) solve_linear_system_scipy_umfpack(mat, res);
     if (matrix_solver == 2) { 
       // 'y' corresponds to the last solution. It is used as an 
       // initial condition for the iterative method
-      int flag = solve_linear_system_cg((CooMatrix*)mat, 
-                                        res, n_dof, 
-                                        matrix_solver_tol, 
+      int flag = solve_linear_system_cg(mat, res,
+                                        matrix_solver_tol,
                                         matrix_solver_maxiter);
       if(flag == 0) error("CG (regular) did not converge.");
     }

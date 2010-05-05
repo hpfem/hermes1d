@@ -4,6 +4,7 @@
 // Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
 #include "common.h"
+#include "matrix.h"
 #include "transforms.h"
 #include "linearizer.h"
 
@@ -311,7 +312,7 @@ double** get_proj_matrix_H1(int n_eq, int fns_num, int pts_num,
                             double phys_weights[MAX_QUAD_PTS_NUM]) 
 { 
   // allocate
-  double** matrix = new_matrix<double>(MAX_P+1, MAX_P+1);
+  double** matrix = _new_matrix<double>(MAX_P+1, MAX_P+1);
 
   // fill
   for (int i=0; i<fns_num; i++) {
@@ -1051,7 +1052,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
                                       leg_pol_val_right, leg_pol_der_right, 
                                       phys_weights_right); 
     // add the two matrices 
-    double ** matrix = new_matrix<double>(MAX_P+1, MAX_P+1);
+    double ** matrix = _new_matrix<double>(MAX_P+1, MAX_P+1);
     for(int i=0; i < fns_num; i++) { 
       for(int j=0; j < fns_num; j++) { 
         matrix[i][j] = matrix_left[i][j] + matrix_right[i][j];
