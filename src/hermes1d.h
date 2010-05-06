@@ -24,7 +24,8 @@
 #include "linearizer.h"
 #include "transforms.h"
 #include "adapt.h"
-#include "solver_umfpack.h"
 #include "graph.h"
+
+#include "python_solvers.h"
 
 #endif

@@ -1,5 +1,4 @@
 #include "hermes1d.h"
-#include "solver_umfpack.h"
 
 // ********************************************************************
 // This example shows solution of harmonic steady state on the homoegenous transmision line.
