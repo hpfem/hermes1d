@@ -20,3 +20,5 @@ if(RELEASE)
     set_target_properties(hermes1d PROPERTIES COMPILE_FLAGS
         ${CMAKE_CXX_FLAGS_RELEASE})
 endif(RELEASE)
+
+target_link_libraries(${HERMES_BIN} hermes_common)
