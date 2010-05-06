@@ -60,7 +60,7 @@ void test_solver2()
     _assert(fabs(res[3] - 0.2) < EPS);
 
     DenseMatrix B(&A);
-    res = {1., 1., 1., 1.};
+    for (int i=0; i < 4; i++) res[i] = 1.;
 
     solve_linear_system_dense_lu(&B, res);
     _assert(fabs(res[0] - 0.2) < EPS);
@@ -91,21 +91,21 @@ void test_solver3()
     _assert(fabs(res[2] - 0.6) < EPS);
     _assert(fabs(res[3] - 0.2) < EPS);
 
-    res = {1., 1., 1., 1.};
+    for (int i=0; i < 4; i++) res[i] = 1.;
     solve_linear_system_scipy_umfpack(&A, res);
     _assert(fabs(res[0] - 0.2) < EPS);
     _assert(fabs(res[1] - 0.6) < EPS);
     _assert(fabs(res[2] - 0.6) < EPS);
     _assert(fabs(res[3] - 0.2) < EPS);
 
-    res = {1., 1., 1., 1.};
+    for (int i=0; i < 4; i++) res[i] = 1.;
     solve_linear_system_scipy_cg(&A, res);
     _assert(fabs(res[0] - 0.2) < EPS);
     _assert(fabs(res[1] - 0.6) < EPS);
     _assert(fabs(res[2] - 0.6) < EPS);
     _assert(fabs(res[3] - 0.2) < EPS);
 
-    res = {1., 1., 1., 1.};
+    for (int i=0; i < 4; i++) res[i] = 1.;
     _assert(solve_linear_system_cg(&A, res, EPS, 2) == 1);
     _assert(fabs(res[0] - 0.2) < EPS);
     _assert(fabs(res[1] - 0.6) < EPS);
@@ -137,7 +137,11 @@ void test_solver4()
     _assert(fabs(res[3] - 4.) < EPS);
     _assert(fabs(res[4] - 5.) < EPS);
 
-    res = {8., 45., -3., 3., 19.};
+    res[0] = 8.;
+    res[1] = 45.;
+    res[2] = -3.;
+    res[3] = 3.;
+    res[4] = 19.;
     solve_linear_system_scipy_umfpack(&A, res);
     _assert(fabs(res[0] - 1.) < EPS);
     _assert(fabs(res[1] - 2.) < EPS);
@@ -145,7 +149,11 @@ void test_solver4()
     _assert(fabs(res[3] - 4.) < EPS);
     _assert(fabs(res[4] - 5.) < EPS);
 
-    res = {8., 45., -3., 3., 19.};
+    res[0] = 8.;
+    res[1] = 45.;
+    res[2] = -3.;
+    res[3] = 3.;
+    res[4] = 19.;
     solve_linear_system_scipy_gmres(&A, res);
     _assert(fabs(res[0] - 1.) < EPS);
     _assert(fabs(res[1] - 2.) < EPS);
