@@ -124,16 +124,16 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
 		    element_shapefn(e->x1, e->x2,  
 				    j, order, phys_u, phys_dudx); 
 		    // evaluate the bilinear form
-		    double val_ji = mfv->fn(pts_num, phys_pts,
+		    double val_ij = mfv->fn(pts_num, phys_pts,
 			      phys_weights, phys_u, phys_dudx, phys_v, phys_dvdx,
 			      phys_u_prev, phys_du_prevdx, NULL); 
 		    //truncating
-		    if (fabs(val_ji) < 1e-12) val_ji = 0.0; 
+		    if (fabs(val_ij) < 1e-12) val_ij = 0.0; 
 		    // add the result to the matrix
-		    if (val_ji != 0) mat->add(pos_j, pos_i, val_ji);
+		    if (val_ij != 0) mat->add(pos_i, pos_j, val_ij);
 		    if (DEBUG) {
 		      printf("Adding to matrix pos %d, %d value %g (comp %d, %d)\n", 
-		      pos_i, pos_j, val_ji, c_i, c_j);
+		      pos_i, pos_j, val_ij, c_i, c_j);
 		    }
 	          }
 	        }
@@ -242,14 +242,14 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
               element_shapefn_point(x_ref, e->x1, e->x2, j, phys_u, 
                                     phys_dudx); 
               // evaluate the surface bilinear form
-              double val_ji_surf = mfs->fn(x_phys,
+              double val_ij_surf = mfs->fn(x_phys,
                                phys_u, phys_dudx, phys_v, 
                                phys_dvdx, phys_u_prev, phys_du_prevdx, 
                                NULL); 
   	      // truncating
-	      if(fabs(val_ji_surf) < 1e-12) val_ji_surf = 0.0; 
+	      if(fabs(val_ij_surf) < 1e-12) val_ij_surf = 0.0; 
               // add the result to the matrix
-              if (val_ji_surf != 0) mat->add(pos_j, pos_i, val_ji_surf);
+              if (val_ij_surf != 0) mat->add(pos_i, pos_j, val_ij_surf);
             }
           }
 	}
