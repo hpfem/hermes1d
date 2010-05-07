@@ -1,7 +1,6 @@
 //#define NDEBUG
 
 #include "hermes1d.h"
-#include "solver_umfpack.h"
 
 #include <map>
 #include <cassert>

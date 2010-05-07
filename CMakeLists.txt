@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(WITH_PYTHON no)
-set(DEBUG no)
-set(RELEASE yes)
+set(DEBUG yes)
+set(RELEASE no)
 set(WITH_TESTS yes)
 
 # Doxygen related
@@ -30,7 +30,12 @@ if(RELEASE)
 endif(RELEASE)
 
 
+add_subdirectory(hermes_common)
 add_subdirectory(src)
+
+find_package(PythonLibs REQUIRED)
+find_package(NumPy REQUIRED)
+
 if(WITH_PYTHON)
     add_subdirectory(python)
 endif(WITH_PYTHON)

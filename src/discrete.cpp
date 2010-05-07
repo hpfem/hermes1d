@@ -3,9 +3,10 @@
 // file for the exact terms).
 // Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
+#include "matrix.h"
 #include "discrete.h"
 #include "mesh.h"
-#include "solver_umfpack.h"
+#include "python_solvers.h"
 
 DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
@@ -124,16 +125,16 @@ void DiscreteProblem::process_vol_forms(Mesh *mesh, Matrix *mat, double *res,
 		    element_shapefn(e->x1, e->x2,  
 				    j, order, phys_u, phys_dudx); 
 		    // evaluate the bilinear form
-		    double val_ji = mfv->fn(pts_num, phys_pts,
+		    double val_ij = mfv->fn(pts_num, phys_pts,
 			      phys_weights, phys_u, phys_dudx, phys_v, phys_dvdx,
 			      phys_u_prev, phys_du_prevdx, NULL); 
 		    //truncating
-		    if (fabs(val_ji) < 1e-12) val_ji = 0.0; 
+		    if (fabs(val_ij) < 1e-12) val_ij = 0.0; 
 		    // add the result to the matrix
-		    if (val_ji != 0) mat->add(pos_j, pos_i, val_ji);
+		    if (val_ij != 0) mat->add(pos_i, pos_j, val_ij);
 		    if (DEBUG) {
 		      printf("Adding to matrix pos %d, %d value %g (comp %d, %d)\n", 
-		      pos_i, pos_j, val_ji, c_i, c_j);
+		      pos_i, pos_j, val_ij, c_i, c_j);
 		    }
 	          }
 	        }
@@ -242,14 +243,14 @@ void DiscreteProblem::process_surf_forms(Mesh *mesh, Matrix *mat, double *res,
               element_shapefn_point(x_ref, e->x1, e->x2, j, phys_u, 
                                     phys_dudx); 
               // evaluate the surface bilinear form
-              double val_ji_surf = mfs->fn(x_phys,
+              double val_ij_surf = mfs->fn(x_phys,
                                phys_u, phys_dudx, phys_v, 
                                phys_dvdx, phys_u_prev, phys_du_prevdx, 
                                NULL); 
   	      // truncating
-	      if(fabs(val_ji_surf) < 1e-12) val_ji_surf = 0.0; 
+	      if(fabs(val_ij_surf) < 1e-12) val_ij_surf = 0.0; 
               // add the result to the matrix
-              if (val_ji_surf != 0) mat->add(pos_j, pos_i, val_ji_surf);
+              if (val_ij_surf != 0) mat->add(pos_i, pos_j, val_ij_surf);
             }
           }
 	}
@@ -383,91 +384,6 @@ void solve_linear_system_iter(int solver, Matrix* mat, double *res)
 }
 */
 
- // matrix vector multiplication
-void mat_dot(Matrix* A, double* x, double* result, int n_dof)
-{
-  A->times_vector(x, result, n_dof);
-}
-
-// vector vector multiplication
-double vec_dot(double* r, double* s, int n_dof) 
-{
-  double result = 0;
-  for (int i=0; i < n_dof; i++) result += r[i]*s[i];
-  return result;
-}
-
-// LU decomposition (default choice in Hermes1D)
-void solve_linear_system_lu(Matrix* coo_mat, double *res)
-{
-  // initializing dense matrix using a coordinate matrix
-  DenseMatrix *dense_mat = new DenseMatrix((CooMatrix*)coo_mat);
-
-  // replace matrix with its LU decomposition
-  // permutations caused by partial pivoting are 
-  // recorded in the vector indx
-  int size = coo_mat->get_size();
-  int *indx = new int[size];
-  double d;
-  ludcmp(dense_mat->mat, size, indx, &d);
-
-  // solve system
-  lubksb(dense_mat->mat, size, indx, res);
-}
-
-// Standard CG method starting from zero vector
-// (because we solve for the increment)
-// x... comes as right-hand side, leaves as solution
-int solve_linear_system_cg(Matrix* A, double *x, 
-                           int n_dof, double matrix_solver_tol, 
-                           int matrix_solver_maxiter)
-{
-  double *r = new double[n_dof];
-  double *p = new double[n_dof];
-  double *help_vec = new double[n_dof];
-  if (r == NULL || p == NULL || help_vec == NULL) {
-    error("a vector could not be allocated in solve_linear_system_iter().");
-  }
-  // r = b - A*x0  (where b is x and x0 = 0)
-  for (int i=0; i < n_dof; i++) r[i] = x[i];
-  // p = r
-  for (int i=0; i < n_dof; i++) p[i] = r[i];
-
-  // setting initial condition x = 0
-  for (int i=0; i < n_dof; i++) x[i] = 0;
-
-  // CG iteration
-  int iter_current = 0;
-  double tol_current;
-  while (1) {
-    mat_dot(A, p, help_vec, n_dof);
-    double r_times_r = vec_dot(r, r, n_dof);
-    double alpha = r_times_r / vec_dot(p, help_vec, n_dof); 
-    for (int i=0; i < n_dof; i++) {
-      x[i] += alpha*p[i];
-      r[i] -= alpha*help_vec[i];
-    }
-    double r_times_r_new = vec_dot(r, r, n_dof);
-    iter_current++;
-    tol_current = sqrt(r_times_r_new);
-    if (tol_current < matrix_solver_tol 
-        || iter_current >= matrix_solver_maxiter) break;
-    double beta = r_times_r_new/r_times_r;
-    for (int i=0; i < n_dof; i++) p[i] = r[i] + beta*p[i];
-  }
-  int flag;
-  if (tol_current <= matrix_solver_tol) flag = 1;
-  else flag = 0;
-  if (r != NULL) delete [] r;
-  if (p != NULL) delete [] p;
-  if (help_vec != NULL) delete [] help_vec;
-
-  printf("CG (regular) made %d iteration(s) (tol = %g)\n", 
-         iter_current, tol_current);
-
-  return flag;
-}
-
 // Newton's iteration
 void newton(DiscreteProblem *dp, Mesh *mesh, 
             int matrix_solver, double matrix_solver_tol, 
@@ -517,14 +433,13 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
 
     // solving the matrix system
     //solve_linear_system_umfpack((CooMatrix*)mat, res);
-    if (matrix_solver == 0) solve_linear_system_lu((CooMatrix*)mat, res);
-    if (matrix_solver == 1) solve_linear_system_umfpack((CooMatrix*)mat, res);
+    if (matrix_solver == 0) solve_linear_system_dense_lu(mat, res);
+    if (matrix_solver == 1) solve_linear_system_scipy_umfpack(mat, res);
     if (matrix_solver == 2) { 
       // 'y' corresponds to the last solution. It is used as an 
       // initial condition for the iterative method
-      int flag = solve_linear_system_cg((CooMatrix*)mat, 
-                                        res, n_dof, 
-                                        matrix_solver_tol, 
+      int flag = solve_linear_system_cg(mat, res,
+                                        matrix_solver_tol,
                                         matrix_solver_maxiter);
       if(flag == 0) error("CG (regular) did not converge.");
     }

@@ -116,8 +116,8 @@ void fill_trans_matrices(TransMatrix trans_matrix_left,
         }
         // for each 'j' we get a new column in the 
         // transformation matrices
-        solve_linear_system(mat_left, f_left);
-        solve_linear_system(mat_right, f_right);
+        solve_linear_system_dense_lu(mat_left, f_left);
+        solve_linear_system_dense_lu(mat_right, f_right);
         for (int i=0; i < max_fns_num; i++) {
             trans_matrix_left[i][j] = f_left[i];
             trans_matrix_right[i][j] = f_right[i];
