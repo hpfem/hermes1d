@@ -14,6 +14,7 @@
 #include <typeinfo>
 #include <math.h>
 #include <string.h>
+#include <complex>
 
 #include "python_api.h"
 
@@ -21,12 +22,18 @@
 #define _error(x) throw std::runtime_error(x)
 #define DEBUG_MATRIX 0
 
+typedef std::complex<double> cplx;
+
+
 class Matrix {
 public:
     Matrix();
     virtual ~Matrix();
     virtual int get_size() = 0;
     virtual void add(int m, int n, double v) = 0;
+    virtual void add(int m, int n, cplx v) {
+	    _error("internal error: add(int, int, cplx) not implemented.");
+    }
     virtual void add_block(int *iidx, int ilen, int *jidx, int jlen,
             double** mat) {
         for (int i = 0; i < ilen; i++)
@@ -34,23 +41,36 @@ public:
                 if (iidx[i] >= 0 && jidx[j] >= 0)
                     this->add(iidx[i], jidx[j], mat[i][j]);
     }
+    virtual void add_block(int *iidx, int ilen, int *jidx, int jlen,
+            cplx** mat) {
+        for (int i = 0; i < ilen; i++)
+            for (int j=0; j < jlen; j++)
+                if (iidx[i] >= 0 && jidx[j] >= 0)
+                    this->add(iidx[i], jidx[j], mat[i][j]);
+    }
     virtual void set_zero() = 0;
     virtual double get(int m, int n) = 0;
+    virtual cplx get_cplx(int m, int n) {
+	    _error("internal error: get_cplx() not implemented.");
+    }
     virtual void copy_into(Matrix *m) = 0;
     virtual void print() = 0;
-    virtual void times_vector(double* vec, double* result, int rank) = 0;
+    virtual void times_vector(double* vec, double* result, int rank) {
+	    _error("internal error: times_vector() not implemented.");
+    }
 protected:
     Python *p;
 };
 
+template <typename SCALAR>
 class Triple {
     public:
         int i;
         int j;
-        double v;
-        Triple *next;
+        SCALAR v;
+        Triple<SCALAR> *next;
 
-        Triple(int i, int j, double v) {
+        Triple(int i, int j, SCALAR v) {
             this->i = i;
             this->j = j;
             this->v = v;
@@ -60,35 +80,38 @@ class Triple {
 
 class CooMatrix : public Matrix {
     public:
-        CooMatrix():Matrix() {
+        CooMatrix(bool is_complex=false):Matrix() {
+            this->_is_complex = is_complex;
             this->size = 0;
             this->list = NULL;
             this->list_last = NULL;
+            this->list_cplx = NULL;
+            this->list_last_cplx = NULL;
         }
-        CooMatrix(int size):Matrix() {
+        CooMatrix(int size, bool is_complex=false):Matrix() {
+            this->_is_complex = is_complex;
             this->size = size;
             this->list = NULL;
             this->list_last = NULL;
+            this->list_cplx = NULL;
+            this->list_last_cplx = NULL;
         }
         ~CooMatrix() {
-            this->free_data();
-            this->list = NULL;
-            this->list_last = NULL;
-            this->size = 0;
+            this->set_zero();
         }
+
+        template <typename SCALAR>
         void free_data() {
-            Triple *t = this->list;
+            Triple<SCALAR> *t = this->get_list<SCALAR>();
             while (t != NULL) {
-                Triple *t_old = t;
+                Triple<SCALAR> *t_old = t;
                 t = t->next;
                 delete t_old;
             }
         }
-        virtual void set_zero() {
-            this->free_data();
-            this->list = NULL;
-            this->list_last = NULL;
-        }
+
+        virtual void set_zero();
+
         virtual void add(int m, int n, double v) {
             // adjusting size if necessary
             if (m+1 > this->size) this->size = m+1;
@@ -97,7 +120,7 @@ class CooMatrix : public Matrix {
             if (DEBUG_MATRIX) {
                 printf("Matrix_add %d %d %g -> size = %d\n", m, n, v, this->size);
             }
-            Triple *t = new Triple(m, n, v);
+            Triple<double> *t = new Triple<double>(m, n, v);
             if (this->list == NULL) {
                 this->list = t;
                 this->list_last = t;
@@ -106,18 +129,41 @@ class CooMatrix : public Matrix {
                 this->list_last = this->list_last->next;
             }
         }
+
+        virtual void add(int m, int n, cplx v) {
+            // adjusting size if necessary
+            if (m+1 > this->size) this->size = m+1;
+            if (n+1 > this->size) this->size = n+1;
+            Triple<cplx> *t = new Triple<cplx>(m, n, v);
+            if (this->list_cplx == NULL) {
+                this->list_cplx = t;
+                this->list_last_cplx = t;
+            } else {
+                this->list_last_cplx->next = t;
+                this->list_last_cplx = this->list_last_cplx->next;
+            }
+        }
+
         virtual void copy_into(Matrix *m) {
             m->set_zero();
-            Triple *t = this->list;
-            while (t != NULL) {
-                m->add(t->i, t->j, t->v);
-                t = t->next;
+            if (this->_is_complex) {
+                Triple<cplx> *t = this->list_cplx;
+                while (t != NULL) {
+                    m->add(t->i, t->j, t->v);
+                    t = t->next;
+                }
+            } else {
+                Triple<double> *t = this->list;
+                while (t != NULL) {
+                    m->add(t->i, t->j, t->v);
+                    t = t->next;
+                }
             }
         }
 
         // Returns the number of triplets
         int triplets_len() {
-            Triple *t = this->list;
+            Triple<double> *t = this->list;
             int len = 0;
             while (t != NULL) {
                 len++;
@@ -129,7 +175,7 @@ class CooMatrix : public Matrix {
         // Returns the row/col indices, together with the data. All row, col
         // and data arrays have to be initialized (use this->triplets_len).
         void get_row_col_data(int *row, int *col, double *data) {
-            Triple *t = this->list;
+            Triple<double> *t = this->list;
             int i = 0;
             while (t != NULL) {
                 row[i] = t->i;
@@ -142,7 +188,7 @@ class CooMatrix : public Matrix {
 
         virtual double get(int m, int n) {
             double v=0;
-            Triple *t = this->list;
+            Triple<double> *t = this->list;
             if (t != NULL) {
                 while (t->next != NULL) {
                     if (m == t->i && n == t->j)
@@ -161,23 +207,34 @@ class CooMatrix : public Matrix {
 
         virtual void times_vector(double* vec, double* result, int rank) {
             for (int i=0; i < rank; i++) result[i] = 0;
-            Triple *t = this->list;
+            Triple<double> *t = this->list;
             while (t != NULL) {
                 result[t->i] += t->v * vec[t->j];
                 t = t->next;
             }
         }
 
+        template <typename SCALAR>
+        Triple<SCALAR> *get_list() {
+            // this works for SCALAR=double, and in matrix.cpp, we specialize
+            // it for SCALAR=cplx
+            return this->list;
+        }
+
     private:
         int size;
+        bool _is_complex;
         /*
            We represent the COO matrix as a list of Triples (i, j, v), where
            (i, j) can be redundant (then the corresponding "v" have to be
            summed). We remember the pointers to the first (*list) and last
            (*list_last) element.
            */
-        Triple *list;
-        Triple *list_last;
+        Triple<double> *list;
+        Triple<double> *list_last;
+
+        Triple<cplx> *list_cplx;
+        Triple<cplx> *list_last_cplx;
 };
 
 
@@ -198,31 +255,52 @@ T** _new_matrix(int m, int n = 0)
 
 class DenseMatrix : public Matrix {
     public:
-        DenseMatrix(int size) {
-            this->mat = _new_matrix<double>(size, size);
+        DenseMatrix(int size, bool is_complex=false) {
+            this->_is_complex = is_complex;
+            if (is_complex)
+                this->mat_cplx = _new_matrix<cplx>(size, size);
+            else
+                this->mat = _new_matrix<double>(size, size);
             this->size = size;
-            for (int i = 0; i<size; i++)
-              for (int j = 0; j<size; j++) this->mat[i][j] = 0;
+            if (is_complex) {
+                for (int i = 0; i<size; i++)
+                  for (int j = 0; j<size; j++)
+                      this->mat_cplx[i][j] = 0;
+            } else {
+                for (int i = 0; i<size; i++)
+                  for (int j = 0; j<size; j++)
+                      this->mat[i][j] = 0;
+            }
         }
-        DenseMatrix(Matrix *m) {
-            this->mat = _new_matrix<double>(m->get_size(), m->get_size());
-            //printf("%d %d", this->size, m->get_size());
-            //exit(1);
+        DenseMatrix(Matrix *m, bool is_complex=false) {
+            this->_is_complex = is_complex;
+            if (is_complex)
+                this->mat_cplx =
+                    _new_matrix<cplx>(m->get_size(), m->get_size());
+            else
+                this->mat = _new_matrix<double>(m->get_size(), m->get_size());
             this->size = m->get_size();
-            //this->size = size;
             m->copy_into(this);
-
         }
         ~DenseMatrix() {
             delete[] this->mat;
         }
         virtual void add(int m, int n, double v) {
             this->mat[m][n] += v;
-            //printf("calling add: %d %d %f\n", m, n, v);
+        }
+        virtual void add(int m, int n, cplx v) {
+            this->mat_cplx[m][n] += v;
         }
         virtual void set_zero() {
-            for (int i = 0; i<size; i++)
-              for (int j = 0; j<size; j++) this->mat[i][j] = 0;
+            if (this->_is_complex) {
+                for (int i = 0; i<size; i++)
+                  for (int j = 0; j<size; j++)
+                      this->mat_cplx[i][j] = 0;
+            } else {
+                for (int i = 0; i<size; i++)
+                  for (int j = 0; j<size; j++)
+                      this->mat[i][j] = 0;
+            }
         }
         virtual double get(int m, int n) {
             return this->mat[m][n];
@@ -257,18 +335,16 @@ class DenseMatrix : public Matrix {
             }
         }
 
-        virtual void times_vector(double* vec, double* result, int rank) {
-	    _error("times_vector() in dense matrix not implemented yet.");
-        }
-
         // Return the internal matrix.
         double **get_mat() {
             return this->mat;
         }
         double **mat;
+        cplx **mat_cplx;
 
     private:
         int size;
+        bool _is_complex;
 
 };
 
@@ -353,10 +429,6 @@ class CSRMatrix : public Matrix {
 
         virtual void print();
 
-        virtual void times_vector(double* vec, double* result, int rank) {
-	    _error("times_vector() in CSR matrix not implemented yet.");
-        }
-
         int *get_IA() {
             return this->IA;
         }
@@ -365,6 +437,9 @@ class CSRMatrix : public Matrix {
         }
         double *get_A() {
             return this->A;
+        }
+        cplx *get_A_cplx() {
+            _error("get_A_cplx not implemented yet");
         }
 
     private:
@@ -424,10 +499,6 @@ class CSCMatrix : public Matrix {
         }
 
         virtual void print();
-
-        virtual void times_vector(double* vec, double* result, int rank) {
-	    _error("times_vector() in CSC matrix not implemented yet.");
-        }
 
         int *get_IA() {
             return this->IA;

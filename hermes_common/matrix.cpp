@@ -304,6 +304,24 @@ void CooMatrix::print()
     printf("%s\n", py2c_str(p->pull("S")));
 }
 
+template <> Triple<cplx> *CooMatrix::get_list<cplx>() {
+    return this->list_cplx;
+}
+
+void CooMatrix::set_zero() {
+    if (this->_is_complex) {
+        this->free_data<cplx>();
+        this->list_cplx = NULL;
+        this->list_last_cplx = NULL;
+    } else {
+        this->free_data<double>();
+        this->list = NULL;
+        this->list_last = NULL;
+    }
+    this->size = 0;
+}
+
+
 // matrix vector multiplication
 void mat_dot(Matrix* A, double* x, double* result, int n_dof)
 {

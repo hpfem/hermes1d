@@ -8,6 +8,7 @@
 
 void solve_linear_system_numpy(Matrix *mat, double *res);
 void solve_linear_system_scipy_umfpack(Matrix *mat, double *res);
+void solve_linear_system_scipy_umfpack(Matrix *mat, cplx *res);
 void solve_linear_system_scipy_cg(Matrix *mat, double *res);
 void solve_linear_system_scipy_gmres(Matrix *mat, double *res);
 
