@@ -13,6 +13,9 @@ def convert_h():
         del lines[0]
         line = lines[0]
 
+    f.write("#include <complex>\n")
+    f.write("typedef ::std::complex<double> __pyx_t_double_complex;\n\n")
+
     while line.startswith("static"):
         line = line.replace("static", "extern")
         f.write(line)

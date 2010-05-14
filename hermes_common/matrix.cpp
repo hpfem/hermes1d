@@ -230,7 +230,12 @@ void CSRMatrix::add_from_CooMatrix(CooMatrix *m)
     p->exec("JA = n.indices");
     //Note: these arrays are allocated by numpy and the pointers A, IA, JA
     //point to them (inplace) so we will leave the deallocation to numpy
-    numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
+    this->_is_complex = m->is_complex();
+    if (this->is_complex())
+        numpy2c_double_complex_inplace(p->pull("A"), &(this->A_cplx),
+                &(this->nnz));
+    else
+        numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
     numpy2c_int_inplace(p->pull("IA"), &(this->IA), &(this->size));
     numpy2c_int_inplace(p->pull("JA"), &(this->JA), &(this->nnz));
     this->size--;
@@ -246,7 +251,12 @@ void CSRMatrix::add_from_CSCMatrix(CSCMatrix *m)
     p->exec("JA = n.indices");
     //Note: these arrays are allocated by numpy and the pointers A, IA, JA
     //point to them (inplace) so we will leave the deallocation to numpy
-    numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
+    this->_is_complex = m->is_complex();
+    if (this->is_complex())
+        numpy2c_double_complex_inplace(p->pull("A"), &(this->A_cplx),
+                &(this->nnz));
+    else
+        numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
     numpy2c_int_inplace(p->pull("IA"), &(this->IA), &(this->size));
     numpy2c_int_inplace(p->pull("JA"), &(this->JA), &(this->nnz));
     this->size--;
@@ -269,7 +279,12 @@ void CSCMatrix::add_from_CooMatrix(CooMatrix *m)
     p->exec("JA = n.indptr");
     //Note: these arrays are allocated by numpy and the pointers A, IA, JA
     //point to them (inplace) so we will leave the deallocation to numpy
-    numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
+    this->_is_complex = m->is_complex();
+    if (this->is_complex())
+        numpy2c_double_complex_inplace(p->pull("A"), &(this->A_cplx),
+                &(this->nnz));
+    else
+        numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
     numpy2c_int_inplace(p->pull("IA"), &(this->IA), &(this->nnz));
     numpy2c_int_inplace(p->pull("JA"), &(this->JA), &(this->size));
     this->size--;
@@ -284,7 +299,12 @@ void CSCMatrix::add_from_CSRMatrix(CSRMatrix *m)
     p->exec("JA = n.indptr");
     //Note: these arrays are allocated by numpy and the pointers A, IA, JA
     //point to them (inplace) so we will leave the deallocation to numpy
-    numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
+    this->_is_complex = m->is_complex();
+    if (this->is_complex())
+        numpy2c_double_complex_inplace(p->pull("A"), &(this->A_cplx),
+                &(this->nnz));
+    else
+        numpy2c_double_inplace(p->pull("A"), &(this->A), &(this->nnz));
     numpy2c_int_inplace(p->pull("IA"), &(this->IA), &(this->nnz));
     numpy2c_int_inplace(p->pull("JA"), &(this->JA), &(this->size));
     this->size--;
