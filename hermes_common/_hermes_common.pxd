@@ -3,6 +3,9 @@
 # file for the exact terms).
 # Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
+ctypedef double complex cplx
+
+
 cdef extern from *:
     ctypedef char* char_p       "char*"
     ctypedef char* const_char_p "const char*"
@@ -49,6 +52,10 @@ cdef extern from "arrayobject.h":
         NPY_NTYPES
         NPY_NOTYPE
 
+        NPY_COMPLEX32
+        NPY_COMPLEX64
+        NPY_COMPLEX128
+
     ctypedef int npy_intp
 
     ctypedef extern class numpy.ndarray [object PyArrayObject]:
@@ -82,12 +89,17 @@ cdef extern from "matrix.h":
 
     cdef struct c_Matrix "Matrix":
         int get_size()
+        int is_complex()
         void add(int m, int n, double v)
+        void add_cplx "add"(int m, int n, cplx v)
 
     cdef struct c_CooMatrix "CooMatrix":
         int triplets_len()
+        int triplets_len_cplx()
         void get_row_col_data(int *row, int *col, double *data)
-    c_CooMatrix *new_CooMatrix "new CooMatrix" (int size)
+        void get_row_col_data_cplx "get_row_col_data"(int *row, int *col,
+                cplx *data)
+    c_CooMatrix *new_CooMatrix "new CooMatrix" (int size, int is_complex)
 
     cdef struct c_CSCMatrix "CSCMatrix"
 
@@ -96,6 +108,7 @@ cdef extern from "matrix.h":
         int *get_IA()
         int *get_JA()
         double *get_A()
+        cplx *get_A_cplx()
         int get_nnz()
     c_CSRMatrix *new_CSRMatrix_size "new CSRMatrix" (int size)
     c_CSRMatrix *new_CSRMatrix_coo_matrix "new CSRMatrix" (c_CooMatrix *m)
@@ -106,6 +119,7 @@ cdef extern from "matrix.h":
         int *get_IA()
         int *get_JA()
         double *get_A()
+        cplx *get_A_cplx()
         int get_nnz()
     c_CSCMatrix *new_CSCMatrix_size "new CSCMatrix" (int size)
     c_CSCMatrix *new_CSCMatrix_coo_matrix "new CSCMatrix" (c_CooMatrix *m)

@@ -20,8 +20,7 @@ void Python::_init(int argc, char* argv[])
     python_count++;
     if (python_count == 1) {
         char *PYTHONPATH = getenv("PYTHONPATH");
-        if (PYTHONPATH == NULL)
-            _error("internal error in hermes_common: PYTHONPATH not defined");
+        // (If PYTHONPATH is not defined, it will be NULL)
         int max_len = 10000;
         char new_path[max_len];
         // This is a hack, so that we can load hermes_common below. Some better

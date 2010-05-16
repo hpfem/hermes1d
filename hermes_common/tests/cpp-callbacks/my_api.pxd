@@ -1,4 +1,4 @@
-from cpython.object cimport PyObject
+from ref cimport PyObject
 
 cdef extern from *:
     ctypedef char* char_p       "char*"
