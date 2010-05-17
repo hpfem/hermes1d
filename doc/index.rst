@@ -3,13 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Content of Hermes1D Documentation
-=================================
+Hermes1D Documentation
+======================
 
 .. toctree::
    :maxdepth: 2
 
-   src/intro.rst
+   src/intro-1.rst
+   src/intro-2.rst
+   src/examples.rst
 
 Links
 =====
@@ -26,5 +28,5 @@ Indices and Tables
 
 * :ref:`search`
 
-.. _Hermes1D: http://www.hpfem.org/hermes1d
-.. _hp-FEM: http://www.hpfem.org
+.. _Hermes1D: http://hpfem.org/hermes1d
+.. _hp-FEM: http://hpfem.org
