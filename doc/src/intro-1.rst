@@ -2,6 +2,55 @@
 Introduction
 ============
 
+About Hermes1D
+--------------
+
+Hermes1D is an experimental C++ library for the solution of ordinary differential equations 
+(ODE) and one-dimensional partial differential equations (PDE) with higher-order finite 
+element methods (hp-FEM). In contrast to traditional time-stepping ODE solvers, Hermes1D 
+constructs the solution using a variational principle. It starts from a weak formulation of 
+the ODE/PDE problem and allows the equations to be defined in a very general implicit 
+(vector-valued) form F(y, y', t) = 0. The approximation is a continuous, piecewise-polynomial 
+function defined in the entire interval (0, T). In contrast to time-stepping schemes, the 
+finite element approach makes it possible to prescribe boundary conditions either at the 
+beginning or at the end of the time interval (combinations are possible for systems). The 
+hp-FEM discretization leads to a system of nonlinear algebraic equations that is solved 
+via the Newton's method or JFNK. Hermes1D comes 
+with a free interactive online lab powered by UNR HPC cluster. The library is distributed 
+under the BSD license. 
+
+About this Document
+-------------------
+
+Prior to reading this document, we recommend that you install Hermes using instructions on 
+its `home page <http://hpfem.org/hermes1d/>`_, and subscribe to the `mailing list 
+<http://groups.google.com/group/hermes1d/>`_. Our mailing list is a very active place where 
+you should get all answers quickly. 
+
+The best way of reading this tutorial is to run the code at the same time. 
+After making your way through the tutorial, you may want to browse the directory
+with `examples <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples>`_ 
+that contain a variety of different ODE and one-dimensional PDE  models. If you 
+create an interesting model using Hermes, let us know and we will add it to the 
+repository. 
+
+The source code can be 
+viewed in the `git repository <http://hpfem.org/git/gitweb.cgi/hermes1d.git/tree>`_.
+For the 2D and 3D codes, see the `Hermes2D <http://hpfem.org/hermes2d/>`_ and 
+`Hermes3D <http://hpfem.org/hermes3d/>`_ home pages, respectively.
+
+User and Developer Documentation
+--------------------------------
+
+User documentation can be found in
+the directory 'doc/'. Type 'make html' there to build it. The documentation is
+available online at http://hpfem.org/hermes1d/doc/index.html.
+
+To compile the C++ reference manual, go to 'hermes1d/doc.cpp/'. There
+type 'doxygen hermes1d.lib-real.doxyfile'. The html files are in 
+'h1d-real/html/index.html'. This documentation is also 
+available online at http://hpfem.org/hermes1d/doc.cpp/h1d-real/html/index.html.
+
 Mathematical Background
 ----------------------
 
@@ -38,8 +87,7 @@ common shortcomings:
 This is why we decided to apply the $hp$-FEM methodology to ODEs and see what happens.
 
 Equations
----------
-
+~~~~~~~~~
 
 We implemented the first version of Hermes1D during one day while returning
 from the 2009 SIAM CSE conference. First we considered the form :eq:`one` but
@@ -82,7 +130,7 @@ condition per solution component has to be defined.
 
 
 hp-FEM discretization
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 
 As always, the finite element discretization starts from a weak formulation.
@@ -114,7 +162,7 @@ components $u_1, u_2, \ldots, u_m$ could (more precisely: *should*) be
 different but for now we assume that they are the same.
 
 Newton's method
----------------
+~~~~~~~~~~~~~~~
 
 
 We will drive the residual vector $\bfR = (R_1, R_2, \ldots, R_N)$ to zero
@@ -145,3 +193,15 @@ derivatives with respect to $u'_{n(j)}$ in :eq:`newt1`.  The functions $u_s$
 and $u'_s$ are used as independent variables for the differentiation.
 
 
+Interactive Web Accessibility
+-----------------------------
+
+* **Interactive web usage**. You can use Hermes (and other major open source FEM codes) remotely via any web browser, using the `FEMhub Online Numerical Methods Laboratory <http://lab.femhub.org/>`_. Your hardware will not be used as the online lab is powered by the University of Nevada, Reno (UNR) high-performance computing facility (`Research Grid <http://hpc.unr.edu/wiki/index.php/Main_Page>`_). You can compute with Hermes using an iPhone if you like.
+
+.. image:: img/intro/iphone_large.png
+   :align: center
+   :width: 250
+   :height: 450
+   :alt: Hermes in iPhone.
+
+See the `Hermes home page <http://hpfem.org/hermes1d/>`_ for more information. An overview of books, journal articles, conference proceedings papers and talks about Hermes and adaptive *hp*-FEM can be found in its `publications section <http://hpfem.org/publications/>`_.
