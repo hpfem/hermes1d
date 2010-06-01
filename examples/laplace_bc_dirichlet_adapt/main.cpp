@@ -11,7 +11,8 @@
 // General input:
 static int N_eq = 1;
 int N_elem = 2;                         // Number of elements
-double A = -1, B = 1;             // Domain end points
+double A = -M_PI, B = M_PI;             // Domain end points
+//double A = -1, B = 1;                 // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Matrix solver
@@ -33,7 +34,7 @@ const int ADAPT_TYPE = 0;               // 0... hp-adaptivity
                                         // 2... p-adaptivity
 const double THRESHOLD = 0.7;           // Refined will be all elements whose error
                                         // is greater than THRESHOLD*max_elem_error
-const double TOL_ERR_REL = 1e-2;        // Tolerance for the relative error between 
+const double TOL_ERR_REL = 1e-6;        // Tolerance for the relative error between 
                                         // the coarse mesh and reference solutions
 const int NORM = 1;                     // To measure errors:
                                         // 1... H1 norm
@@ -41,14 +42,14 @@ const int NORM = 1;                     // To measure errors:
 
 // Boundary conditions
 double Val_dir_left = 0;                // Dirichlet condition left
-double Val_dir_right = 1;               // Dirichlet condition right
+double Val_dir_right = 0;               // Dirichlet condition right
 
 // Function f(x)
 double alpha = 1.5;
 double f(double x) {
-  if (x <= 0) return 0;
-  else return -alpha*(alpha-1.)*pow(x, alpha-2.); 
-  //return sin(x);
+  //if (x <= 0) return 0;
+  //else return -alpha*(alpha-1.)*pow(x, alpha-2.); 
+  return sin(x);
   //return 2;
 }
 
@@ -57,12 +58,12 @@ double f(double x) {
 // forget to update interval accordingly
 const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
-  if (x <= 0) u[0] = 0;
-  else u[0] = pow(x, alpha);
-  if (x <= 0) dudx[0] = 0;
-  else dudx[0] = alpha*pow(x, alpha-1.);
-  //u[0] = sin(x);
-  //dudx[0] = cos(x);
+  //if (x <= 0) u[0] = 0;
+  //else u[0] = pow(x, alpha);
+  //if (x <= 0) dudx[0] = 0;
+  //else dudx[0] = alpha*pow(x, alpha-1.);
+  u[0] = sin(x);
+  dudx[0] = cos(x);
   //u[0] = 1. - x*x;
   //dudx[0] = -2.*x;
 }
@@ -84,6 +85,7 @@ int main() {
   dp->add_vector_form(0, residual);
 
   // Initial Newton's loop on coarse mesh
+  printf("Newton on coarse mesh.\n");
   newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
          NEWTON_TOL_COARSE, NEWTON_MAXITER);
 
@@ -110,6 +112,7 @@ int main() {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
 
     // Newton's loop on fine mesh
+    printf("Newton on fine mesh.\n");
     newton(dp, mesh_ref, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
            NEWTON_TOL_REF, NEWTON_MAXITER);
 
@@ -119,6 +122,7 @@ int main() {
     if (adapt_iterations > 1) {
 
       // Newton's loop on coarse mesh
+      printf("Newton on coarse mesh.\n");
       newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
              NEWTON_TOL_COARSE, NEWTON_MAXITER);
     }
@@ -160,7 +164,7 @@ int main() {
     if(err_est_rel*100 < TOL_ERR_REL) break;
 
     // debug
-    if (adapt_iterations == 5) break;
+    if (adapt_iterations == 8) break;
 
     // Returns updated coarse and fine meshes, with the last 
     // coarse and fine mesh solutions on them, respectively. 

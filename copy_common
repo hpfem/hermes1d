@@ -4,7 +4,7 @@
 
 # Set the path to your hermes_common git directory:
 
-HERMES_COMMON=../hermes_common
+HERMES_COMMON=../hermes2d/hermes_common
 
 # How it works: the old hermes_common directory gets deleted, and the new
 # hermes_common gets copied instead of it. This means that all local
