@@ -5,7 +5,7 @@
 // This example uses hp-adaptivity to solve the Poisson equation 
 // -u'' - f = 0 in an interval (A, B), equipped with Dirichlet 
 // boundary conditions on both end points. A series of small reference 
-// solutions (we call tehm fast trial refinements, FTR) is used both 
+// solutions (we call them fast trial refinements, FTR) is used both 
 // to decide what elements will be refined, and how they will be refined. 
 
 // General input:
@@ -15,7 +15,7 @@ double A = -M_PI, B = M_PI;             // Domain end points
 int P_init = 1;                         // Initial polynomal degree
 
 // Matrix solver
-const int MATRIX_SOLVER = 2;            // 0... default (LU decomposition)
+const int MATRIX_SOLVER = 0;            // 0... default (LU decomposition)
                                         // 1... UMFPACK
                                         // 2... CG (no preconditioning)
                                         // Only relevant for iterative matrix solvers:
@@ -195,7 +195,7 @@ int main() {
     if(max_ftr_error < TOL_ERR_FTR) break;
 
     // debug
-    //if (adapt_iterations == 10) break;
+    if (adapt_iterations >= 1) break;
 
     // Returns updated coarse mesh with the last solution on it. 
     adapt(NORM, ADAPT_TYPE, THRESHOLD, ftr_errors,

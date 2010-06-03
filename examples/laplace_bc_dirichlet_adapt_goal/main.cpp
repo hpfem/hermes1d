@@ -5,7 +5,7 @@
 // This example uses hp-adaptivity to solve the Poisson equation 
 // -u'' - f = 0 in an interval (A, B), equipped with Dirichlet 
 // boundary conditions on both end points. A series of small reference 
-// solutions (we call tehm fast trial refinements, FTR) is used both 
+// solutions (we call them fast trial refinements, FTR) is used both 
 // to decide what elements will be refined, and how they will be refined.
 // One has to define a goal of computation (quantity of interest) which 
 // is any linear functional of the solution. Adaptivity can be guided either
@@ -15,10 +15,10 @@
 
 // General input:
 const int N_eq = 1;
-const int N_elem = 3;                   // Number of elements
-//const double A = -M_PI, B = M_PI;      // Domain end points
+const int N_elem = 30;                   // Number of elements
+//const double A = 0, B = 1;              // Domain end points
+const double A = -M_PI, B = M_PI;      // Domain end points
 const double EPSILON = 0.01;            // Equation parameter
-const double A = 0, B = 1;              // Domain end points
 const int P_init = 1;                   // Initial polynomal degree
 
 // JFNK or classical Newton?
@@ -41,7 +41,7 @@ const double NEWTON_TOL_REF = 1e-8;     // Reference mesh
 const int NEWTON_MAXITER = 150;
 
 // Adaptivity
-const int GOAL_ORIENTED = 1;            // 0... standard adaptivity in norm
+const int GOAL_ORIENTED = 0;            // 0... standard adaptivity in norm
                                         // 1... goal-oriented adaptivity 
 const double X_QOI = 0.9*B;             // Value of u[0] at X_QOI is the 
                                         // Quantity of interest
@@ -56,13 +56,15 @@ const int NORM = 1;                     // To measure errors:
                                         // 0... L2 norm
 
 // Boundary conditions
-double Val_dir_left = pow(A + EPSILON, 1./3.);   // Dirichlet condition left
-double Val_dir_right = pow(B + EPSILON, 1./3.);  // Dirichlet condition right
+//double Val_dir_left = pow(A + EPSILON, 1./3.);   // Dirichlet condition left
+//double Val_dir_right = pow(B + EPSILON, 1./3.);  // Dirichlet condition right
+double Val_dir_left = 0;                           // Dirichlet condition left
+double Val_dir_right = 0;                          // Dirichlet condition right
 
 // Function f(x)
 double f(double x) {
-  //return sin(x);
-  return 2;
+  return sin(x);
+  //return 2;
   //return 2./9. * pow(x + EPSILON, -5./3.);
 }
 
@@ -71,10 +73,10 @@ double f(double x) {
 // forget to update interval accordingly
 const int EXACT_SOL_PROVIDED = 1;
 double exact_sol(double x, double u[MAX_EQN_NUM], double dudx[MAX_EQN_NUM]) {
-  //u[0] = sin(x);
-  //dudx[0] = cos(x);
-  u[0] = 1. - x*x;
-  dudx[0] = -2.*x;
+  u[0] = sin(x);
+  dudx[0] = cos(x);
+  //u[0] = 1. - x*x;
+  //dudx[0] = -2.*x;
   //u[0] = pow(x + EPSILON, 1./3.);
   //dudx[0] = 1./3. * pow(x + EPSILON, -2./3.);
 }
