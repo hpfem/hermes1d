@@ -41,7 +41,3 @@ void throw_exception(char *text)
 {
     throw std::runtime_error(text);
 }
-
-double max(double a, double b) {
-  return a > b ? a : b;
-}
