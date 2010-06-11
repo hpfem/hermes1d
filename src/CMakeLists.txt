@@ -22,3 +22,13 @@ if(RELEASE)
 endif(RELEASE)
 
 target_link_libraries(${HERMES_BIN} hermes_common)
+
+install(TARGETS ${HERMES_BIN}
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+)
+
+file(GLOB header_files "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+install(FILES ${header_files} DESTINATION include/hermes1d)
+
