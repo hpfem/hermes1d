@@ -4,14 +4,14 @@ if [ "$SAGE_LOCAL" = "" ]; then
    exit 1
 fi
 
-PACKAGE_NAME=hermes
+PACKAGE_NAME=hermes1d
 
 PY_VER=`python -c "import sys;print '%d.%d' % sys.version_info[:2]"`
 echo "Detected Python version: $PY_VER"
 
 cmake -DCMAKE_INSTALL_PREFIX="$SAGE_LOCAL" \
     -DPYTHON_INCLUDE_PATH="$SAGE_LOCAL/include/python$PY_VER" \
-    -DPYTHON_LIBRARY="$SAGE_LOCAL/lib/python2.6/config/libpython2.6.dll.a" \
+    -DPYTHON_LIBRARY="$SAGE_LOCAL/lib/libpython2.6.so" \
     .
 if [ $? -ne 0 ]; then
    echo "Error configuring $PACKAGE_NAME."
