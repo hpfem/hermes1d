@@ -7,6 +7,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(WITH_PYTHON no)
 set(DEBUG yes)
 set(RELEASE no)
+set(WITH_EXAMPLES yes)
 set(WITH_TESTS yes)
 
 # allow to override the default values in CMake.vars
@@ -33,7 +34,9 @@ find_package(NumPy REQUIRED)
 if(WITH_PYTHON)
     add_subdirectory(python)
 endif(WITH_PYTHON)
-add_subdirectory(examples)
+if(WITH_EXAMPLES)
+    add_subdirectory(examples)
+endif(WITH_EXAMPLES)
 
 if(WITH_TESTS)
     enable_testing()
