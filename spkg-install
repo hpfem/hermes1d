@@ -10,7 +10,8 @@ PY_VER=`python -c "import sys;print '%d.%d' % sys.version_info[:2]"`
 echo "Detected Python version: $PY_VER"
 
 # Set the hermes1d build options:
-python -c 'print "set(WITH_EXAMPLES no)\nset(WITH_TESTS no)"' > CMake.vars
+# If you don't want to build examples/tests, uncomment this line:
+#python -c 'print "set(WITH_EXAMPLES no)\nset(WITH_TESTS no)"' > CMake.vars
 
 
 if [ `uname` = "Darwin" ]; then
