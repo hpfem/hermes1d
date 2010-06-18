@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
   int n;
 
   double *res = new double[N_dof];
-  E = py2c_double(get_object("E"));
+  E = py2c_double(p.pull("E"));
   printf("E=%.10f\n", E);
   E = -0.5;
   dp3->assemble_residual(mesh, res);
@@ -137,9 +137,9 @@ int main(int argc, char* argv[]) {
       throw std::runtime_error("");
   p.push("mesh",  c2py_Mesh(mesh));
   printf("2\n");
-  cmd("from plot import plot_eigs, plot_file");
-  cmd("plot_eigs(mesh, eigs)");
-  //cmd("plot_eigs(eigs)");
+  p.exec("from plot import plot_eigs, plot_file");
+  p.exec("plot_eigs(mesh, eigs)");
+  //p.exec("plot_eigs(eigs)");
   printf("Done.\n");
   return 0;
 }
