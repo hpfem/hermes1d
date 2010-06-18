@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
 
   // variable for the total number of DOF
   int N_dof = mesh->assign_dofs();
-  printf("ndofs: %d", N_dof);
+  printf("ndofs: %d\n", N_dof);
 
   // register weak forms
   DiscreteProblem *dp1 = new DiscreteProblem();
@@ -107,7 +107,6 @@ int main(int argc, char* argv[]) {
   dp1->assemble_jacobian(mesh, mat1);
   dp2->assemble_jacobian(mesh, mat2);
 
-  printf("Importing hermes1d\n");
   Python p;
 
   p.exec("print 'Python initialized'");
