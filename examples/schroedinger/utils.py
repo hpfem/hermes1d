@@ -1,12 +1,13 @@
 def solve_eig_numpy(A, B):
-    # in case A or B is a CooMatrix:
-    if hasattr(A, "to_scipy_coo"):
-        A = A.to_scipy_coo().todense()
-    if hasattr(B, "to_scipy_coo"):
-        B = B.to_scipy_coo().todense()
+    """
+    A, B .... scipy sparse matrices
 
+    Uses numpy to solve the A*x = lambda*B*x eigenproblem.
+    """
     from numpy import array, dot
     from numpy.linalg import inv, eig, eigh
+    A = A.todense()
+    B = B.todense()
 
     print "inverting"
     M = dot(inv(B), A)
