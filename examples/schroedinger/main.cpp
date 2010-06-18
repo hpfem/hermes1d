@@ -9,10 +9,10 @@ int P_init = 2;                           // initial polynomal degree
 
 double l = 0;
 
-double lhs(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+double lhs(int num, double *x, double *weights,
+                double *u, double *dudx, double *v, double *dvdx,
+                double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                 void *user_data)
 {
     double val = 0;
@@ -25,10 +25,10 @@ double lhs(int num, double *x, double *weights,
     return val;
 }
 
-double rhs(int num, double *x, double *weights, 
-                double *u, double *dudx, double *v, double *dvdx, 
-                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
-                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+double rhs(int num, double *x, double *weights,
+                double *u, double *dudx, double *v, double *dvdx,
+                double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                 void *user_data)
 {
   double val = 0;
@@ -40,13 +40,13 @@ double rhs(int num, double *x, double *weights,
 
 double E;
 
-double residual(int num, double *x, double *weights, 
-                double u_prev[MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
-                double du_prevdx[MAX_EQN_NUM][MAX_QUAD_PTS_NUM], 
+double residual(int num, double *x, double *weights,
+                double u_prev[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
+                double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                 double *v, double *dvdx, void *user_data)
 {
-    double *u = &u_prev[0][0];
-    double *dudx = &du_prevdx[0][0];
+    double *u = &u_prev[0][0][0];
+    double *dudx = &du_prevdx[0][0][0];
     double val = 0;
     for(int i = 0; i<num; i++) {
         double coeff;
@@ -85,15 +85,12 @@ int main(int argc, char* argv[]) {
 
   // register weak forms
   DiscreteProblem *dp1 = new DiscreteProblem();
-  // TODO: fix this:
-  //dp1->add_matrix_form(0, 0, lhs);
+  dp1->add_matrix_form(0, 0, lhs);
   DiscreteProblem *dp2 = new DiscreteProblem();
-  // TODO: fix this:
-  //dp2->add_matrix_form(0, 0, rhs);
+  dp2->add_matrix_form(0, 0, rhs);
 
   DiscreteProblem *dp3 = new DiscreteProblem();
-  // TODO: fix this:
-  //dp3->add_vector_form(0, residual);
+  dp3->add_vector_form(0, residual);
 
   // allocate Jacobi matrix and residual
   DenseMatrix *mat1 = new DenseMatrix(N_dof);
