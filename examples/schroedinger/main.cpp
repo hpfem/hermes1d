@@ -18,8 +18,10 @@ double lhs(int num, double *x, double *weights,
     double val = 0;
     for(int i = 0; i<num; i++) {
         double coeff;
-        coeff = 0.5*x[i]*x[i]*dudx[i]*dvdx[i] -u[i]*v[i]*x[i]
-            + 0.5 * (l + 1)*l *u[i]*v[i];
+        double r = x[i];
+        // specify r^2*V:
+        double rrV = -r; // r^2 * (-1/r) = -r
+        coeff = 0.5*r*r*dudx[i]*dvdx[i] + (rrV + 0.5 * (l + 1)*l) *u[i]*v[i];
         val += coeff*weights[i];
     }
     return val;
@@ -31,11 +33,12 @@ double rhs(int num, double *x, double *weights,
                 double du_prevdx[MAX_SLN_NUM][MAX_EQN_NUM][MAX_QUAD_PTS_NUM],
                 void *user_data)
 {
-  double val = 0;
-  for(int i = 0; i<num; i++) {
-    val += u[i]*v[i]*x[i]*x[i]*weights[i];
-  }
-  return val;
+    double val = 0;
+    for(int i = 0; i < num; i++) {
+        double r = x[i];
+        val += u[i]*v[i]*r*r*weights[i];
+    }
+    return val;
 }
 
 double E;
@@ -79,7 +82,7 @@ int main(int argc, char* argv[]) {
   // you can set the zero dirichlet at the right hand side
   //mesh.set_bc_right_dirichlet(0, 0);
 
-  // variable for the total number of DOF 
+  // variable for the total number of DOF
   int N_dof = mesh->assign_dofs();
   printf("ndofs: %d", N_dof);
 
