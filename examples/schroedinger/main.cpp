@@ -1,6 +1,6 @@
 #include "hermes1d.h"
 
-#include "_hermes1d_api.h"
+#include "python_api.h"
 
 static int N_eq = 1;
 int N_elem = 100;                         // number of elements
@@ -85,29 +85,29 @@ int main(int argc, char* argv[]) {
 
   // register weak forms
   DiscreteProblem *dp1 = new DiscreteProblem();
-  dp1->add_matrix_form(0, 0, lhs);
+  // TODO: fix this:
+  //dp1->add_matrix_form(0, 0, lhs);
   DiscreteProblem *dp2 = new DiscreteProblem();
-  dp2->add_matrix_form(0, 0, rhs);
+  // TODO: fix this:
+  //dp2->add_matrix_form(0, 0, rhs);
 
   DiscreteProblem *dp3 = new DiscreteProblem();
-  dp3->add_vector_form(0, residual);
+  // TODO: fix this:
+  //dp3->add_vector_form(0, residual);
 
   // allocate Jacobi matrix and residual
   DenseMatrix *mat1 = new DenseMatrix(N_dof);
   DenseMatrix *mat2 = new DenseMatrix(N_dof);
   double *y_prev = new double[N_dof];
 
-  dp1->assemble_matrix(mesh, mat1);
-  dp2->assemble_matrix(mesh, mat2);
+  // TODO: fix this:
+  //dp1->assemble_matrix(mesh, mat1);
+  //dp2->assemble_matrix(mesh, mat2);
 
   printf("Importing hermes1d\n");
-  // Initialize Python
-  Py_Initialize();
-  PySys_SetArgv(argc, argv);
-  if (import_hermes1d___hermes1d())
-      throw std::runtime_error("hermes1d failed to import.");
+  Python p;
 
-  cmd("print 'Python initialized'");
+  p.exec("print 'Python initialized'");
   insert_matrix(mat1, N_dof); cmd("A = _");
   insert_matrix(mat2, N_dof); cmd("B = _");
   cmd("from utils import solve");
@@ -123,7 +123,8 @@ int main(int argc, char* argv[]) {
   E = py2c_double(get_object("E"));
   printf("E=%.10f\n", E);
   E = -0.5;
-  dp3->assemble_vector(mesh, res);
+  // TODO: fix this:
+  //dp3->assemble_vector(mesh, res);
   // calculate L2 norm of residual vector
   double res_norm = 0;
   for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
@@ -136,7 +137,8 @@ int main(int argc, char* argv[]) {
   l.plot_solution(out_filename);
 
   printf("still ok\n");
-  insert_object("mesh", c2py_mesh(mesh));
+  // TODO: fix this:
+  //insert_object("mesh", c2py_mesh(mesh));
   printf("2\n");
   cmd("from plot import plot_eigs, plot_file");
   cmd("plot_eigs(mesh, eigs)");

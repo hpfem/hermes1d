@@ -36,8 +36,3 @@ void intro() {
   printf(" For more details visit http://hpfem.org/.\n");
   printf("-------------------------------------------\n");
 }
-
-void throw_exception(char *text)
-{
-    throw std::runtime_error(text);
-}

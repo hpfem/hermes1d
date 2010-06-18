@@ -7,7 +7,7 @@ if (NOT PYTHON_INCLUDE_PATH)
 endif (NOT PYTHON_INCLUDE_PATH)
 find_package(NumPy REQUIRED)
 
-include_directories(/usr/include/suitesparse)
+include_directories(${hermes1d_SOURCE_DIR}/hermes_common/)
 include_directories(${PYTHON_INCLUDE_PATH} ${NUMPY_INCLUDE_PATH})
 include_directories(../src)
 

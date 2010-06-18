@@ -19,62 +19,7 @@ cdef extern from "stdlib.h":
 
     void exit(int exit_code)
 
-cdef extern from "arrayobject.h":
-
-    cdef enum NPY_TYPES:
-        NPY_BOOL
-        NPY_BYTE
-        NPY_UBYTE
-        NPY_SHORT
-        NPY_USHORT
-        NPY_INT
-        NPY_UINT
-        NPY_LONG
-        NPY_ULONG
-        NPY_LONGLONG
-        NPY_ULONGLONG
-        NPY_FLOAT
-        NPY_DOUBLE
-        NPY_LONGDOUBLE
-        NPY_CFLOAT
-        NPY_CDOUBLE
-        NPY_CLONGDOUBLE
-        NPY_OBJECT
-        NPY_STRING
-        NPY_UNICODE
-        NPY_VOID
-        NPY_NTYPES
-        NPY_NOTYPE
-
-    ctypedef int npy_intp
-
-    ctypedef extern class numpy.ndarray [object PyArrayObject]:
-        cdef char *data
-        cdef int nd
-        cdef npy_intp *dimensions
-        cdef npy_intp *strides
-        cdef int flags
-
-    object PyArray_SimpleNewFromData(int nd, npy_intp* dims, int typenum,
-            void* data)
-    void import_array()
-
-
-cdef extern from "Python.h":
-    ctypedef void PyObject
-    void Py_INCREF(PyObject *x)
-    void Py_DECREF(PyObject *x)
-
-cdef extern from "stdcython.h":
-    void init_global_empty_tuple()
-    object PY_NEW(object t)
-
 cdef extern from "hermes1d.h":
-
-    # This is just the C++ "delete" statement
-    void delete(...)
-
-    void throw_exception(char *msg)
 
     ctypedef double double4[4]
     ctypedef double double3[3]
@@ -104,5 +49,3 @@ cdef extern from "hermes1d.h":
         void get_xy_mesh(int comp, int plotting_elem_subdivision,
                 double **x, double **y, int *n)
     c_Linearizer *new_Linearizer "new Linearizer" (c_Mesh *mesh)
-
-
