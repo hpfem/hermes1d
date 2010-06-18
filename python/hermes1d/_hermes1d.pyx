@@ -3,7 +3,7 @@
 # file for the exact terms).
 # Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
-from _hermes_common cimport c2numpy_double, delete
+from _hermes_common cimport c2numpy_double, delete, PY_NEW
 
 cdef class Element:
     cdef c_Element *thisptr
@@ -58,3 +58,9 @@ cdef class Linearizer:
         x_numpy = c2numpy_double(x, n)
         y_numpy = c2numpy_double(y, n)
         return x_numpy, y_numpy
+
+cdef api object c2py_Mesh(c_Mesh *h):
+    cdef Mesh n
+    n = <Mesh>PY_NEW(Mesh)
+    n.thisptr = h
+    return n
