@@ -64,17 +64,17 @@ double residual(int num, double *x, double *weights,
 }
 
 
-void insert_matrix(DenseMatrix *mat, int len)
+void insert_matrix(Python *p, DenseMatrix *mat, int len)
 {
   double _mat[len*len];
   for(int i=0; i<len; i++)
       for(int j=0; j<len; j++)
           _mat[i*len+j] = mat->get(i, j);
-  insert_object("len", c2py_int(len));
-  insert_object("mat", c2numpy_double(_mat, len*len));
-  cmd("_ = mat.reshape((len, len))");
-  cmd("del len");
-  cmd("del mat");
+  p->push("len", c2py_int(len));
+  p->push("mat", c2numpy_double(_mat, len*len));
+  p->exec("_ = mat.reshape((len, len))");
+  p->exec("del len");
+  p->exec("del mat");
 }
 
 /******************************************************************************/
@@ -109,16 +109,12 @@ int main(int argc, char* argv[]) {
   Python p;
 
   p.exec("print 'Python initialized'");
-  insert_matrix(mat1, N_dof); cmd("A = _");
-  insert_matrix(mat2, N_dof); cmd("B = _");
-  cmd("from utils import solve");
-  cmd("eigs = solve(A, B)");
-  cmd("E, v = eigs[0]");
-  //cmd("print 'v[0]', v[0]");
-  //cmd("print E");
-  //double *v;
+  insert_matrix(&p, mat1, N_dof); p.exec("A = _");
+  insert_matrix(&p, mat2, N_dof); p.exec("B = _");
+  p.exec("from utils import solve");
+  p.exec("eigs = solve(A, B)");
+  p.exec("E, v = eigs[0]");
   int n;
-  //numpy2c_double_inplace(get_object("v"), &v, &n);
 
   double *res = new double[N_dof];
   E = py2c_double(get_object("E"));
