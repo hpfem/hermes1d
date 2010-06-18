@@ -30,6 +30,12 @@ cdef class Mesh:
     def __dealloc__(self):
         delete(self.thisptr)
 
+    def copy_vector_to_mesh(self, sol, int comp):
+        cdef double *Y
+        cdef int n
+        numpy2c_double_inplace(sol, &Y, &n)
+        self.thisptr.copy_vector_to_mesh(Y, comp)
+
 cdef class Linearizer:
     cdef c_Linearizer *thisptr
     cdef Mesh mesh
@@ -51,12 +57,10 @@ cdef class Linearizer:
         sol ... is the solution to linearize
         comp ... solution component
         """
-        cdef double *Y
         cdef double *x
         cdef double *y
         cdef int n
-        numpy2c_double_inplace(sol, &Y, &n)
-        self.mesh.thisptr.copy_vector_to_mesh(Y, comp)
+        self.mesh.copy_vector_to_mesh(sol, comp)
         self.thisptr.get_xy_mesh(comp, plotting_elem_subdivision,
                 &x, &y, &n)
         x_numpy = c2numpy_double(x, n)
