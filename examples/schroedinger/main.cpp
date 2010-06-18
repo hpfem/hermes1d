@@ -104,8 +104,8 @@ int main(int argc, char* argv[]) {
   CooMatrix *mat2 = new CooMatrix(N_dof);
   double *y_prev = new double[N_dof];
 
-  dp1->assemble_jacobian(mesh, mat1);
-  dp2->assemble_jacobian(mesh, mat2);
+  dp1->assemble_matrix(mesh, mat1);
+  dp2->assemble_matrix(mesh, mat2);
 
   Python p;
 
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
   E = py2c_double(p.pull("E"));
   printf("E=%.10f\n", E);
   E = -0.5;
-  dp3->assemble_residual(mesh, res);
+  dp3->assemble_vector(mesh, res);
   // calculate L2 norm of residual vector
   double res_norm = 0;
   for(int i=0; i<N_dof; i++) res_norm += res[i]*res[i];
