@@ -2,6 +2,8 @@
 
 #include "python_api.h"
 
+#include "_hermes1d_api.h"
+
 static int N_eq = 1;
 int N_elem = 100;                         // number of elements
 double A = 0, B = 20;                     // domain end points
@@ -135,8 +137,9 @@ int main(int argc, char* argv[]) {
   l.plot_solution(out_filename);
 
   printf("still ok\n");
-  // TODO: fix this:
-  //insert_object("mesh", c2py_mesh(mesh));
+  if (import_hermes1d___hermes1d())
+      throw std::runtime_error("");
+  p.push("mesh",  c2py_Mesh(mesh));
   printf("2\n");
   cmd("from plot import plot_eigs, plot_file");
   cmd("plot_eigs(mesh, eigs)");
