@@ -40,6 +40,8 @@ cdef extern from "hermes1d.h":
         c_Element *get_base_elems()
         void set_dirichlet_bc_left(int eq_n, double val)
         void set_dirichlet_bc_right(int eq_n, double val)
+        void copy_vector_to_mesh(double *y, int sln)
+        void copy_mesh_to_vector(double *y, int sln)
     c_Mesh *new_Mesh "new Mesh" (double a, double b, int n_elem, int p_init,
             int eq_num)
 
