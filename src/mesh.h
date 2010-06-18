@@ -61,6 +61,11 @@ public:
 
 typedef Element* ElemPtr2[2];
 
+class Mesh;
+
+void copy_mesh_to_vector(Mesh *mesh, double *y, int sln=0);
+void copy_vector_to_mesh(double *y, Mesh *mesh, int sln=0);
+
 class Mesh {
     public:
         Mesh();
@@ -158,6 +163,12 @@ class Mesh {
                         int subdivision = 500); // plots error wrt. exact solution
         int assign_elem_ids();
         int n_active_elem;
+        void copy_vector_to_mesh(double *y, int sln=0) {
+            ::copy_vector_to_mesh(y, this, sln);
+        }
+        void copy_mesh_to_vector(double *y, int sln=0) {
+            ::copy_mesh_to_vector(this, y, sln);
+        }
 
     private:
         double left_endpoint, right_endpoint;
@@ -192,7 +203,4 @@ void adapt_plotting(Mesh *mesh, Mesh *mesh_ref,
 void adapt_plotting(Mesh *mesh, ElemPtr2* ref_elem_pairs,
                     int norm, int exact_sol_provided, 
                     exact_sol_type exact_sol); 
-
-void copy_mesh_to_vector(Mesh *mesh, double *y, int sln=0);
-void copy_vector_to_mesh(double *y, Mesh *mesh, int sln=0);
 #endif
