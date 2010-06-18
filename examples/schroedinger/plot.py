@@ -10,7 +10,10 @@ def plot_file():
     show()
 
 def plot_eigs(mesh, eigs):
-    from pylab import plot, show
+    try:
+        from jsplot import plot, show
+    except ImportError:
+        from pylab import plot, show
     import numpy
     l = Linearizer(mesh)
     for E, eig in eigs:
