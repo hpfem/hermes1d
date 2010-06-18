@@ -64,6 +64,8 @@ double residual(int num, double *x, double *weights,
 }
 
 
+// This is obsoleted and should be moved to hermes_common as a way to export
+// DenseMatrix to Python:
 void insert_matrix(Python *p, DenseMatrix *mat, int len)
 {
   double _mat[len*len];
@@ -98,8 +100,8 @@ int main(int argc, char* argv[]) {
   dp3->add_vector_form(0, residual);
 
   // allocate Jacobi matrix and residual
-  DenseMatrix *mat1 = new DenseMatrix(N_dof);
-  DenseMatrix *mat2 = new DenseMatrix(N_dof);
+  CooMatrix *mat1 = new CooMatrix(N_dof);
+  CooMatrix *mat2 = new CooMatrix(N_dof);
   double *y_prev = new double[N_dof];
 
   dp1->assemble_jacobian(mesh, mat1);
@@ -109,10 +111,10 @@ int main(int argc, char* argv[]) {
   Python p;
 
   p.exec("print 'Python initialized'");
-  insert_matrix(&p, mat1, N_dof); p.exec("A = _");
-  insert_matrix(&p, mat2, N_dof); p.exec("B = _");
-  p.exec("from utils import solve");
-  p.exec("eigs = solve(A, B)");
+  p.push("A", c2py_CooMatrix(mat1));
+  p.push("B", c2py_CooMatrix(mat2));
+  p.exec("from utils import solve_eig_numpy");
+  p.exec("eigs = solve_eig_numpy(A, B)");
   p.exec("E, v = eigs[0]");
   int n;
 
@@ -139,7 +141,6 @@ int main(int argc, char* argv[]) {
   printf("2\n");
   p.exec("from plot import plot_eigs, plot_file");
   p.exec("plot_eigs(mesh, eigs)");
-  //p.exec("plot_eigs(eigs)");
   printf("Done.\n");
   return 0;
 }

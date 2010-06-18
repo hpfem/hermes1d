@@ -1,7 +1,13 @@
-from numpy import array, dot
-from numpy.linalg import inv, eig, eigh
+def solve_eig_numpy(A, B):
+    # in case A or B is a CooMatrix:
+    if hasattr(A, "to_scipy_coo"):
+        A = A.to_scipy_coo().todense()
+    if hasattr(B, "to_scipy_coo"):
+        B = B.to_scipy_coo().todense()
 
-def solve(A, B):
+    from numpy import array, dot
+    from numpy.linalg import inv, eig, eigh
+
     print "inverting"
     M = dot(inv(B), A)
     print "solving"
