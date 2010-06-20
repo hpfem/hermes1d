@@ -49,9 +49,9 @@ public:
     void process_surf_forms(Mesh *mesh, Matrix *mat, double *res, 
                             int matrix_flag, int bdy_index);
     void assemble(Mesh *mesh, Matrix *mat, double *res, int matrix_flag);
-    void assemble_jacobian_and_residual(Mesh *mesh, Matrix *mat, double *res); 
-    void assemble_jacobian(Mesh *mesh, Matrix *mat);
-    void assemble_residual(Mesh *mesh, double *res);
+    void assemble_matrix_and_vector(Mesh *mesh, Matrix *mat, double *res); 
+    void assemble_matrix(Mesh *mesh, Matrix *mat);
+    void assemble_vector(Mesh *mesh, double *res);
 
 private:
 	struct MatrixFormVol {

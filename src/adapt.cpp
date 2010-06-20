@@ -279,7 +279,7 @@ void sort_element_errors(int n, double *err_squared_array, int *id_array)
 
     for (int i=0; i<n; i++) {
       err_squared_array[i] = array[i][0];
-      id_array[i] = array[i][1];
+      id_array[i] = (int) array[i][1];
     }
 }
 
@@ -414,7 +414,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   // transformed Legendre polynomials of degree 'p_left'
 
   // create Gauss quadrature on 'e_ref_left'
-  int order_left = 2*max(e_ref_left->p, p_left);
+  int order_left = 2*std::max(e_ref_left->p, p_left);
   int pts_num_left;
   double phys_x_left[MAX_QUAD_PTS_NUM];          // quad points
   double phys_weights_left[MAX_QUAD_PTS_NUM];    // quad weights
@@ -496,7 +496,7 @@ double check_cand_coarse_hp_fine_hp(int norm, Element *e, Element *e_ref_left,
   // transformed Legendre polynomials of degree 'p_right'
 
   // create Gauss quadrature on 'e_ref_right'
-  int order_right = 2*max(e_ref_right->p, p_right);
+  int order_right = 2*std::max(e_ref_right->p, p_right);
   int pts_num_right;
   double phys_x_right[MAX_QUAD_PTS_NUM];          // quad points
   double phys_weights_right[MAX_QUAD_PTS_NUM];    // quad weights
@@ -692,7 +692,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   // transformed Legendre polynomials of degree 'p_left'
 
   // create Gauss quadrature on the left half
-  int order_left = 2*max(e_ref->p, p_left);
+  int order_left = 2*std::max(e_ref->p, p_left);
   int pts_num_left;
   double phys_x_left[MAX_QUAD_PTS_NUM];          // quad points
   double phys_weights_left[MAX_QUAD_PTS_NUM];    // quad weights
@@ -772,7 +772,7 @@ double check_cand_coarse_hp_fine_p(int norm, Element *e, Element *e_ref,
   // transformed Legendre polynomials of degree 'p_right'
 
   // create Gauss quadrature on the right half
-  int order_right = 2*max(e_ref->p, p_right);
+  int order_right = 2*std::max(e_ref->p, p_right);
   int pts_num_right;
   double phys_x_right[MAX_QUAD_PTS_NUM];          // quad points
   double phys_weights_right[MAX_QUAD_PTS_NUM];    // quad weights
@@ -962,7 +962,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
   int n_eq = e->n_eq;
 
   // create Gauss quadrature on 'e_ref_left'
-  int order_left = 2*max(e_ref_left->p, p);
+  int order_left = 2*std::max(e_ref_left->p, p);
   int pts_num_left;
   double phys_x_left[MAX_QUAD_PTS_NUM];          // quad points
   double phys_weights_left[MAX_QUAD_PTS_NUM];    // quad weights
@@ -990,7 +990,7 @@ double check_cand_coarse_p_fine_hp(int norm, Element *e, Element *e_ref_left,
                     leg_pol_der_left);
 
   // create Gauss quadrature on 'e_ref_right'
-  int order_right = 2*max(e_ref_right->p, p);
+  int order_right = 2*std::max(e_ref_right->p, p);
   int pts_num_right;
   double phys_x_right[MAX_QUAD_PTS_NUM];          // quad points
   double phys_weights_right[MAX_QUAD_PTS_NUM];    // quad weights
@@ -1280,7 +1280,7 @@ double check_cand_coarse_p_fine_p(int norm, Element *e, Element *e_ref,
   // (original) Legendre polynomials of degree 'p'
 
   // create Gauss quadrature on 'e'
-  int order = 2*max(e->p, p);
+  int order = 2*std::max(e->p, p);
   int pts_num;
   double phys_x[MAX_QUAD_PTS_NUM];          // quad points
   double phys_weights[MAX_QUAD_PTS_NUM];    // quad weights
@@ -1513,7 +1513,7 @@ double calc_error_exact(int norm, Mesh *mesh,
   Iterator *I = new Iterator(mesh);
   Element *e;
   while ((e = I->next_active_element()) != NULL) {
-    int order = max(20, 3*e->p);         // heuristic parameter
+    int order = std::max(20, 3*e->p);         // heuristic parameter
       double elem_err_squared = 
         calc_elem_exact_error_squared(norm, exact_sol, e, order);
       total_err_squared += elem_err_squared;

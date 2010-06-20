@@ -1,4 +1,7 @@
-from pylab import plot, show, grid, legend
+try:
+    from jsplot import plot, show, grid, legend
+except ImportError:
+    from pylab import plot, show, grid, legend
 import numpy
 data = numpy.loadtxt("solution.gp_0")
 x = data[:, 0]

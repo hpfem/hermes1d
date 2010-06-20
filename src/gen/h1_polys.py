@@ -5,7 +5,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 
 from sympy import var, pprint, ccode
-from sympy.matrices.orthogonalization import (gram_schmidt, l2_inner_product,
+from orthogonalization import (gram_schmidt, l2_inner_product,
         h1_inner_product, integrate)
 
 N = 20

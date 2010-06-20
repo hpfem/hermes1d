@@ -337,19 +337,19 @@ void DiscreteProblem::assemble(Mesh *mesh, Matrix *mat, double *res,
 } 
 
 // construct both the Jacobi matrix and the residual vector
-void DiscreteProblem::assemble_jacobian_and_residual(Mesh *mesh, 
+void DiscreteProblem::assemble_matrix_and_vector(Mesh *mesh, 
                       Matrix *mat, double *res) {
   assemble(mesh, mat, res, 0);
 } 
 
 // construct Jacobi matrix only
-void DiscreteProblem::assemble_jacobian(Mesh *mesh, Matrix *mat) {
+void DiscreteProblem::assemble_matrix(Mesh *mesh, Matrix *mat) {
   double *void_res = NULL;
   assemble(mesh, mat, void_res, 1);
 } 
 
 // construct residual vector only
-void DiscreteProblem::assemble_residual(Mesh *mesh, double *res) {
+void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
   Matrix *void_mat = NULL;
   assemble(mesh, void_mat, res, 2);
 } 
@@ -410,7 +410,7 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
     mat = new CooMatrix();
 
     // construct matrix and residual vector
-    dp->assemble_jacobian_and_residual(mesh, mat, res); 
+    dp->assemble_matrix_and_vector(mesh, mat, res); 
 
     // debug
     //mat->print();
@@ -472,7 +472,7 @@ void J_dot_vec_jfnk(DiscreteProblem *dp, Mesh *mesh, double* vec,
     y_perturbed[i] = y_orig[i] + jfnk_epsilon*vec[i];
   }
   copy_vector_to_mesh(y_perturbed, mesh);
-  dp->assemble_residual(mesh, f_perturbed); 
+  dp->assemble_vector(mesh, f_perturbed); 
   copy_vector_to_mesh(y_orig, mesh);
   for (int i=0; i<n_dof; i++) {
     J_dot_vec[i] = (f_perturbed[i] - f_orig[i])/jfnk_epsilon;
@@ -501,7 +501,7 @@ void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
   // debug
   // fill vector y_orig using dof and coeffs arrays in elements
   copy_mesh_to_vector(mesh, y_orig);
-  dp->assemble_residual(mesh, f_orig); 
+  dp->assemble_vector(mesh, f_orig); 
   double *w = new double[n_dof];
   for(int i=0; i<n_dof; i++) w[i] = 0;
   w[0] = 1;
@@ -522,7 +522,7 @@ void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
 
     // construct residual vector f_orig corresponding to y_orig
     // (f_orig stays unchanged through the entire CG loop)
-    dp->assemble_residual(mesh, f_orig); 
+    dp->assemble_vector(mesh, f_orig); 
 
     // calculate L2 norm of f_orig
     double res_norm_squared = 0;

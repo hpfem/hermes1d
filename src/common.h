@@ -63,10 +63,8 @@ typedef double (*shape_fn_t)(double);
 
 // auxiliary functions
 void intro();
-void throw_exception(char *text);
 #define MEM_CHECK(var) if (var == NULL) { printf("Out of memory."); exit(1); }
 #define verbose(msg)
 #define warn(msg)
-double max(double a, double b);
 
 #endif
