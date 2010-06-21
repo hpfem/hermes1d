@@ -39,14 +39,6 @@ int Marker_inner = 0;                              // Material marker for inner 
 int Marker_outer = 1;                              // Material marker for outer core elements
 int Marker_reflector = 2;                             // Material marker for reflector elements
 
-// Matrix solver
-const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
-                                        // 1... UMFPACK
-                                        // 2... CG (no preconditioning)
-                                        // Only relevant for iterative matrix solvers:
-const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
-const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
-
 // Newton's method
 double NEWTON_TOL = 1e-5;               // tolerance for the Newton's method
 int NEWTON_MAXITER = 150;               // max. number of Newton iterations
@@ -172,8 +164,7 @@ int main() {
     copy_dofs(current_solution, previous_solution, mesh);
 		
     // Newton's loop		
-    newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-           NEWTON_TOL, NEWTON_MAXITER, verbose);
+    newton(dp, mesh, NULL, NEWTON_TOL, NEWTON_MAXITER, verbose);
 	
     // Update the eigenvalue
     K_EFF_old = K_EFF;

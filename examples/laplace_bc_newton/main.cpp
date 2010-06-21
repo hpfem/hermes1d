@@ -18,14 +18,6 @@ double Val_dir_left = 0;
 double Val_newton_alpha = 1;   // must be nonzero
 double Val_newton_beta = 1;
 
-// Matrix solver
-const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
-                                        // 1... UMFPACK
-                                        // 2... CG (no preconditioning)
-                                        // Only relevant for iterative matrix solvers:
-const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
-const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
-
 // Newton's method
 double NEWTON_TOL = 1e-5;
 int NEWTON_MAXITER = 150;
@@ -55,8 +47,7 @@ int main() {
   dp->add_vector_form_surf(0, residual_surf_right, BOUNDARY_RIGHT);
 
   // Newton's loop
-  newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-         NEWTON_TOL, NEWTON_MAXITER); 
+  newton(dp, mesh, NULL, NEWTON_TOL, NEWTON_MAXITER);
 
   // Plot the solution
   Linearizer l(mesh);

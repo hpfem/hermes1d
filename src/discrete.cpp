@@ -6,7 +6,8 @@
 #include "matrix.h"
 #include "discrete.h"
 #include "mesh.h"
-#include "python_solvers.h"
+
+#include "solvers.h"
 
 DiscreteProblem::DiscreteProblem() {
   // precalculating values and derivatives 
@@ -354,41 +355,11 @@ void DiscreteProblem::assemble_vector(Mesh *mesh, double *res) {
   assemble(mesh, void_mat, res, 2);
 } 
 
-/* FAILED ATTEMPT TO USE SparseLib++ and IML++
-void solve_linear_system_iter(int solver, Matrix* mat, double *res)
-{
-  // creating matrix
-  CompRow_Mat_double *m;
-  double val[12] = {1,2 , 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-  int colind[12] = {0, 1, 4, 0, 1, 2, 1, 2, 4, 3, 0, 4};
-  int rowptr[6] = {0, 3, 6, 9, 10, 12};
-  m = new CompRow_Mat_double(5, 5, 12, val, rowptr, colind);
-
-  // creating initial guess
-  double* x = new double[5];
-
-  // creating ILU preconditioner
-  CompCol_ILUPreconditioner_double D(*m);
-
-  // solving with CG
-  double tol = 1e-6;
-  int result, max_iter = 150;
-  result = CG(*m, x, res, D, max_iter, tol);
-  
-  printf("CG flag: %d\n", result);
-  printf("CG iterations: %d\n", max_iter);
-  printf("CG tolerance achieved: %g\n", tol);
-
-
-  error("notimplemented yet.");
-}
-*/
-
 // Newton's iteration
-void newton(DiscreteProblem *dp, Mesh *mesh, 
-            int matrix_solver, double matrix_solver_tol, 
-            int matrix_solver_maxiter,
-            double newton_tol, int newton_maxiter, bool verbose) 
+void newton(DiscreteProblem *dp, Mesh *mesh,
+            CommonSolver *solver,
+            double newton_tol, int newton_maxiter,
+            bool verbose)
 {
   int newton_iter_num = 0;
   int n_dof = mesh->get_n_dof();
@@ -398,7 +369,7 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
   if (res == NULL)
     error("vector res could not be allocated in newton().");
 
-  // fill vector y using dof and coeffs arrays 
+  // fill vector y using dof and coeffs arrays
   // in elements
   copy_mesh_to_vector(mesh, y);
 
@@ -410,7 +381,7 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
     mat = new CooMatrix();
 
     // construct matrix and residual vector
-    dp->assemble_matrix_and_vector(mesh, mat, res); 
+    dp->assemble_matrix_and_vector(mesh, mat, res);
 
     // debug
     //mat->print();
@@ -432,17 +403,10 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
     for(int i=0; i<n_dof; i++) res[i]*= -1;
 
     // solving the matrix system
-    //solve_linear_system_umfpack((CooMatrix*)mat, res);
-    if (matrix_solver == 0) solve_linear_system_dense_lu(mat, res);
-    if (matrix_solver == 1) solve_linear_system_scipy_umfpack(mat, res);
-    if (matrix_solver == 2) { 
-      // 'y' corresponds to the last solution. It is used as an 
-      // initial condition for the iterative method
-      int flag = solve_linear_system_cg(mat, res,
-                                        matrix_solver_tol,
-                                        matrix_solver_maxiter);
-      if(flag == 0) error("CG (regular) did not converge.");
-    }
+    if (solver)
+        solver->solve(mat, res);
+    else
+        solve_linear_system_sparselib_cgs(mat, res);
 
     // updating vector y by new solution which is in res
     for(int i=0; i<n_dof; i++) y[i] += res[i];

@@ -26,6 +26,6 @@
 #include "adapt.h"
 #include "graph.h"
 
-#include "python_solvers.h"
+#include "solvers.h"
 
 #endif

@@ -1,33 +1,38 @@
-import pylab
+from pylab import plot, show, legend
 import numpy
-
-N = 10
-steps = 510
-tu = numpy.empty([N, steps])
-ti = numpy.empty([N, steps])
-uu = numpy.empty([N, steps])
-ii = numpy.empty([N, steps])
-
-for i in range(1, N):
-    data = numpy.loadtxt("solution_" + str(i-1) + ".gp_0")
-    x = data[:, 0]
-    y = data[:, 1]
-    tu[i, :] = x
-    uu[i, :] = y
-    
-    data = numpy.loadtxt("solution_" + str(i-1) + ".gp_1")
-    x = data[:, 0]
-    y = data[:, 1]
-    ti[i, :] = x
-    ii[i, :] = y
-
-pylab.subplot(2,1,1)
-pylab.plot(tu[:,1], uu[:,1], label="voltage")
-pylab.grid(True);
-pylab.title("voltage")
-
-pylab.subplot(2,1,2)
-pylab.plot(ti[:,0], ii[:,0], label="current")
-pylab.grid(True);
-pylab.title("current")
-pylab.show()
+data = numpy.loadtxt("solution.gp_0")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="0")
+data = numpy.loadtxt("solution.gp_1")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="1")
+data = numpy.loadtxt("solution.gp_2")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="2")
+data = numpy.loadtxt("solution.gp_3")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="3")
+"""
+data = numpy.loadtxt("solution_ref.gp_0")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="0 ref")
+data = numpy.loadtxt("solution_ref.gp_1")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="1 ref")
+data = numpy.loadtxt("solution_ref.gp_2")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="2 ref")
+data = numpy.loadtxt("solution_ref.gp_3")
+x = data[:, 0]
+y = data[:, 1]
+plot(x, y, label="3 ref")
+"""
+legend()
+show()

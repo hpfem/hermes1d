@@ -18,14 +18,6 @@ const double A = 0, B = 10;             // Domain end points
 const double YA = 1;                    // Equation parameter
 const int P_init = 1;                   // Initial polynomal degree
 
-// Matrix solver
-const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
-                                        // 1... UMFPACK
-                                        // 2... CG (no preconditioning)
-                                        // Only relevant for iterative matrix solvers:
-const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
-const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
-
 // Newton's method
 const double NEWTON_TOL_COARSE = 1e-8;  // Coarse mesh
 const double NEWTON_TOL_REF = 1e-8;     // Fine mesh
@@ -101,8 +93,7 @@ int main() {
     printf("N_dof = %d\n", mesh->get_n_dof());
  
     // Newton's loop on coarse mesh
-    newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-           NEWTON_TOL_COARSE, NEWTON_MAXITER);
+    newton(dp, mesh, NULL, NEWTON_TOL_COARSE, NEWTON_MAXITER);
 
     // For every element perform its fast trial refinement (FTR),
     // calculate the norm of the difference between the FTR
@@ -122,8 +113,7 @@ int main() {
              i, mesh_ref_local->assign_dofs());
 
       // Newton's loop on the FTR mesh
-      newton(dp, mesh_ref_local, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-             NEWTON_TOL_REF, NEWTON_MAXITER);
+      newton(dp, mesh_ref_local, NULL, NEWTON_TOL_REF, NEWTON_MAXITER);
 
       // Print FTR solution (enumerated) 
       Linearizer *lxx = new Linearizer(mesh_ref_local);

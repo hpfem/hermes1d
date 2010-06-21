@@ -92,9 +92,9 @@ void element_shapefn_point(double x_ref, double a, double b,
 			   int k, double &val, double &der);
 
 void newton(DiscreteProblem *dp, Mesh *mesh, 
-            int matrix_solver, double matrix_solver_tol, 
-            int matrix_solver_maxiter,
-            double newton_tol, int newton_maxiter, bool verbose=true); 
+            CommonSolver *solver,
+            double newton_tol, int newton_maxiter,
+            bool verbose=true);
 
 void jfnk_cg(DiscreteProblem *dp, Mesh *mesh,
              double matrix_solver_tol, int matrix_solver_maxiter,  

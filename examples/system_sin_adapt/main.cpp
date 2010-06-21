@@ -16,14 +16,6 @@ double A = 0, B = 2*M_PI;               // Domain end points
 int P_init = 1;                         // Initial polynomial degree
 double K = 1.0;                         // Equation parameter
 
-// Matrix solver
-const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
-                                        // 1... UMFPACK
-                                        // 2... CG (no preconditioning)
-                                        // Only relevant for iterative matrix solvers:
-const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
-const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
-
 // Newton's method
 double NEWTON_TOL_COARSE = 1e-6;        // Coarse mesh
 double NEWTON_TOL_REF = 1e-6;           // Fine mesh
@@ -77,8 +69,7 @@ int main() {
   dp->add_vector_form(1, residual_1);
 
   // Initial Newton's loop on coarse mesh
-  newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-         NEWTON_TOL_COARSE, NEWTON_MAXITER);
+  newton(dp, mesh, NULL, NEWTON_TOL_COARSE, NEWTON_MAXITER);
 
   // Replicate coarse mesh including solution.
   Mesh *mesh_ref = mesh->replicate();
@@ -102,16 +93,14 @@ int main() {
     printf("============ Adaptivity step %d ============\n", adapt_iterations); 
 
     // Newton's loop on fine mesh
-    newton(dp, mesh_ref, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-           NEWTON_TOL_REF, NEWTON_MAXITER);
+    newton(dp, mesh_ref, NULL, NEWTON_TOL_REF, NEWTON_MAXITER);
 
     // Starting with second adaptivity step, obtain new coarse 
     // mesh solution via Newton's method. Initial condition is 
     // the last coarse mesh solution.
     if (adapt_iterations > 1) {
       // Newton's loop on coarse mesh
-      newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-             NEWTON_TOL_COARSE, NEWTON_MAXITER);
+      newton(dp, mesh, NULL, NEWTON_TOL_COARSE, NEWTON_MAXITER);
     }
 
     // In the next step, estimate element errors based on 

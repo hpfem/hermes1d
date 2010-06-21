@@ -42,14 +42,6 @@ bool verbose = true;
 
 int N_SLN = 1;              						// Number of solutions
 
-// Matrix solver
-const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
-                                        // 1... UMFPACK
-                                        // 2... CG (no preconditioning)
-                                        // Only relevant for iterative matrix solvers:
-const double MATRIX_SOLVER_TOL = 1e-7;  // Tolerance for residual in L2 norm
-const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
-
 // Newton's method
 double NEWTON_TOL = 1e-5;               // tolerance for the Newton's method
 int NEWTON_MAXITER = 150;               // max. number of Newton iterations
@@ -84,8 +76,7 @@ int main() {
   dp->add_vector_form_surf(1, residual_surf_left_1, BOUNDARY_LEFT);
 	  	
   // Newton's loop		
-  newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-         NEWTON_TOL, NEWTON_MAXITER, verbose);
+  newton(dp, mesh, NULL, NEWTON_TOL, NEWTON_MAXITER, verbose);
 	 
   // Plot the resulting neutron flux
   Linearizer l(mesh);

@@ -22,18 +22,12 @@ const double EPSILON = 0.01;            // Equation parameter
 const int P_init = 1;                   // Initial polynomal degree
 
 // JFNK or classical Newton?
+const double MATRIX_SOLVER_TOL = 1e-5;
+const int MATRIX_SOLVER_MAXITER = 150;
 const int JFNK = 0;                     // 0... classical Newton
                                         // 1... JFNK  
                                         // Only relevant for JFNK:
 const double JFNK_EPSILON = 1e-4;       // Parameter in the JFNK finite difference
-
-// Matrix solver                        // Used if JFNK == 0
-const int MATRIX_SOLVER = 1;            // 0... default (LU decomposition)
-                                        // 1... UMFPACK
-                                        // 2... CG (no preconditioning)
-                                        // Only relevant for iterative matrix solvers:
-const double MATRIX_SOLVER_TOL = 1e-8;  // Tolerance for residual in L2 norm
-const int MATRIX_SOLVER_MAXITER = 150;  // Max. number of iterations
  
 // Newton's method
 const double NEWTON_TOL_COARSE = 1e-8;  // Coarse mesh
@@ -146,11 +140,10 @@ int main() {
     // Newton's loop on coarse mesh
     int success;
     if(JFNK == 0) {
-      newton(dp, mesh, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-             NEWTON_TOL_COARSE, NEWTON_MAXITER);
+      newton(dp, mesh, NULL, NEWTON_TOL_COARSE, NEWTON_MAXITER);
     }
     else {
-      jfnk_cg(dp, mesh, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
+      jfnk_cg(dp, mesh, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
               JFNK_EPSILON, NEWTON_TOL_COARSE, NEWTON_MAXITER);
     }
     // For every element perform its fast trial refinement (FTR),
@@ -173,8 +166,7 @@ int main() {
 
       // Newton's loop on the FTR mesh
       if(JFNK == 0) {
-        newton(dp, mesh_ref_local, MATRIX_SOLVER, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER,
-               NEWTON_TOL_COARSE, NEWTON_MAXITER);
+        newton(dp, mesh_ref_local, NULL, NEWTON_TOL_COARSE, NEWTON_MAXITER);
       }
       else {
         jfnk_cg(dp, mesh_ref_local, MATRIX_SOLVER_TOL, MATRIX_SOLVER_MAXITER, 
