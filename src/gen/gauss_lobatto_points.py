@@ -7,7 +7,7 @@
 
 points = {
     {% for s in data %}
-    "{{ s.p }}": [
+    {{ s.p }}: [
         {% for point in s.points %}{{ point }},
         {% endfor %} ],
     {% endfor %}
