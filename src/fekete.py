@@ -86,13 +86,75 @@ def test1():
 def test2():
     eps = 1e-12
     func = lambda x: x**2
-    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 1)))
-    for x in [-5, -4, 3, 10, 0, 0.01, 0.0001]:
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (2, 5, 2)))
+    for x in [-5, -4.5, -4, -3, -2, -1, 0, 0.01, 1e-5, 1, 2, 3, 4, 5, 6, 7, 10]:
         assert abs(f(x) - func(x)) < eps
+
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 2)))
+    for x in [-5, -4, -3, -2, -1, 0, 0.01, 1e-5, 1, 2, 3, 4, 5, 6, 7, 10]:
+        assert abs(f(x) - func(x)) < eps
+    x = -4.9
+    assert abs(f(x) - func(x)) > 0.08
+    x = -4.5
+    assert abs(f(x) - func(x)) > 0.24
+
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 1)))
+    for x in [-5, -4, -3, -2, -1, 0, 0.01, 1e-5, 1, 2, 3, 10]:
+        assert abs(f(x) - func(x)) < eps
+    x = -4.9
+    assert abs(f(x) - func(x)) > 0.08
+    x = -4.5
+    assert abs(f(x) - func(x)) > 0.24
+    x = 4
+    assert abs(f(x) - func(x)) > 5.9
+    x = 5
+    assert abs(f(x) - func(x)) > 9.9
+    x = 6
+    assert abs(f(x) - func(x)) > 11.9
+    x = 7
+    assert abs(f(x) - func(x)) > 11.9
+    x = 8
+    assert abs(f(x) - func(x)) > 9.9
+    x = 9
+    assert abs(f(x) - func(x)) > 5.9
+
+def test3():
+    eps = 1e-12
+    func = lambda x: x**2
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 1)))
+    for x in [-4, -3, -2, -1, 0, 0.01, 1e-5, 1, 2, 3]:
+        assert abs(f(x) - func(x)) < eps
+
+    func = lambda x: x**3
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 1)))
+    for x in [-4, -3, -2, -1, 0, 0.01, 1e-5, 1, 2, 3]:
+        assert abs(f(x) - func(x)) < eps
+
+    func = lambda x: x**4
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 1)))
+    for x in [-4, -3, -2, -1, 0, 0.01, 1e-5, 1, 2, 3]:
+        assert abs(f(x) - func(x)) < eps
+
+    func = lambda x: x**5
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 1)))
+    for x in [-4, -3, -2, -1, 0, 0.01, 1e-5, 1, 2, 3]:
+        assert abs(f(x) - func(x)) < eps
+
+    func = lambda x: x**6
+    f = Function(func, Mesh1D((-5, -4, 3, 10), (1, 5, 1)))
+    x = -1
+    assert abs(f(x) - func(x)) > 61.9
+    x = 0
+    assert abs(f(x) - func(x)) > 61.9
+    x = 1
+    assert abs(f(x) - func(x)) > 61.6
+    x = 2
+    assert abs(f(x) - func(x)) > 28.9
 
 def main():
     test1()
     test2()
+    test3()
 
 if __name__ == "__main__":
     main()
