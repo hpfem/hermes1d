@@ -2,6 +2,9 @@
 Module for handling Fekete points approximations.
 """
 
+from numpy import empty
+from numpy.linalg import solve
+
 from gauss_lobatto_points import points
 
 def get_x_phys(x_ref, a, b):
@@ -42,11 +45,38 @@ class Function(object):
                     val = obj(p)
                     elem_values.append(val)
                 self._values.append(elem_values)
-            print self._values
+
+    def get_polynomial(self, values, a, b):
+        """
+        Returns the interpolating polynomial's coeffs.
+
+        The len(values) specifies the order and we work in the element <a, b>
+        """
+        n = len(values)
+        A = empty((n, n), dtype="double")
+        y = empty((n,), dtype="double")
+        x = points[n-1]
+        assert len(x) == n
+        for i in range(n):
+            for j in range(n):
+                A[i, j] = get_x_phys(x[i], a, b)**(n-j-1)
+            y[i] = values[i]
+        a = solve(A, y)
+        return a
+
+    def eval_polynomial(self, coeffs, x):
+        r = 0
+        n = len(coeffs)
+        for i, a in enumerate(coeffs):
+            r += a*x**(n-i-1)
+        return r
 
     def __call__(self, x):
-        print x
-        return 5
+        for n, (a, b, order) in enumerate(self._mesh.iter_elems()):
+            if b < x:
+                continue
+            coeffs = self.get_polynomial(self._values[n], a, b)
+            return self.eval_polynomial(coeffs, x)
 
 
 
