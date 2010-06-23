@@ -4,8 +4,8 @@
 
 #include "_hermes1d_api.h"
 
-static int N_eq = 1;
 int N_elem = 100;                         // number of elements
+static int N_eq = 2;
 double A = 0, B = 20;                     // domain end points
 int P_init = 2;                           // initial polynomal degree
 
