@@ -21,4 +21,5 @@ add_subdirectory(system_neutronics_fixedsrc2)
 
 if(WITH_PYTHON)
     add_subdirectory(schroedinger)
+    add_subdirectory(dirac)
 endif(WITH_PYTHON)
