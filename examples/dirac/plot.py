@@ -9,14 +9,14 @@ def plot_file():
     plot(x, y)
     show()
 
-def plot_eigs(mesh, eigs):
+def plot_eigs(mesh, eigs, n=10):
     try:
         from jsplot import plot, show
     except ImportError:
         from pylab import plot, show
     import numpy
     l = Linearizer(mesh)
-    for E, eig in eigs:
+    for E, eig in eigs[:n]:
         if E >= 0:
             break
         x, y = l.get_xy(eig, 0, 100)

@@ -22,8 +22,10 @@ def solve_eig_numpy(A, B):
     r.sort(key=lambda x: x[0])
     print "eigenvalues:"
     eigs = []
+    count = 0
     for w, vec in r:
-        if w > 0:
+        count += 1
+        if w > 0 or count > 10:
             break
         print w
         eigs.append(vec)
