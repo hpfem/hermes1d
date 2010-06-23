@@ -22,7 +22,10 @@ double lhs(int num, double *x, double *weights,
         double coeff;
         double r = x[i];
         // specify r^2*V:
+        // Hydrogen:
         double rrV = -r; // r^2 * (-1/r) = -r
+        // Harmonic oscillator:
+        //double rrV = r*r*r*r; // r^2 * (r^2) = r^4
         coeff = 0.5*r*r*dudx[i]*dvdx[i] + (rrV + 0.5 * (l + 1)*l) *u[i]*v[i];
         val += coeff*weights[i];
     }
