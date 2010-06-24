@@ -2,7 +2,7 @@
 Module for handling Fekete points approximations.
 """
 
-from numpy import empty
+from numpy import empty, arange
 from numpy.linalg import solve
 
 from gauss_lobatto_points import points
@@ -81,6 +81,27 @@ class Function(object):
     def project_onto(self, mesh):
         # This is not a true projection, only some approximation:
         return Function(self, mesh)
+
+    def plot(self, call_show=True):
+        from pylab import plot, show
+        odd = False
+        for n, (a, b, order) in enumerate(self._mesh.iter_elems()):
+            fekete_points = points[order]
+            vals = self._values[n]
+            assert len(vals) == len(fekete_points)
+            fekete_points = [get_x_phys(x, a, b) for x in fekete_points]
+            x = arange(a, b, 0.1)
+            y = [self(_x) for _x in x]
+            if odd:
+                format = "g-"
+            else:
+                format = "r-"
+            odd = not odd
+            plot(x, y, format)
+            plot(fekete_points, vals, "ko")
+        if call_show:
+            show()
+
 
 
 
