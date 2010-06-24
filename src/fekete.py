@@ -30,21 +30,18 @@ class Function(object):
     """
 
     def __init__(self, obj, mesh=None):
-        if isinstance(obj, Function):
-            raise NotImplementedError()
-        else:
-            if not isinstance(mesh, Mesh1D):
-                raise Exception("You need to specify a mesh.")
-            self._mesh = mesh
-            self._values = []
-            for a, b, order in mesh.iter_elems():
-                fekete_points = points[order]
-                elem_values = []
-                for p in fekete_points:
-                    p = get_x_phys(p, a, b)
-                    val = obj(p)
-                    elem_values.append(val)
-                self._values.append(elem_values)
+        if not isinstance(mesh, Mesh1D):
+            raise Exception("You need to specify a mesh.")
+        self._mesh = mesh
+        self._values = []
+        for a, b, order in mesh.iter_elems():
+            fekete_points = points[order]
+            elem_values = []
+            for p in fekete_points:
+                p = get_x_phys(p, a, b)
+                val = obj(p)
+                elem_values.append(val)
+            self._values.append(elem_values)
 
     def get_polynomial(self, values, a, b):
         """
@@ -80,6 +77,10 @@ class Function(object):
             # polynomial below). The results are however identical.
             coeffs = self.get_polynomial(self._values[n], a, b)
             return self.eval_polynomial(coeffs, x)
+
+    def project_onto(self, mesh):
+        # This is not a true projection, only some approximation:
+        return Function(self, mesh)
 
 
 
@@ -154,10 +155,19 @@ def test3():
     x = 2
     assert abs(f(x) - func(x)) > 28.9
 
+def test4():
+    eps = 1e-12
+    func = lambda x: x**2
+    orig_mesh = Mesh1D((-5, -4, 3, 10), (1, 5, 1))
+    mesh1     = Mesh1D((-5, -4, 3, 10), (1, 1, 1))
+    f = Function(func, orig_mesh)
+    g = f.project_onto(mesh1)
+
 def main():
     test1()
     test2()
     test3()
+    test4()
 
 if __name__ == "__main__":
     main()
