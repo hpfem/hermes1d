@@ -103,18 +103,19 @@ class Function(object):
             show()
 
     def __eq__(self, o):
+        eps = 1e-12
         if isinstance(o, Function):
             for a, b, order in self._mesh.iter_elems():
                 fekete_points = points[order]
                 fekete_points = [get_x_phys(x, a, b) for x in fekete_points]
                 for p in fekete_points:
-                    if self(p) != o(p):
+                    if abs(self(p) - o(p)) > eps:
                         return False
             for a, b, order in o._mesh.iter_elems():
                 fekete_points = points[order]
                 fekete_points = [get_x_phys(x, a, b) for x in fekete_points]
                 for p in fekete_points:
-                    if self(p) != o(p):
+                    if abs(self(p) - o(p)) > eps:
                         return False
             return True
         else:
@@ -232,7 +233,7 @@ def test5():
     assert f != Function(lambda x: x**3, mesh1)
     assert f == Function(lambda x: x**2, mesh2)
     assert f == Function(lambda x: x**2, mesh4)
-    #assert f == Function(lambda x: x**2, mesh5)
+    assert f == Function(lambda x: x**2, mesh5)
     assert f != Function(lambda x: x**2, mesh6)
 
 def main():
