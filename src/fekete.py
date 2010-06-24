@@ -205,6 +205,9 @@ def test4():
     mesh1     = Mesh1D((-5, -4, 3, 10), (1, 1, 1))
     f = Function(func, orig_mesh)
     g = f.project_onto(mesh1)
+    h = Function(func, mesh1)
+    assert g == Function(func, mesh1)
+    assert h == h.project_onto(orig_mesh)
 
 def test5():
     eps = 1e-12
