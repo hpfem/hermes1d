@@ -75,6 +75,9 @@ class Function(object):
         for n, (a, b, order) in enumerate(self._mesh.iter_elems()):
             if b < x:
                 continue
+            # This can be made faster by using Lagrange interpolation
+            # polynomials (no need to invert a matrix in order to get the
+            # polynomial below). The results are however identical.
             coeffs = self.get_polynomial(self._values[n], a, b)
             return self.eval_polynomial(coeffs, x)
 
