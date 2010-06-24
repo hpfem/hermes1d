@@ -22,6 +22,21 @@ class Mesh1D(object):
         for i in range(len(self._orders)):
             yield (self._points[i], self._points[i+1], self._orders[i])
 
+    def plot(self, call_show=True):
+        from pylab import plot, show
+        odd = False
+        for a, b, order in self.iter_elems():
+            fekete_points = points[order]
+            fekete_points = [get_x_phys(x, a, b) for x in fekete_points]
+            if odd:
+                format = "y-"
+            else:
+                format = "k-"
+            odd = not odd
+            plot([a, a, b, b], [0, order, order, 0], format, lw=2)
+        if call_show:
+            show()
+
 class Function(object):
     """
     Represents a function on a mesh.
@@ -37,6 +52,8 @@ class Function(object):
         for a, b, order in mesh.iter_elems():
             fekete_points = points[order]
             elem_values = []
+            # Note: this is not a projection, so the result is not the best
+            # approximation possible:
             for p in fekete_points:
                 p = get_x_phys(p, a, b)
                 val = obj(p)
@@ -124,7 +141,8 @@ class Function(object):
     def __neq__(self, o):
         return not self.__eq__(o)
 
-
+    def get_mesh_adapt(self, max_order=12):
+        return self._mesh
 
 
 def test1():
