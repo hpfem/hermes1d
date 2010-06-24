@@ -102,6 +102,27 @@ class Function(object):
         if call_show:
             show()
 
+    def __eq__(self, o):
+        if isinstance(o, Function):
+            for a, b, order in self._mesh.iter_elems():
+                fekete_points = points[order]
+                fekete_points = [get_x_phys(x, a, b) for x in fekete_points]
+                for p in fekete_points:
+                    if self(p) != o(p):
+                        return False
+            for a, b, order in o._mesh.iter_elems():
+                fekete_points = points[order]
+                fekete_points = [get_x_phys(x, a, b) for x in fekete_points]
+                for p in fekete_points:
+                    if self(p) != o(p):
+                        return False
+            return True
+        else:
+            return False
+
+    def __neq__(self, o):
+        return not self.__eq__(o)
+
 
 
 
@@ -184,11 +205,42 @@ def test4():
     f = Function(func, orig_mesh)
     g = f.project_onto(mesh1)
 
+def test5():
+    eps = 1e-12
+    func = lambda x: x**2
+    mesh1 = Mesh1D((-5, -4, 3, 10), (2, 5, 2))
+    mesh2 = Mesh1D((-5, -4, 3, 10), (2, 2, 2))
+    mesh3 = Mesh1D((-5, -4, 3, 10), (2, 2, 1))
+    mesh4 = Mesh1D((-5, 10), (2,))
+    mesh5 = Mesh1D((-5, 10), (3,))
+    mesh6 = Mesh1D((-5, 10), (1,))
+    f = Function(func, mesh1)
+    g = Function(func, mesh2)
+    h = Function(func, mesh3)
+    l = Function(func, mesh4)
+
+    assert f == g
+    assert g == f
+    assert f == l
+    assert g == l
+    assert f != h
+    assert h != f
+    assert g != h
+    assert h != g
+
+    assert f == Function(lambda x: x**2, mesh1)
+    assert f != Function(lambda x: x**3, mesh1)
+    assert f == Function(lambda x: x**2, mesh2)
+    assert f == Function(lambda x: x**2, mesh4)
+    #assert f == Function(lambda x: x**2, mesh5)
+    assert f != Function(lambda x: x**2, mesh6)
+
 def main():
     test1()
     test2()
     test3()
     test4()
+    test5()
 
 if __name__ == "__main__":
     main()
