@@ -2,6 +2,8 @@
 Module for handling Fekete points approximations.
 """
 
+from math import pi, sin
+
 from numpy import empty, arange
 from numpy.linalg import solve
 
@@ -263,6 +265,11 @@ def main():
     test3()
     test4()
     test5()
+
+    #f = Function(lambda x: sin(x), Mesh1D((-pi,pi), (12,)))
+    #mesh = f.get_mesh_adapt(max_order=5)
+    #mesh.plot(False)
+    #f.project_onto(mesh).plot()
 
 if __name__ == "__main__":
     main()
