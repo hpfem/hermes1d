@@ -273,8 +273,10 @@ def main():
     test5()
 
     #f = Function(lambda x: sin(x), Mesh1D((-pi,pi), (12,)))
-    #mesh = f.get_mesh_adapt(max_order=5)
+    #mesh = f.get_mesh_adapt(max_order=1)
+    #mesh = Mesh1D((-pi, -1, 0, 1, pi), (1, 1, 1, 1))
     #mesh.plot(False)
+    #f.plot(False)
     #f.project_onto(mesh).plot()
 
 if __name__ == "__main__":
