@@ -25,7 +25,10 @@ class Mesh1D(object):
             yield (self._points[i], self._points[i+1], self._orders[i])
 
     def plot(self, call_show=True):
-        from pylab import plot, show
+        try:
+            from jsplot import plot, show
+        except ImportError:
+            from pylab import plot, show
         odd = False
         for a, b, order in self.iter_elems():
             fekete_points = points[order]
@@ -102,7 +105,10 @@ class Function(object):
         return Function(self, mesh)
 
     def plot(self, call_show=True):
-        from pylab import plot, show
+        try:
+            from jsplot import plot, show
+        except ImportError:
+            from pylab import plot, show
         odd = False
         for n, (a, b, order) in enumerate(self._mesh.iter_elems()):
             fekete_points = points[order]
