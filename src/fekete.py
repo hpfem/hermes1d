@@ -103,7 +103,8 @@ class Function(object):
             for a, b, order in mesh.iter_elems():
                 fekete_points = points[order]
                 elem_values = []
-                # Note: this is not a projection, so the result is not the best
+                # Note: this is not a projection (it only evaluates obj in
+                # fekete points), so the result is not the best
                 # approximation possible:
                 for p in fekete_points:
                     p = get_x_phys(p, a, b)
