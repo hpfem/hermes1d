@@ -218,6 +218,9 @@ class Function(object):
         return self._mesh
 
     def l2_norm(self):
+        """
+        Returns the L2 norm of the function.
+        """
         i = 0
         def f(x):
             return [self(_)**2 for _ in x]
@@ -226,6 +229,14 @@ class Function(object):
             i += val
         return i
 
+    def dofs(self):
+        """
+        Returns the number of DOFs needed to represent the function.
+        """
+        n = 1
+        for a, b, order in self._mesh.iter_elems():
+            n += order
+        return n
 
 
 def test1():
