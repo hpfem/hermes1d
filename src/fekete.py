@@ -7,6 +7,8 @@ from math import pi, sin
 from numpy import empty, arange, array, ndarray
 from numpy.linalg import solve
 
+from scipy.integrate import quadrature
+
 from gauss_lobatto_points import points
 
 def get_x_phys(x_ref, a, b):
@@ -214,6 +216,16 @@ class Function(object):
 
     def get_mesh_adapt(self, max_order=12):
         return self._mesh
+
+    def l2_norm(self):
+        i = 0
+        def f(x):
+            return [self(_)**2 for _ in x]
+        for a, b, order in self._mesh.iter_elems():
+            val, err = quadrature(f, a, b)
+            i += val
+        return i
+
 
 
 def test1():
