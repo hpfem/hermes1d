@@ -4,7 +4,7 @@ Module for handling Fekete points approximations.
 
 from math import pi, sin
 
-from numpy import empty, arange, array
+from numpy import empty, arange, array, ndarray
 from numpy.linalg import solve
 
 from gauss_lobatto_points import points
@@ -96,17 +96,20 @@ class Function(object):
         if not isinstance(mesh, Mesh1D):
             raise Exception("You need to specify a mesh.")
         self._mesh = mesh
-        self._values = []
-        for a, b, order in mesh.iter_elems():
-            fekete_points = points[order]
-            elem_values = []
-            # Note: this is not a projection, so the result is not the best
-            # approximation possible:
-            for p in fekete_points:
-                p = get_x_phys(p, a, b)
-                val = obj(p)
-                elem_values.append(val)
-            self._values.append(elem_values)
+        if isinstance(obj, (tuple, list, ndarray)):
+            self._values = obj
+        else:
+            self._values = []
+            for a, b, order in mesh.iter_elems():
+                fekete_points = points[order]
+                elem_values = []
+                # Note: this is not a projection, so the result is not the best
+                # approximation possible:
+                for p in fekete_points:
+                    p = get_x_phys(p, a, b)
+                    val = obj(p)
+                    elem_values.append(val)
+                self._values.append(elem_values)
 
     def get_polynomial(self, values, a, b):
         """
@@ -191,6 +194,22 @@ class Function(object):
 
     def __neq__(self, o):
         return not self.__eq__(o)
+
+    def __add__(self, o):
+        if self._mesh == o._mesh:
+            values = array(self._values) + array(o._values)
+            return Function(values, self._mesh)
+        else:
+            union_mesh = self._mesh.union(o._mesh)
+            return self.project_onto(union_mesh) + o.project_onto(union_mesh)
+
+    def __sub__(self, o):
+        return self + (-o)
+
+    def __neg__(self):
+        values = array(self._values)
+        return Function(-values, self._mesh)
+
 
     def get_mesh_adapt(self, max_order=12):
         return self._mesh
@@ -356,15 +375,17 @@ def main():
     f_mesh = Mesh1D((-pi,pi), (12,))
     f = Function(lambda x: sin(x), f_mesh)
     #mesh = f.get_mesh_adapt(max_order=1)
-    g_mesh = Mesh1D((-pi, -1, 0, 1, pi), (2, 3, 4, 3))
+    g_mesh = Mesh1D((-pi, -1, 0, 1, pi), (2, 1, 1, 1))
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
-    u_mesh = f_mesh.union(g_mesh)
+    #u_mesh = f_mesh.union(g_mesh)
     #f_mesh.plot(False)
     #g_mesh.plot(False)
     #u_mesh.plot()
-    #a = (g + f)
-    #a.plot()
+    g.plot(False)
+    f.plot(False)
+    a = (g - f)
+    a.plot()
 
 if __name__ == "__main__":
     main()
