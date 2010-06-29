@@ -4,7 +4,7 @@ Module for handling Fekete points approximations.
 
 from math import pi, sin
 
-from numpy import empty, arange
+from numpy import empty, arange, array
 from numpy.linalg import solve
 
 from gauss_lobatto_points import points
@@ -17,8 +17,8 @@ class Mesh1D(object):
     def __init__(self, points, orders):
         if not (len(points) == len(orders) + 1):
             raise Exception("points vs order mismatch")
-        self._points = points
-        self._orders = orders
+        self._points = tuple(points)
+        self._orders = tuple(orders)
 
     def iter_elems(self):
         for i in range(len(self._orders)):
@@ -41,6 +41,49 @@ class Mesh1D(object):
             plot([a, a, b, b], [0, order, order, 0], format, lw=2)
         if call_show:
             show()
+
+    def element_at_point(self, x):
+        """
+        Returns the element id at a point "x".
+
+        """
+        for n, (a, b, order) in enumerate(self.iter_elems()):
+            if b < x:
+                continue
+            return n
+
+    def union(self, o):
+        eps = 1e-12
+        p1 = self._points
+        p2 = o._points
+        p = list(p1)
+        p.extend(p2)
+        p.sort()
+        points = [p[0]]
+        for point in p[1:]:
+            if abs(points[-1] - point) < eps:
+                continue
+            points.append(point)
+        # points now contains the sorted list of union points
+        orders = []
+        for n, p in enumerate(points[1:]):
+            p1 = points[n]
+            p2 = p
+            mid = (p1+p2)/2.
+            o1 = self._orders[self.element_at_point(mid)]
+            o2 = o._orders[o.element_at_point(mid)]
+            orders.append(max(o1, o2))
+
+        return Mesh1D(points, orders)
+
+    def __eq__(self, o):
+        eps = 1e-12
+        if isinstance(o, Mesh1D):
+            if self._orders == o._orders:
+                d = array(self._points) - array(o._points)
+                if (abs(d) < eps).all():
+                    return True
+        return False
 
 class Function(object):
     """
@@ -265,19 +308,63 @@ def test5():
     assert f == Function(lambda x: x**2, mesh5)
     assert f != Function(lambda x: x**2, mesh6)
 
+def test6():
+    mesh1 = Mesh1D((-5, -4, 3, 10), (2, 5, 2))
+    mesh2 = Mesh1D((-5, -4, 3, 10), (2, 2, 2))
+    mesh3 = Mesh1D((-5, -4, 3, 10), (2, 2, 1))
+    mesh4 = Mesh1D((-5, 10), (2,))
+    mesh5 = Mesh1D((-5, 10), (3,))
+    mesh6 = Mesh1D((-5, 10), (1,))
+    mesh7 = Mesh1D((-5, 10), (1,))
+    mesh8 = Mesh1D((-5, 0, 10), (1, 4))
+
+    assert mesh1 == mesh1
+    assert mesh1 != mesh2
+    assert mesh1 != mesh3
+    assert mesh1 != mesh4
+    assert mesh1 != mesh5
+    assert mesh1 != mesh6
+    assert mesh6 == mesh7
+    assert mesh1.union(mesh1) == mesh1
+
+    assert mesh1.union(mesh2) == mesh1
+    assert mesh2.union(mesh1) == mesh1
+
+    assert mesh1.union(mesh3) == mesh1
+    assert mesh3.union(mesh1) == mesh1
+
+    assert mesh1.union(mesh4) == mesh1
+    assert mesh4.union(mesh1) == mesh1
+
+    assert mesh1.union(mesh5) == Mesh1D((-5, -4, 3, 10), (3, 5, 3))
+    assert mesh5.union(mesh1) == Mesh1D((-5, -4, 3, 10), (3, 5, 3))
+
+    assert mesh1.union(mesh6) == mesh1
+    assert mesh6.union(mesh1) == mesh1
+
+    assert mesh1.union(mesh8) == Mesh1D((-5, -4, 0, 3, 10), (2, 5, 5, 4))
+    assert mesh8.union(mesh1) == Mesh1D((-5, -4, 0, 3, 10), (2, 5, 5, 4))
+
 def main():
     test1()
     test2()
     test3()
     test4()
     test5()
+    test6()
 
-    #f = Function(lambda x: sin(x), Mesh1D((-pi,pi), (12,)))
+    f_mesh = Mesh1D((-pi,pi), (12,))
+    f = Function(lambda x: sin(x), f_mesh)
     #mesh = f.get_mesh_adapt(max_order=1)
-    #mesh = Mesh1D((-pi, -1, 0, 1, pi), (1, 1, 1, 1))
+    g_mesh = Mesh1D((-pi, -1, 0, 1, pi), (2, 3, 4, 3))
     #mesh.plot(False)
-    #f.plot(False)
-    #f.project_onto(mesh).plot()
+    g = f.project_onto(g_mesh)
+    u_mesh = f_mesh.union(g_mesh)
+    #f_mesh.plot(False)
+    #g_mesh.plot(False)
+    #u_mesh.plot()
+    #a = (g + f)
+    #a.plot()
 
 if __name__ == "__main__":
     main()
