@@ -14,6 +14,34 @@ from gauss_lobatto_points import points
 def get_x_phys(x_ref, a, b):
     return (a+b)/2. + x_ref*(b-a)/2.;
 
+def generate_candidates(a, b, order):
+    def cand(divisions, orders):
+        if len(divisions) == 0:
+            assert len(orders) == 1
+            return ((a, b, order + orders[0]),)
+        elif len(divisions) == 1:
+            assert len(orders) == 2
+            return (a, divisions[0], order + orders[0]), \
+                    (divisions[0], b, order + orders[1])
+        else:
+            raise NotImplementedError()
+    cands = [
+            cand([], [0]),
+            cand([], [1]),
+            cand([], [2]),
+            cand([0.5], [0, 0]),
+            cand([0.5], [1, 0]),
+            cand([0.5], [0, 1]),
+            cand([0.5], [1, 1]),
+            ]
+    if order > 1:
+        cands.extend([
+            cand([0.5], [-1, 0]),
+            cand([0.5], [0, -1]),
+            cand([0.5], [-1, -1]),
+            ])
+    return cands
+
 class Mesh1D(object):
 
     def __init__(self, points, orders):
@@ -399,21 +427,24 @@ def main():
     f_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (12, 12, 12))
     f = Function(lambda x: sin(x), f_mesh)
     #mesh = f.get_mesh_adapt(max_order=1)
-    g_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (3, 3, 3))
+    g_mesh = Mesh1D((-pi, -pi/2, 0, pi/2, pi), (1, 1, 1, 1))
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
-    #u_mesh = f_mesh.union(g_mesh)
-    #f_mesh.plot(False)
-    #g_mesh.plot(False)
-    #u_mesh.plot()
-    f.plot(False)
-    g.plot(False)
+    for a, b, order in g._mesh.iter_elems():
+        cands = generate_candidates(a, b, order)
+        print "-"*40
+        print a, b, order
+        print cands
+        for c in cands:
+            print c
+    #f.plot(False)
+    #g.plot(False)
     error = (g - f)
-    error.plot()
-    print error.l2_norm()
-    print f.dofs()
-    print g.dofs()
-    print error.dofs()
+    #error.plot()
+    print "error:     ", error.l2_norm()
+    print "f dofs:    ", f.dofs()
+    print "g dofs:    ", g.dofs()
+    print "error dofs:", error.dofs()
 
 if __name__ == "__main__":
     main()
