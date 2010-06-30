@@ -18,11 +18,11 @@ def generate_candidates(a, b, order):
     def cand(divisions, orders):
         if len(divisions) == 0:
             assert len(orders) == 1
-            return ((a, b, order + orders[0]),)
+            return Mesh1D((a, b), (order + orders[0],))
         elif len(divisions) == 1:
             assert len(orders) == 2
-            return (a, divisions[0], order + orders[0]), \
-                    (divisions[0], b, order + orders[1])
+            return Mesh1D((a, get_x_phys(divisions[0], a, b), b),
+                    (order + orders[0], order + orders[1]))
         else:
             raise NotImplementedError()
     cands = [
@@ -159,6 +159,16 @@ class Function(object):
             y[i] = values[i]
         a = solve(A, y)
         return a
+
+    def restrict_to_interval(self, A, B):
+        """
+        Returns the same function, but with mesh only going from A to B.
+        """
+        # TODO: this has to be properly implemented.
+        for n, (a, b, order) in enumerate(self._mesh.iter_elems()):
+            if a < A:
+                continue
+
 
     def eval_polynomial(self, coeffs, x):
         r = 0
@@ -434,11 +444,13 @@ def main():
         cands = generate_candidates(a, b, order)
         print "-"*40
         print a, b, order
-        print cands
-        for c in cands:
-            print c
+        for m in cands:
+            cand = Function(f, m)
+            error = f.restrict_to_interval(a, b) - cand
+            #print cand._mesh._points, error.l2_norm()
+            #c.plot(False)
     #f.plot(False)
-    #g.plot(False)
+    #g.plot()
     error = (g - f)
     #error.plot()
     print "error:     ", error.l2_norm()
