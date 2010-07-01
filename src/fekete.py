@@ -349,6 +349,48 @@ class Function(object):
             n += order
         return n
 
+    def get_candidates_with_errors(self, f):
+        """
+        Returns a sorted list of all candidates and their errors.
+
+        The best candidate is first, the worst candidate is last.
+
+        The "f" is the reference function which we want to approximate using
+        "self".
+        """
+        cand_with_errors = []
+        for a, b, order in self._mesh.iter_elems():
+            cands = generate_candidates(a, b, order)
+            print "-"*40
+            print a, b, order
+            for m in cands:
+                orig = self.restrict_to_interval(a, b)
+                cand = Function(f, m)
+                f2 = f.restrict_to_interval(a, b)
+                dof_cand = cand.dofs()
+                err_cand = (f2 - cand).l2_norm()
+                dof_orig = orig.dofs()
+                err_orig = (f2 - orig).l2_norm()
+                if dof_cand == dof_orig:
+                    if err_cand < err_orig:
+                        # if this happens, it means that we can get better
+                        # approximation with the same DOFs, so we definitely take
+                        # this candidate:
+                        crit = -1e10
+                    else:
+                        crit = 1e10 # forget this candidate
+                elif dof_cand > dof_orig:
+                    # if DOF rises, we take the candidate that goes the steepest in
+                    # the log/sqrt error/DOFs convergence graph
+                    # we want 'crit' as negative as possible:
+                    crit = (log(err_cand) - log(err_orig)) / \
+                            sqrt(dof_cand - dof_orig)
+                else:
+                    raise NotImplementedError("Derefinement not implemented yet.")
+                cand_with_errors.append((m, crit))
+        cand_with_errors.sort(key=lambda x: x[1])
+        return cand_with_errors
+
 
 def test1():
     m = Mesh1D((-5, -4, 3, 10), (1, 5, 1))
@@ -551,37 +593,7 @@ def main():
     g_mesh = Mesh1D((-pi, -pi/2, 0, pi/2, pi), (1, 1, 1, 1))
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
-    cand_with_errors = []
-    for a, b, order in g._mesh.iter_elems():
-        cands = generate_candidates(a, b, order)
-        print "-"*40
-        print a, b, order
-        for m in cands:
-            orig = g.restrict_to_interval(a, b)
-            cand = Function(f, m)
-            f2 = f.restrict_to_interval(a, b)
-            dof_cand = cand.dofs()
-            err_cand = (f2 - cand).l2_norm()
-            dof_orig = orig.dofs()
-            err_orig = (f2 - orig).l2_norm()
-            if dof_cand == dof_orig:
-                if err_cand < err_orig:
-                    # if this happens, it means that we can get better
-                    # approximation with the same DOFs, so we definitely take
-                    # this candidate:
-                    crit = -1e10
-                else:
-                    crit = 1e10 # forget this candidate
-            elif dof_cand > dof_orig:
-                # if DOF rises, we take the candidate that goes the steepest in
-                # the log/sqrt error/DOFs convergence graph
-                # we want 'crit' as negative as possible:
-                crit = (log(err_cand) - log(err_orig)) / \
-                        sqrt(dof_cand - dof_orig)
-            else:
-                raise NotImplementedError("Derefinement not implemented yet.")
-            cand_with_errors.append((m, crit))
-    cand_with_errors.sort(key=lambda x: x[1])
+    cand_with_errors = g.get_candidates_with_errors(f)
     cand_accepted = cand_with_errors[0]
     print "accepting:", cand_accepted
     m = cand_accepted[0]
