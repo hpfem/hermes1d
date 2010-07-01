@@ -28,16 +28,29 @@ def generate_candidates(a, b, order):
     cands = [
             cand([], [1]),
             cand([], [2]),
-            cand([0.5], [0, 0]),
-            cand([0.5], [1, 0]),
-            cand([0.5], [0, 1]),
-            cand([0.5], [1, 1]),
+            cand([0], [0, 0]),
+            cand([0], [1, 0]),
+            cand([0], [0, 1]),
+            cand([0], [1, 1]),
+            cand([0], [2, 0]),
+            cand([0], [2, 1]),
+            cand([0], [1, 2]),
+            cand([0], [0, 2]),
+            cand([0], [2, 2]),
             ]
     if order > 1:
         cands.extend([
-            cand([0.5], [-1, 0]),
-            cand([0.5], [0, -1]),
-            cand([0.5], [-1, -1]),
+            cand([0], [-1, 0]),
+            cand([0], [0, -1]),
+            cand([0], [-1, -1]),
+            ])
+    if order > 2:
+        cands.extend([
+            cand([0], [-2, 0]),
+            cand([0], [-2, -1]),
+            cand([0], [-1, -2]),
+            cand([0], [0, -2]),
+            cand([0], [-2, -2]),
             ])
     return cands
 
@@ -387,9 +400,16 @@ class Function(object):
                     # we want 'crit' as negative as possible:
                     crit = (log(err_cand) - log(err_orig)) / \
                             sqrt(dof_cand - dof_orig)
-                    print crit, err_cand, err_orig, dof_cand, dof_orig
+                    #print crit, err_cand, err_orig, dof_cand, dof_orig
                 else:
-                    raise NotImplementedError("Derefinement not implemented yet.")
+                    if err_cand < err_orig:
+                        # if this happens, it means that we can get better
+                        # approximation with less DOFs, so we definitely take
+                        # this candidate:
+                        print "Nice!", dof_cand, dof_orig, err_cand, err_orig
+                        crit = -1e10
+                    else:
+                        crit = 1e10 # forget this candidate
                 cand_with_errors.append((m, crit))
         cand_with_errors.sort(key=lambda x: x[1])
         return cand_with_errors
@@ -590,18 +610,20 @@ def main():
     test6()
     test7()
 
-    f_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (12, 12, 12))
-    f = Function(lambda x: sin(x), f_mesh)
+    f_mesh = Mesh1D((-pi, -pi/2, 0, pi/2, pi), (12, 12, 12, 12))
+    f = Function(lambda x: sin(2*x), f_mesh)
     #mesh = f.get_mesh_adapt(max_order=1)
-    g_mesh = Mesh1D((-pi, -pi/2, 0, pi/2, pi), (1, 1, 1, 1))
+    g_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (1, 1, 1))
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
     error = (g-f).l2_norm()
-    while error > 1e-5:
+    while error > 1e-9:
         print error, g.dofs()
+        print "  ", g._mesh._points
+        print "  ", g._mesh._orders
         cand_with_errors = g.get_candidates_with_errors(f)
-        for m, err in cand_with_errors[:10]:
-            print "   ", err, m._points, m._orders
+        #for m, err in cand_with_errors[:10]:
+        #    print "   ", err, m._points, m._orders
         m, _ = cand_with_errors[0]
         g_mesh = g_mesh.use_candidate(m)
         g = f.project_onto(g_mesh)
@@ -612,7 +634,8 @@ def main():
     print "f dofs:    ", f.dofs()
     print "g dofs:    ", g.dofs()
     f.plot(False)
-    g.plot(True)
+    g.plot(False)
+    g._mesh.plot()
 
 if __name__ == "__main__":
     main()
