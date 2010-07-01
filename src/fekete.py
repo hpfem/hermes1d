@@ -530,7 +530,6 @@ def main():
     test5()
     test6()
     test7()
-    return
 
     f_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (12, 12, 12))
     f = Function(lambda x: sin(x), f_mesh)
@@ -538,15 +537,22 @@ def main():
     g_mesh = Mesh1D((-pi, -pi/2, 0, pi/2, pi), (1, 1, 1, 1))
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
+    cand_with_errors = []
     for a, b, order in g._mesh.iter_elems():
         cands = generate_candidates(a, b, order)
         print "-"*40
         print a, b, order
         for m in cands:
             cand = Function(f, m)
-            error = f.restrict_to_interval(a, b) - cand
-            #print cand._mesh._points, error.l2_norm()
-            #c.plot(False)
+            f2 = f.restrict_to_interval(a, b)
+            error = f2 - cand
+            dof_cand = cand.dofs()
+            err_cand = error.l2_norm()
+            dof_orig = f2.dofs()
+            cand_with_errors.append((dof_cand, err_cand))
+    cand_with_errors.sort(key=lambda x: x[1])
+    cand_accepted = cand_with_errors[0]
+    print "accepting:", cand_accepted
     #f.plot(False)
     #g.plot()
     error = (g - f)
