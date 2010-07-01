@@ -82,11 +82,62 @@ class Mesh1D(object):
                 continue
             return n
 
+    def get_element_by_id(self, id):
+        return list(self.iter_elems())[id]
+
     def restrict_to_elements(self, n1, n2):
         """
         Returns the submesh of elements [n1, n2] (in the slice notation).
         """
         return Mesh1D(self._points[n1:n2+1], self._orders[n1:n2])
+
+    def restrict_to_interval(self, A, B):
+        assert B > A
+        n1 = self.element_at_point(A)
+        n2 = self.element_at_point(B)
+        points = []
+        orders = []
+
+        # first element:
+        a, b, order = self.get_element_by_id(n1)
+        eps = 1e-12
+        if abs(b-A) < eps:
+            pass
+        else:
+            if abs(a-A) < eps:
+                pass
+            elif a < A:
+                a = A
+            else:
+                raise NotImplementedError()
+            points.append(a)
+            orders.append(order)
+
+        #middle elements
+        for n in range(n1+1, n2):
+            a, b, order = self.get_element_by_id(n)
+            points.append(a)
+            orders.append(order)
+
+        # last element:
+        a, b, order = self.get_element_by_id(n2)
+        eps = 1e-12
+        if abs(a-A) < eps:
+            pass
+        elif a < A:
+            a = A
+        if abs(b-B) < eps:
+            pass
+        elif B < b:
+            b = B
+        else:
+            raise NotImplementedError()
+        if len(points) == 0 or not (abs(points[-1] - a) < eps):
+            points.append(a)
+            orders.append(order)
+        points.append(b)
+
+        return Mesh1D(points, orders)
 
     def union(self, o):
         eps = 1e-12
@@ -120,6 +171,9 @@ class Mesh1D(object):
                 if (abs(d) < eps).all():
                     return True
         return False
+
+    def __ne__(self, o):
+        return not self.__eq__(o)
 
 class Function(object):
     """
@@ -171,13 +225,8 @@ class Function(object):
         Returns the same function, with the mesh (domain) restricted to the
         interval (A, B).
         """
-        n1 = self._mesh.element_at_point(A)
-        n2 = self._mesh.element_at_point(B) + 1
-        l = list(enumerate(self._mesh.iter_elems()))[n1:n2]
-        m = self._mesh.restrict_to_elements(n1, n2)
-        f = Function(sin, m)
-        f._values = self._values[n1:n2]
-        return f
+        m = self._mesh.restrict_to_interval(A, B)
+        return Function(self, m)
 
 
     def eval_polynomial(self, coeffs, x):
@@ -243,7 +292,7 @@ class Function(object):
         else:
             return False
 
-    def __neq__(self, o):
+    def __ne__(self, o):
         return not self.__eq__(o)
 
     def __add__(self, o):
@@ -410,6 +459,7 @@ def test6():
     mesh8 = Mesh1D((-5, 0, 10), (1, 4))
 
     assert mesh1 == mesh1
+    assert not (mesh1 != mesh1)
     assert mesh1 != mesh2
     assert mesh1 != mesh3
     assert mesh1 != mesh4
@@ -445,10 +495,32 @@ def test7():
     mesh6 = Mesh1D((-5, 10), (1,))
     mesh8 = Mesh1D((-5, 0, 10), (1, 4))
 
-    f = Function(sin, mesh1)
-    assert f._mesh == mesh1
-    g = f.restrict_to_interval(-5, 10)
-    assert g._mesh == mesh1
+    assert mesh1.restrict_to_interval(-5, 10) == mesh1
+    assert mesh1.restrict_to_interval(-4.5, 10) == Mesh1D((-4.5, -4, 3, 10),
+            (2, 5, 2))
+    assert mesh1.restrict_to_interval(-4, 10) != mesh1
+    assert mesh1.restrict_to_interval(-4, 10) == Mesh1D((-4, 3, 10), (5, 2))
+    assert mesh1.restrict_to_interval(-3.5, 10) == Mesh1D((-3.5, 3, 10), (5, 2))
+    assert mesh1.restrict_to_interval(3, 10) == Mesh1D((3, 10), (2,))
+    assert mesh1.restrict_to_interval(3.5, 10) == Mesh1D((3.5, 10), (2,))
+
+    assert mesh2.restrict_to_interval(-5, 10) == mesh2
+    assert mesh2.restrict_to_interval(-4.5, 10) == Mesh1D((-4.5, -4, 3, 10),
+            (2, 2, 2))
+    assert mesh2.restrict_to_interval(-4, 10) != mesh2
+    assert mesh2.restrict_to_interval(-4, 10) == Mesh1D((-4, 3, 10), (2, 2))
+    assert mesh2.restrict_to_interval(-3.5, 10) == Mesh1D((-3.5, 3, 10), (2, 2))
+    assert mesh2.restrict_to_interval(3, 10) == Mesh1D((3, 10), (2,))
+    assert mesh2.restrict_to_interval(3.5, 10) == Mesh1D((3.5, 10), (2,))
+
+    assert mesh3.restrict_to_interval(-5, 10) == mesh3
+    assert mesh3.restrict_to_interval(-4.5, 10) == Mesh1D((-4.5, -4, 3, 10),
+            (2, 2, 1))
+    assert mesh3.restrict_to_interval(-4, 10) != mesh3
+    assert mesh3.restrict_to_interval(-4, 10) == Mesh1D((-4, 3, 10), (2, 1))
+    assert mesh3.restrict_to_interval(-3.5, 10) == Mesh1D((-3.5, 3, 10), (2, 1))
+    assert mesh3.restrict_to_interval(3, 10) == Mesh1D((3, 10), (1,))
+    assert mesh3.restrict_to_interval(3.5, 10) == Mesh1D((3.5, 10), (1,))
 
 def main():
     test1()
@@ -458,6 +530,7 @@ def main():
     test5()
     test6()
     test7()
+    return
 
     f_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (12, 12, 12))
     f = Function(lambda x: sin(x), f_mesh)
