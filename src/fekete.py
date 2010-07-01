@@ -2,7 +2,7 @@
 Module for handling Fekete points approximations.
 """
 
-from math import pi, sin, log, sqrt
+from math import pi, sin, log, sqrt, exp, cos
 
 from numpy import empty, arange, array, ndarray
 from numpy.linalg import solve
@@ -610,10 +610,10 @@ def main():
     test6()
     test7()
 
-    f_mesh = Mesh1D((-pi, -pi/2, 0, pi/2, pi), (12, 12, 12, 12))
-    f = Function(lambda x: sin(2*x), f_mesh)
+    f_mesh = Mesh1D((0, 2, 4, 6, 8, 10), (12, 12, 12, 12, 12))
+    f = Function(lambda x: exp(-x), f_mesh)
     #mesh = f.get_mesh_adapt(max_order=1)
-    g_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (1, 1, 1))
+    g_mesh = Mesh1D((0, 10), (1,))
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
     error = (g-f).l2_norm()
