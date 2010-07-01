@@ -617,8 +617,10 @@ def main():
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
     error = (g-f).l2_norm()
+    graph = []
     while error > 1e-9:
         print error, g.dofs()
+        graph.append((g.dofs(), error))
         print "  ", g._mesh._points
         print "  ", g._mesh._orders
         cand_with_errors = g.get_candidates_with_errors(f)
@@ -628,6 +630,7 @@ def main():
         g_mesh = g_mesh.use_candidate(m)
         g = f.project_onto(g_mesh)
         error = (g-f).l2_norm()
+    graph.append((g.dofs(), error))
     print "Done.", error
     error = (g - f)
     print "error:     ", error.l2_norm()
@@ -635,7 +638,14 @@ def main():
     print "g dofs:    ", g.dofs()
     f.plot(False)
     g.plot(False)
-    g._mesh.plot()
+    g._mesh.plot(False)
+    from pylab import figure, show, semilogy, grid
+    figure()
+    xx = [x[0] for x in graph]
+    yy = [x[1] for x in graph]
+    semilogy(xx, yy)
+    grid()
+    show()
 
 if __name__ == "__main__":
     main()
