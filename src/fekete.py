@@ -26,7 +26,6 @@ def generate_candidates(a, b, order):
         else:
             raise NotImplementedError()
     cands = [
-            cand([], [0]),
             cand([], [1]),
             cand([], [2]),
             cand([0.5], [0, 0]),
@@ -205,6 +204,8 @@ class Function(object):
         else:
             self._values = []
             for a, b, order in mesh.iter_elems():
+                if order not in points:
+                    raise ValueError("order '%d' not implememented" % order)
                 fekete_points = points[order]
                 elem_values = []
                 # Note: this is not a projection (it only evaluates obj in
@@ -361,8 +362,8 @@ class Function(object):
         cand_with_errors = []
         for a, b, order in self._mesh.iter_elems():
             cands = generate_candidates(a, b, order)
-            print "-"*40
-            print a, b, order
+            #print "-"*40
+            #print a, b, order
             for m in cands:
                 orig = self.restrict_to_interval(a, b)
                 cand = Function(f, m)
@@ -376,6 +377,7 @@ class Function(object):
                         # if this happens, it means that we can get better
                         # approximation with the same DOFs, so we definitely take
                         # this candidate:
+                        print "XXX", dof_cand, dof_orig, err_cand, err_orig
                         crit = -1e10
                     else:
                         crit = 1e10 # forget this candidate
@@ -593,26 +595,23 @@ def main():
     g_mesh = Mesh1D((-pi, -pi/2, 0, pi/2, pi), (1, 1, 1, 1))
     #mesh.plot(False)
     g = f.project_onto(g_mesh)
-    cand_with_errors = g.get_candidates_with_errors(f)
-    cand_accepted = cand_with_errors[0]
-    print "accepting:", cand_accepted
-    m = cand_accepted[0]
-    g_new_mesh = g_mesh.use_candidate(m)
-    g_new = f.project_onto(g_new_mesh)
-    #f.plot(False)
-    #g.plot()
+    error = (g-f).l2_norm()
+    while error > 1e-5:
+        print error
+        cand_with_errors = g.get_candidates_with_errors(f)
+        for m, err in cand_with_errors[:10]:
+            print "   ", err, m._points, m._orders
+        m, _ = cand_with_errors[0]
+        g_mesh = g_mesh.use_candidate(m)
+        g = f.project_onto(g_mesh)
+        error = (g-f).l2_norm()
+    print "Done.", error
     error = (g - f)
-    error_new = (g_new - f)
-    #error.plot()
     print "error:     ", error.l2_norm()
-    print "error new: ", error_new.l2_norm()
     print "f dofs:    ", f.dofs()
     print "g dofs:    ", g.dofs()
-    print "g_new dofs:", g_new.dofs()
-    print "error dofs:", error.dofs()
-    print "error_new dofs:", error_new.dofs()
-    print g_mesh._points, g_mesh._orders
-    print g_new_mesh._points, g_new_mesh._orders
+    f.plot(False)
+    g.plot(True)
 
 if __name__ == "__main__":
     main()
