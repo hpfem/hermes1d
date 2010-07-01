@@ -82,6 +82,12 @@ class Mesh1D(object):
                 continue
             return n
 
+    def restrict_to_elements(self, n1, n2):
+        """
+        Returns the submesh of elements [n1, n2] (in the slice notation).
+        """
+        return Mesh1D(self._points[n1:n2+1], self._orders[n1:n2])
+
     def union(self, o):
         eps = 1e-12
         p1 = self._points
@@ -162,12 +168,16 @@ class Function(object):
 
     def restrict_to_interval(self, A, B):
         """
-        Returns the same function, but with mesh only going from A to B.
+        Returns the same function, with the mesh (domain) restricted to the
+        interval (A, B).
         """
-        # TODO: this has to be properly implemented.
-        for n, (a, b, order) in enumerate(self._mesh.iter_elems()):
-            if a < A:
-                continue
+        n1 = self._mesh.element_at_point(A)
+        n2 = self._mesh.element_at_point(B) + 1
+        l = list(enumerate(self._mesh.iter_elems()))[n1:n2]
+        m = self._mesh.restrict_to_elements(n1, n2)
+        f = Function(sin, m)
+        f._values = self._values[n1:n2]
+        return f
 
 
     def eval_polynomial(self, coeffs, x):
@@ -426,6 +436,20 @@ def test6():
     assert mesh1.union(mesh8) == Mesh1D((-5, -4, 0, 3, 10), (2, 5, 5, 4))
     assert mesh8.union(mesh1) == Mesh1D((-5, -4, 0, 3, 10), (2, 5, 5, 4))
 
+def test7():
+    mesh1 = Mesh1D((-5, -4, 3, 10), (2, 5, 2))
+    mesh2 = Mesh1D((-5, -4, 3, 10), (2, 2, 2))
+    mesh3 = Mesh1D((-5, -4, 3, 10), (2, 2, 1))
+    mesh4 = Mesh1D((-5, 10), (2,))
+    mesh5 = Mesh1D((-5, 10), (3,))
+    mesh6 = Mesh1D((-5, 10), (1,))
+    mesh8 = Mesh1D((-5, 0, 10), (1, 4))
+
+    f = Function(sin, mesh1)
+    assert f._mesh == mesh1
+    g = f.restrict_to_interval(-5, 10)
+    assert g._mesh == mesh1
+
 def main():
     test1()
     test2()
@@ -433,6 +457,7 @@ def main():
     test4()
     test5()
     test6()
+    test7()
 
     f_mesh = Mesh1D((-pi, -pi/3, pi/3, pi), (12, 12, 12))
     f = Function(lambda x: sin(x), f_mesh)
