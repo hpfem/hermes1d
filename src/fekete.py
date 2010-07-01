@@ -2,7 +2,7 @@
 Module for handling Fekete points approximations.
 """
 
-from math import pi, sin
+from math import pi, sin, log, sqrt
 
 from numpy import empty, arange, array, ndarray
 from numpy.linalg import solve
@@ -84,6 +84,13 @@ class Mesh1D(object):
 
     def get_element_by_id(self, id):
         return list(self.iter_elems())[id]
+
+    def get_node_id_by_coord(self, x):
+        eps = 1e-10
+        for i, node in enumerate(self._points):
+            if abs(node-x) < eps:
+                return i
+        raise ValueError("Node not found")
 
     def restrict_to_elements(self, n1, n2):
         """
@@ -174,6 +181,13 @@ class Mesh1D(object):
 
     def __ne__(self, o):
         return not self.__eq__(o)
+
+    def use_candidate(self, cand):
+        n1 = self.get_node_id_by_coord(cand._points[0])
+        n2 = self.get_node_id_by_coord(cand._points[-1])
+        points = self._points[:n1] + cand._points + self._points[n2+1:]
+        orders = self._orders[:n1] + cand._orders + self._orders[n2:]
+        return Mesh1D(points, orders)
 
 class Function(object):
     """
@@ -543,24 +557,50 @@ def main():
         print "-"*40
         print a, b, order
         for m in cands:
+            orig = g.restrict_to_interval(a, b)
             cand = Function(f, m)
             f2 = f.restrict_to_interval(a, b)
-            error = f2 - cand
             dof_cand = cand.dofs()
-            err_cand = error.l2_norm()
-            dof_orig = f2.dofs()
-            cand_with_errors.append((dof_cand, err_cand))
+            err_cand = (f2 - cand).l2_norm()
+            dof_orig = orig.dofs()
+            err_orig = (f2 - orig).l2_norm()
+            if dof_cand == dof_orig:
+                if err_cand < err_orig:
+                    # if this happens, it means that we can get better
+                    # approximation with the same DOFs, so we definitely take
+                    # this candidate:
+                    crit = -1e10
+                else:
+                    crit = 1e10 # forget this candidate
+            elif dof_cand > dof_orig:
+                # if DOF rises, we take the candidate that goes the steepest in
+                # the log/sqrt error/DOFs convergence graph
+                # we want 'crit' as negative as possible:
+                crit = (log(err_cand) - log(err_orig)) / \
+                        sqrt(dof_cand - dof_orig)
+            else:
+                raise NotImplementedError("Derefinement not implemented yet.")
+            cand_with_errors.append((m, crit))
     cand_with_errors.sort(key=lambda x: x[1])
     cand_accepted = cand_with_errors[0]
     print "accepting:", cand_accepted
+    m = cand_accepted[0]
+    g_new_mesh = g_mesh.use_candidate(m)
+    g_new = f.project_onto(g_new_mesh)
     #f.plot(False)
     #g.plot()
     error = (g - f)
+    error_new = (g_new - f)
     #error.plot()
     print "error:     ", error.l2_norm()
+    print "error new: ", error_new.l2_norm()
     print "f dofs:    ", f.dofs()
     print "g dofs:    ", g.dofs()
+    print "g_new dofs:", g_new.dofs()
     print "error dofs:", error.dofs()
+    print "error_new dofs:", error_new.dofs()
+    print g_mesh._points, g_mesh._orders
+    print g_new_mesh._points, g_new_mesh._orders
 
 if __name__ == "__main__":
     main()
