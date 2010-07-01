@@ -307,8 +307,8 @@ class Function(object):
         return self + (-o)
 
     def __neg__(self):
-        values = array(self._values)
-        return Function(-values, self._mesh)
+        values = [-array(x) for x in self._values]
+        return Function(values, self._mesh)
 
 
     def get_mesh_adapt(self, max_order=12):
