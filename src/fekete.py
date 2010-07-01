@@ -360,18 +360,18 @@ class Function(object):
         "self".
         """
         cand_with_errors = []
+        orig = f.project_onto(self._mesh)
+        dof_orig = orig.dofs()
+        err_orig = (f - orig).l2_norm()
         for a, b, order in self._mesh.iter_elems():
             cands = generate_candidates(a, b, order)
             #print "-"*40
             #print a, b, order
             for m in cands:
-                orig = self.restrict_to_interval(a, b)
-                cand = Function(f, m)
-                f2 = f.restrict_to_interval(a, b)
+                cand_mesh = self._mesh.use_candidate(m)
+                cand = f.project_onto(cand_mesh)
                 dof_cand = cand.dofs()
-                err_cand = (f2 - cand).l2_norm()
-                dof_orig = orig.dofs()
-                err_orig = (f2 - orig).l2_norm()
+                err_cand = (f - cand).l2_norm()
                 if dof_cand == dof_orig:
                     if err_cand < err_orig:
                         # if this happens, it means that we can get better
@@ -387,6 +387,7 @@ class Function(object):
                     # we want 'crit' as negative as possible:
                     crit = (log(err_cand) - log(err_orig)) / \
                             sqrt(dof_cand - dof_orig)
+                    print crit, err_cand, err_orig, dof_cand, dof_orig
                 else:
                     raise NotImplementedError("Derefinement not implemented yet.")
                 cand_with_errors.append((m, crit))
@@ -597,7 +598,7 @@ def main():
     g = f.project_onto(g_mesh)
     error = (g-f).l2_norm()
     while error > 1e-5:
-        print error
+        print error, g.dofs()
         cand_with_errors = g.get_candidates_with_errors(f)
         for m, err in cand_with_errors[:10]:
             print "   ", err, m._points, m._orders
