@@ -66,22 +66,6 @@ double residual(int num, double *x, double *weights,
     return val;
 }
 
-
-// This is obsoleted and should be moved to hermes_common as a way to export
-// DenseMatrix to Python:
-void insert_matrix(Python *p, DenseMatrix *mat, int len)
-{
-  double _mat[len*len];
-  for(int i=0; i<len; i++)
-      for(int j=0; j<len; j++)
-          _mat[i*len+j] = mat->get(i, j);
-  p->push("len", c2py_int(len));
-  p->push("mat", c2numpy_double(_mat, len*len));
-  p->exec("_ = mat.reshape((len, len))");
-  p->exec("del len");
-  p->exec("del mat");
-}
-
 /******************************************************************************/
 int main(int argc, char* argv[]) {
   // create mesh
