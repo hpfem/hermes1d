@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
   l.plot_solution(out_filename);
 
   printf("still ok\n");
-  if (import_hermes1d___hermes1d())
+  if (import_hermes1d__h1d_wrapper___hermes1d())
       throw std::runtime_error("");
   p.push("mesh",  c2py_Mesh(mesh));
   printf("2\n");
