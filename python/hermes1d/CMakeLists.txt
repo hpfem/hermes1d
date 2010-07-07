@@ -1,9 +1,5 @@
 SET(CYTHON_INCLUDE_DIRECTORIES . -I../../hermes_common/)
 cython_add_module(_hermes1d)
-add_custom_target(convert_api ./convert_api.py
-    DEPENDS _hermes1d.cpp
-    )
-add_dependencies(_hermes1d convert_api)
 target_link_libraries(_hermes1d hermes_common ${HERMES_BIN})
 set_property(TARGET _hermes1d PROPERTY COMPILE_FLAGS "-g")
 
