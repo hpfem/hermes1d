@@ -3,22 +3,6 @@
 # file for the exact terms).
 # Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
-cdef extern from "math.h":
-
-    double c_sqr "sqr"(double x)
-    double c_sqrt "sqrt"(double x)
-    double c_atan "atan"(double x)
-    double c_pi "M_PI"
-
-cdef extern from "stdlib.h":
-
-    ctypedef unsigned long size_t
-    void *malloc (size_t size)
-    void free(void *mem)
-    void *memcpy(void *dst, void *src, long n)
-
-    void exit(int exit_code)
-
 cdef extern from "hermes1d.h":
 
     ctypedef double double4[4]
