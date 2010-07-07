@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
   p.exec("print 'Python initialized'");
   p.push("A", c2py_CooMatrix(mat1));
   p.push("B", c2py_CooMatrix(mat2));
-  p.exec("from utils import solve_eig_numpy, solve_eig_pysparse");
+  p.exec("from hermes1d.solvers.eigen import solve_eig_numpy, solve_eig_pysparse");
   p.exec("eigs = solve_eig_numpy(A.to_scipy_coo(), B.to_scipy_coo())");
   //p.exec("eigs = solve_eig_pysparse(A.to_scipy_coo(), B.to_scipy_coo())");
   p.exec("E, v = eigs[0]");
