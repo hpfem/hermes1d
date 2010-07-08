@@ -24,8 +24,31 @@ cdef class Element:
 cdef class Mesh:
     cdef c_Mesh *thisptr
 
-    def __init__(self, double a, double b, int n_elem, int p_init, int eq_num=1):
-        self.thisptr = new_Mesh(a, b, n_elem, p_init, eq_num)
+    def __init__(self, *args):
+        from numpy import array
+        cdef double a, b
+        cdef int n_elem, p_init, eq_num, n
+        cdef double *pts_array
+        cdef int *p_array, *m_array, *div_array
+        if len(args) == 5:
+            a, b, n_elem, p_init, eq_num = args
+            self.thisptr = new_Mesh(a, b, n_elem, p_init, eq_num)
+        elif len(args) == 4:
+            a, b, n_elem, p_init = args
+            eq_num = 1
+            self.thisptr = new_Mesh(a, b, n_elem, p_init, eq_num)
+        elif len(args) == 2:
+            pts, p = args
+            pts = array(pts)
+            p = array(p)
+            assert len(pts) == len(p) + 1
+            m = array([1]*len(p))
+            div = array([1]*len(p))
+            eq_num = 1
+            self.thisptr = new_Mesh2(1, pts_array, p_array, m_array, div_array,
+                    eq_num)
+        else:
+            raise ValueError("Don't understand the arguments")
 
     def __dealloc__(self):
         delete(self.thisptr)
