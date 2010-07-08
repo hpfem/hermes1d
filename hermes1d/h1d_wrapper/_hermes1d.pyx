@@ -39,13 +39,13 @@ cdef class Mesh:
             self.thisptr = new_Mesh(a, b, n_elem, p_init, eq_num)
         elif len(args) == 2:
             pts, p = args
-            pts = array(pts)
-            p = array(p)
+            pts = array(pts, dtype="double")
+            p = array(p, dtype="int32")
             if not (len(pts) == len(p) + 1):
                 raise ValueError("len(pts) must be equal to len(p) + 1")
             n_elem = len(p)
-            m = array([1]*len(p))
-            div = array([1]*len(p))
+            m = array([1]*len(p), dtype="int32")
+            div = array([1]*len(p), dtype="int32")
             eq_num = 1
             numpy2c_double_inplace(pts, &pts_array, &n)
             numpy2c_int_inplace(p, &p_array, &n)
