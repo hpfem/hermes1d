@@ -1,6 +1,6 @@
 from numpy import array, abs
 
-from _hermes_common import CooMatrix, CSRMatrix, CSCMatrix
+from hermes_common._hermes_common import CooMatrix, CSRMatrix, CSCMatrix
 
 eps = 1e-10
 
