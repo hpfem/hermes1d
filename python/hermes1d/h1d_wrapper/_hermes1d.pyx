@@ -24,7 +24,7 @@ cdef class Element:
 cdef class Mesh:
     cdef c_Mesh *thisptr
 
-    def __init__(self, double a, double b, int n_elem, int p_init, int eq_num):
+    def __init__(self, double a, double b, int n_elem, int p_init, int eq_num=1):
         self.thisptr = new_Mesh(a, b, n_elem, p_init, eq_num)
 
     def __dealloc__(self):
