@@ -6,11 +6,10 @@
 from hermes_common._hermes_common cimport c2numpy_double, delete, PY_NEW, \
     numpy2c_double_inplace, numpy2c_int_inplace
 
-from hermes1d cimport c_Element, c_Linearizer, c_Mesh, new_Mesh, \
-    new_Linearizer, new_Mesh2
+cimport hermes1d
 
 cdef class Element:
-    cdef c_Element *thisptr
+    cdef hermes1d.c_Element *thisptr
 
     @property
     def p(self):
@@ -25,7 +24,7 @@ cdef class Element:
         return self.thisptr.x2
 
 cdef class Mesh:
-    cdef c_Mesh *thisptr
+    cdef hermes1d.c_Mesh *thisptr
 
     def __init__(self, *args):
         from numpy import array
@@ -35,11 +34,11 @@ cdef class Mesh:
         cdef int *p_array, *m_array, *div_array
         if len(args) == 5:
             a, b, n_elem, p_init, eq_num = args
-            self.thisptr = new_Mesh(a, b, n_elem, p_init, eq_num)
+            self.thisptr = hermes1d.new_Mesh(a, b, n_elem, p_init, eq_num)
         elif len(args) == 4:
             a, b, n_elem, p_init = args
             eq_num = 1
-            self.thisptr = new_Mesh(a, b, n_elem, p_init, eq_num)
+            self.thisptr = hermes1d.new_Mesh(a, b, n_elem, p_init, eq_num)
         elif len(args) == 2:
             pts, p = args
             pts = array(pts, dtype="double")
@@ -54,8 +53,8 @@ cdef class Mesh:
             numpy2c_int_inplace(p, &p_array, &n)
             numpy2c_int_inplace(m, &m_array, &n)
             numpy2c_int_inplace(div, &div_array, &n)
-            self.thisptr = new_Mesh2(n_elem, pts_array, p_array, m_array, div_array,
-                    eq_num)
+            self.thisptr = hermes1d.new_Mesh2(n_elem, pts_array, p_array,
+                    m_array, div_array, eq_num)
         else:
             raise ValueError("Don't understand the arguments")
 
@@ -75,11 +74,11 @@ cdef class Mesh:
         self.thisptr.plot(filename)
 
 cdef class Linearizer:
-    cdef c_Linearizer *thisptr
+    cdef hermes1d.c_Linearizer *thisptr
     cdef Mesh mesh
 
     def __cinit__(self, Mesh mesh):
-        self.thisptr = new_Linearizer(mesh.thisptr)
+        self.thisptr = hermes1d.new_Linearizer(mesh.thisptr)
         self.mesh = mesh
 
     def plot_solution(self, out_filename, plotting_elem_subdivision):
@@ -105,7 +104,7 @@ cdef class Linearizer:
         y_numpy = c2numpy_double(y, n)
         return x_numpy, y_numpy
 
-cdef api object c2py_Mesh(c_Mesh *h):
+cdef api object c2py_Mesh(hermes1d.c_Mesh *h):
     cdef Mesh n
     n = <Mesh>PY_NEW(Mesh)
     n.thisptr = h
