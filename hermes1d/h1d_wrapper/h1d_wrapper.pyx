@@ -84,6 +84,22 @@ cdef class Mesh:
     def plot_to_file(self, filename):
         self.thisptr.plot(filename)
 
+    def get_mesh_data(self):
+        """
+        Returns the list of node coordinates and element orders.
+        """
+        pts = []
+        p = []
+        I = Iterator(self)
+        e = I._next_active_element()
+        while e != NULL:
+            if len(pts) == 0:
+                pts.append(e.x1)
+            pts.append(e.x2)
+            p.append(e.p)
+            e = I._next_active_element()
+        return pts, p
+
 cdef api object c2py_Mesh(hermes1d.Mesh *h):
     cdef Mesh n
     n = <Mesh>PY_NEW(Mesh)
