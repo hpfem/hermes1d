@@ -4,7 +4,7 @@
 # Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
 from _hermes_common cimport c2numpy_double, delete, PY_NEW, \
-    numpy2c_double_inplace
+    numpy2c_double_inplace, numpy2c_int_inplace
 
 cdef class Element:
     cdef c_Element *thisptr
@@ -41,11 +41,17 @@ cdef class Mesh:
             pts, p = args
             pts = array(pts)
             p = array(p)
-            assert len(pts) == len(p) + 1
+            if not (len(pts) == len(p) + 1):
+                raise ValueError("len(pts) must be equal to len(p) + 1")
+            n_elem = len(p)
             m = array([1]*len(p))
             div = array([1]*len(p))
             eq_num = 1
-            self.thisptr = new_Mesh2(1, pts_array, p_array, m_array, div_array,
+            numpy2c_double_inplace(pts, &pts_array, &n)
+            numpy2c_int_inplace(p, &p_array, &n)
+            numpy2c_int_inplace(m, &m_array, &n)
+            numpy2c_int_inplace(div, &div_array, &n)
+            self.thisptr = new_Mesh2(n_elem, pts_array, p_array, m_array, div_array,
                     eq_num)
         else:
             raise ValueError("Don't understand the arguments")
