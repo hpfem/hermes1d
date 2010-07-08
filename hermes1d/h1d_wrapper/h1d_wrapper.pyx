@@ -23,6 +23,12 @@ cdef class Element:
     def x2(self):
         return self.thisptr.x2
 
+cdef api object c2py_Element(hermes1d.Element *h):
+    cdef Element n
+    n = <Element>PY_NEW(Element)
+    n.thisptr = h
+    return n
+
 cdef class Mesh:
     cdef hermes1d.Mesh *thisptr
 
@@ -61,7 +67,7 @@ cdef class Mesh:
             raise ValueError("Don't understand the arguments")
 
     def __dealloc__(self):
-        delete(self.thisptr)
+        del self.thisptr
 
     def copy_vector_to_mesh(self, sol, int comp):
         cdef double *Y
@@ -74,6 +80,12 @@ cdef class Mesh:
 
     def plot_to_file(self, filename):
         self.thisptr.plot(filename)
+
+cdef api object c2py_Mesh(hermes1d.Mesh *h):
+    cdef Mesh n
+    n = <Mesh>PY_NEW(Mesh)
+    n.thisptr = h
+    return n
 
 cdef class Linearizer:
     cdef hermes1d.Linearizer *thisptr
@@ -106,8 +118,15 @@ cdef class Linearizer:
         y_numpy = c2numpy_double(y, n)
         return x_numpy, y_numpy
 
-cdef api object c2py_Mesh(hermes1d.Mesh *h):
-    cdef Mesh n
-    n = <Mesh>PY_NEW(Mesh)
-    n.thisptr = h
-    return n
+cdef class Iterator:
+    cdef hermes1d.Iterator *thisptr
+
+    def __cinit__(self, Mesh mesh):
+        self.thisptr = new hermes1d.Iterator(mesh.thisptr)
+
+    def __dealloc__(self):
+        del self.thisptr
+
+    def first_active_element(self):
+        cdef hermes1d.Element *e = self.thisptr.first_active_element()
+        return c2py_Element(e)

@@ -38,3 +38,10 @@ cdef extern from "hermes1d.h":
                 int plotting_elem_subdivision)
         void get_xy_mesh(int comp, int plotting_elem_subdivision,
                 double **x, double **y, int *n)
+
+    cdef cppclass Iterator:
+        Iterator(Mesh *mesh)
+        void reset()
+        Element *first_active_element()
+        Element *next_active_element()
+        Element *last_active_element()
