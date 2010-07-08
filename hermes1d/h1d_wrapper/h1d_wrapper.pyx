@@ -30,8 +30,6 @@ cdef api object c2py_Element(hermes1d.Element *h):
     return n
 
 cdef class Mesh:
-    cdef hermes1d.Mesh *thisptr
-    cdef object delptr
 
     def __init__(self, *args):
         from numpy import array
