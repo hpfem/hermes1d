@@ -349,12 +349,13 @@ Mesh::Mesh() {
 
 // Creates equidistant mesh with uniform polynomial degree of elements.
 // All elements will have the same (zero) marker.
-Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq, int n_sln)
+Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq, int
+        n_sln, bool print_banner)
 {
   // print the banner (only once)
   static int n_calls = 0;
   n_calls++;
-  if (n_calls == 1) intro();
+  if (n_calls == 1 && print_banner) intro();
 
   // check maximum number of equations
   if(n_eq > MAX_EQN_NUM) 
@@ -392,12 +393,13 @@ Mesh::Mesh(double a, double b, int n_base_elem, int p_init, int n_eq, int n_sln)
 // p_array[]...    array of macroelement poly degrees
 // m_array[]...    array of macroelement material markers
 // div_array[]...  array of macroelement equidistant divisions
-Mesh::Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int *div_array, int n_eq, int n_sln)
+Mesh::Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, int
+        *div_array, int n_eq, int n_sln, bool print_banner)
 {
   // print the banner (only once)
   static int n_calls = 0;
   n_calls++;
-  if (n_calls == 1) intro();
+  if (n_calls == 1 && print_banner) intro();
 
   // check maximum number of equations
   if(n_eq > MAX_EQN_NUM) 

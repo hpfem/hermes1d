@@ -71,7 +71,8 @@ class Mesh {
         Mesh();
         // Creates equidistant mesh with uniform polynomial degree of elements.
         // All elements will have the same (zero) marker.
-        Mesh(double a, double b, int n_elem, int p_init=1, int n_eq=1, int n_sln=1);
+        Mesh(double a, double b, int n_elem, int p_init=1, int n_eq=1, int
+                n_sln=1, bool print_banner=true);
         // Creates a general mesh (used, e.g., in example "neutronics").
         // n_macro_elem... number of macro elements
         // pts_array[]...  array of macroelement grid points
@@ -79,7 +80,7 @@ class Mesh {
         // m_array[]...    array of macroelement material markers
         // div_array[]...  array of macroelement equidistant divisions
         Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array, 
-             int *div_array, int n_eq=1, int n_sln=1);
+             int *div_array, int n_eq=1, int n_sln=1, bool print_banner=true);
         ~Mesh() {
             if (this->base_elems != NULL) {
                 delete[] this->base_elems;
