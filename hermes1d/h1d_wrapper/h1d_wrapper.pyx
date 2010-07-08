@@ -88,6 +88,7 @@ cdef class Mesh:
         """
         Returns the list of node coordinates and element orders.
         """
+        from numpy import array
         pts = []
         p = []
         I = Iterator(self)
@@ -98,7 +99,7 @@ cdef class Mesh:
             pts.append(e.x2)
             p.append(e.p)
             e = I._next_active_element()
-        return pts, p
+        return array(pts), array(p)
 
 cdef api object c2py_Mesh(hermes1d.Mesh *h):
     cdef Mesh n
