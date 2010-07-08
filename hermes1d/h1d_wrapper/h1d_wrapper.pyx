@@ -31,6 +31,7 @@ cdef api object c2py_Element(hermes1d.Element *h):
 
 cdef class Mesh:
     cdef hermes1d.Mesh *thisptr
+    cdef object delptr
 
     def __init__(self, *args):
         from numpy import array
@@ -65,9 +66,11 @@ cdef class Mesh:
                     m_array, div_array, eq_num, 1, 0)
         else:
             raise ValueError("Don't understand the arguments")
+        self.delptr = True
 
     def __dealloc__(self):
-        del self.thisptr
+        if self.delptr:
+            del self.thisptr
 
     def copy_vector_to_mesh(self, sol, int comp):
         cdef double *Y
@@ -85,6 +88,7 @@ cdef api object c2py_Mesh(hermes1d.Mesh *h):
     cdef Mesh n
     n = <Mesh>PY_NEW(Mesh)
     n.thisptr = h
+    n.delptr = False
     return n
 
 cdef class Linearizer:
