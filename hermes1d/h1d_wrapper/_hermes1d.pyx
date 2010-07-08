@@ -3,7 +3,7 @@
 # file for the exact terms).
 # Email: hermes1d@googlegroups.com, home page: http://hpfem.org/
 
-from _hermes_common cimport c2numpy_double, delete, PY_NEW, \
+from hermes_common._hermes_common cimport c2numpy_double, delete, PY_NEW, \
     numpy2c_double_inplace, numpy2c_int_inplace
 
 cdef class Element:
