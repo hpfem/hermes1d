@@ -6,6 +6,9 @@
 from hermes_common._hermes_common cimport c2numpy_double, delete, PY_NEW, \
     numpy2c_double_inplace, numpy2c_int_inplace
 
+from hermes1d cimport c_Element, c_Linearizer, c_Mesh, new_Mesh, \
+    new_Linearizer, new_Mesh2
+
 cdef class Element:
     cdef c_Element *thisptr
 
