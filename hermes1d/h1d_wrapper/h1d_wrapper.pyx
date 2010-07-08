@@ -131,6 +131,20 @@ cdef class Iterator:
     def __dealloc__(self):
         del self.thisptr
 
+    cdef hermes1d.Element* _first_active_element(self):
+        return self.thisptr.first_active_element()
+
     def first_active_element(self):
-        cdef hermes1d.Element *e = self.thisptr.first_active_element()
-        return c2py_Element(e)
+        return c2py_Element(self._first_active_element())
+
+    cdef hermes1d.Element* _next_active_element(self):
+        return self.thisptr.next_active_element()
+
+    def next_active_element(self):
+        return c2py_Element(self._next_active_element())
+
+    cdef hermes1d.Element* _last_active_element(self):
+        return self.thisptr.last_active_element()
+
+    def last_active_element(self):
+        return c2py_Element(self._last_active_element())
