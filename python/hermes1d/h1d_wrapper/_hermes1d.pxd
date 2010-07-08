@@ -20,12 +20,13 @@ cdef extern from "hermes1d.h":
         int get_n_base_elems()
         int get_n_dofs()
         void set_poly_orders(int poly_order)
-        void assign_dofs()
+        int assign_dofs()
         c_Element *get_base_elems()
         void set_dirichlet_bc_left(int eq_n, double val)
         void set_dirichlet_bc_right(int eq_n, double val)
         void copy_vector_to_mesh(double *y, int sln)
         void copy_mesh_to_vector(double *y, int sln)
+        void plot(char* filename)
     c_Mesh *new_Mesh "new Mesh" (double a, double b, int n_elem, int p_init,
             int eq_num)
     c_Mesh *new_Mesh2 "new Mesh" (int n_macro_elem, double *pts_array,
