@@ -2,7 +2,7 @@
 
 #include "python_api.h"
 
-#include "_hermes1d_api.h"
+#include "h1d_wrapper_api.h"
 
 int N_elem = 2;                         // number of elements
 static int N_eq = 2;
@@ -118,8 +118,8 @@ int main(int argc, char* argv[]) {
   p.exec("from utils import show_eigs");
   p.exec("show_eigs(eigs)");
 
-  if (import_hermes1d__h1d_wrapper___hermes1d())
-      throw std::runtime_error("");
+  if (import_hermes1d__h1d_wrapper__h1d_wrapper())
+      throw std::runtime_error("Can't import hermes1d");
   p.push("mesh",  c2py_Mesh(mesh));
   printf("2\n");
   p.exec("from plot import plot_eigs, plot_file");
