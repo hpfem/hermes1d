@@ -16,9 +16,10 @@ cdef extern from "hermes1d.h":
         int *dof
 
     cdef cppclass Mesh:
-        Mesh(double a, double b, int n_elem, int p_init, int eq_num)
+        Mesh(double a, double b, int n_elem, int p_init, int n_eq, int
+                n_sln, int print_banner)
         Mesh(int n_macro_elem, double *pts_array, int *p_array, int *m_array,
-                int *div_array, int n_eq)
+             int *div_array, int n_eq, int n_sln, int print_banner)
         void create(double A, double B, int n)
         int get_n_base_elems()
         int get_n_dofs()

@@ -34,11 +34,13 @@ cdef class Mesh:
         cdef int *p_array, *m_array, *div_array
         if len(args) == 5:
             a, b, n_elem, p_init, eq_num = args
-            self.thisptr = new hermes1d.Mesh(a, b, n_elem, p_init, eq_num)
+            self.thisptr = new hermes1d.Mesh(a, b, n_elem, p_init, eq_num,
+                    1, 0)
         elif len(args) == 4:
             a, b, n_elem, p_init = args
             eq_num = 1
-            self.thisptr = new hermes1d.Mesh(a, b, n_elem, p_init, eq_num)
+            self.thisptr = new hermes1d.Mesh(a, b, n_elem, p_init, eq_num,
+                    1, 0)
         elif len(args) == 2:
             pts, p = args
             pts = array(pts, dtype="double")
@@ -54,7 +56,7 @@ cdef class Mesh:
             numpy2c_int_inplace(m, &m_array, &n)
             numpy2c_int_inplace(div, &div_array, &n)
             self.thisptr = new hermes1d.Mesh(n_elem, pts_array, p_array,
-                    m_array, div_array, eq_num)
+                    m_array, div_array, eq_num, 1, 0)
         else:
             raise ValueError("Don't understand the arguments")
 
