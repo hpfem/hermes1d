@@ -6,10 +6,15 @@
 #ifndef __HERMES_COMMON_TIME_PERIOD_H
 #define __HERMES_COMMON_TIME_PERIOD_H
 
+// For uint64_t type on windows.
+#ifdef _MSC_VER
+#include <inttypes.h>
+#endif
+
 /// Tick type. Used by the class TimePeriod.
 enum TimerPeriodTickType {
-  H2D_ACCUMULATE, ///< Accumulate a period between ticks.
-  H2D_SKIP ///< Skip period between ticks, i.e., do not accumulate it.
+  HERMES_ACCUMULATE, ///< Accumulate a period between ticks.
+  HERMES_SKIP ///< Skip period between ticks, i.e., do not accumulate it.
 };
 
 /// A named time period measurement with accumulation.
@@ -21,7 +26,7 @@ public:
 
   const TimePeriod& reset(); ///< Resets accumulated time.
   const TimePeriod& tick_reset(); ///< Starts a new period and resets accumulated time.
-  const TimePeriod& tick(TimerPeriodTickType type = H2D_ACCUMULATE); ///< Starts/ends a new period.
+  const TimePeriod& tick(TimerPeriodTickType type = HERMES_ACCUMULATE); ///< Starts/ends a new period.
 
   /// Returns a name of the time period if any.
   const std::string& name() const { return period_name; }
