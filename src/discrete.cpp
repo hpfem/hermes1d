@@ -403,8 +403,13 @@ void newton(DiscreteProblem *dp, Mesh *mesh,
     for(int i=0; i<n_dof; i++) res[i]*= -1;
 
     // solving the matrix system
-    if (solver)
-        solver->solve(mat, res);
+    if (solver) {
+        AVector *v = new AVector(n_dof);
+        memcpy(v->get_c_array(), res, sizeof(double)*n_dof);
+        solver->solve(mat, v);
+        memcpy(res, v->get_c_array(), sizeof(double)*n_dof);
+        delete v;
+    }
     else
         solve_linear_system_sparselib_cgs(mat, res);
 
