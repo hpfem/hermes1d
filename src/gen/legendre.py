@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-print "Importing..."
+print("Importing...")
 import os
 
 from jinja2 import Environment, FileSystemLoader
@@ -17,9 +17,9 @@ x = Symbol("x")
 env = Environment(loader=FileSystemLoader('.'))
 
 functions = []
-print "Calculating shape functions..."
+print("Calculating shape functions...")
 for i in range(n_functions):
-    print "  i=%d" % i
+    print(("  i=%d" % i))
     lob = legendre_shape_function(i, x)
     lob_diff = lob.diff(x)
     lob = horner_scheme(lob, x, factor_const=factor_const)
@@ -29,7 +29,7 @@ for i in range(n_functions):
         "expr_diff": ccode_pow2(lob_diff),
         })
 
-print "Generating the C file..."
+print("Generating the C file...")
 template = "legendre.cpp"
 t = env.get_template(template)
 open(os.path.join("..", template), "w").write(t.render({

@@ -9,23 +9,23 @@ def solve_eig_numpy(A, B):
     A = A.todense()
     B = B.todense()
 
-    print "inverting"
+    print("inverting")
     M = dot(inv(B), A)
-    print "solving"
+    print("solving")
     w, v = eig(M)
-    print "sorting the eigenvalues"
+    print("sorting the eigenvalues")
 
     r = []
     for i in range(len(w)):
         vec = v[:, i]
         r.append((w[i], vec))
     r.sort(key=lambda x: x[0])
-    print "eigenvalues:"
+    print("eigenvalues:")
     eigs = []
     for w, vec in r:
         if w > 0:
             break
-        print w
+        print(w)
         eigs.append(vec)
     return r
 
@@ -36,7 +36,7 @@ def convert_mat(mtx):
     from pysparse import spmatrix
     mtx = mtx.tocsr()
     A = spmatrix.ll_mat(*mtx.shape)
-    for i in xrange( mtx.indptr.shape[0] - 1 ):
+    for i in range( mtx.indptr.shape[0] - 1 ):
         ii = slice( mtx.indptr[i], mtx.indptr[i+1] )
         n_in_row = ii.stop - ii.start
         A.update_add_at( mtx.data[ii], [i] * n_in_row, mtx.indices[ii] )
@@ -54,12 +54,12 @@ def solve_eig_pysparse(A, B, n_eigs=4, verbose=False):
     """
     from pysparse import jdsym, precon, itsolvers
     if verbose:
-        print "converting to pysparse"
+        print("converting to pysparse")
     n = A.shape[0]
     A = convert_mat(A)
     B = convert_mat(B)
     if verbose:
-        print "solving (%d x %d)" % (n, n)
+        print(("solving (%d x %d)" % (n, n)))
     Atau = A.copy()
     tau = -1
     Atau.shift(-tau, B)
@@ -69,18 +69,18 @@ def solve_eig_pysparse(A, B, n_eigs=4, verbose=False):
     kconv, lmbd, Q, it, it_in = jdsym.jdsym(A, B, K, n_eigs, tau, 1e-6, 150,
             itsolvers.qmrs)
     if verbose:
-        print "number of converged eigenvalues:", kconv
+        print(("number of converged eigenvalues:", kconv))
 
     r = []
     for i in range(len(lmbd)):
         vec = Q[:, i]
         r.append((lmbd[i], vec))
     r.sort(key=lambda x: x[0])
-    print "eigenvalues:"
+    print("eigenvalues:")
     eigs = []
     for w, vec in r:
         if w > 0:
             break
-        print w
+        print(w)
         eigs.append(vec)
     return r

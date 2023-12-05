@@ -71,7 +71,7 @@ set_property(TARGET _hermes_common PROPERTY COMPILE_FLAGS "-g")
 
 if(MSVC)
     IF(NOT PYTHON_VERSION)
-        execute_process(COMMAND python -c "import sys;print '%d.%d' % sys.version_info[:2]" OUTPUT_VARIABLE PYTHON_VERSION)
+	    execute_process(COMMAND python -c "import sys;print('%d.%d' % sys.version_info[:2])" OUTPUT_VARIABLE PYTHON_VERSION)
         string(STRIP ${PYTHON_VERSION} PYTHON_VERSION)
     ENDIF(NOT PYTHON_VERSION)
 

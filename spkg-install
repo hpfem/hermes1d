@@ -6,7 +6,7 @@ fi
 
 PACKAGE_NAME=hermes1d
 
-PY_VER=`python -c "import sys;print '%d.%d' % sys.version_info[:2]"`
+PY_VER=`python -c "import sys;print('%d.%d' % sys.version_info[:2])"`
 echo "Detected Python version: $PY_VER"
 
 # Set the hermes1d build options:
