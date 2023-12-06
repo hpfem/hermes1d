@@ -9,9 +9,9 @@ from scipy.integrate import quadrature
 # weights for a given number n of points.
  
 n = 101
-print "n =", n
-print "orders: %d, %d" % (2*n - 2, 2*n - 1)
+print(("n =", n))
+print(("orders: %d, %d" % (2*n - 2, 2*n - 1)))
 roots, weights = p_roots(n)
-print "{"
+print("{")
 for root, weight in zip(roots, weights):
-    print "  { %.20f, %.20f }," % (root, weight)
+    print(("  { %.20f, %.20f }," % (root, weight)))

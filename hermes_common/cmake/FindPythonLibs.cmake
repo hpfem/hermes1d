@@ -2,7 +2,7 @@
 # Python and use that version, or you specify it, then it will use that Python
 # version
 IF(NOT PYTHON_VERSION)
-    execute_process(COMMAND python -c "import sys;print '%d.%d' % sys.version_info[:2]" OUTPUT_VARIABLE PYTHON_VERSION)
+	execute_process(COMMAND python -c "import sys;print('%d.%d' % sys.version_info[:2])" OUTPUT_VARIABLE PYTHON_VERSION)
     string(STRIP ${PYTHON_VERSION} PYTHON_VERSION)
     set(PYTHON_VERSION ${PYTHON_VERSION} CACHE STRING "Systemwide Python version")
     message(STATUS "The systemwide default Python is: ${PYTHON_VERSION}")

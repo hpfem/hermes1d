@@ -9,7 +9,7 @@ from numpy.linalg import solve
 
 from scipy.integrate import quadrature
 
-from gauss_lobatto_points import points
+from .gauss_lobatto_points import points
 
 def get_x_phys(x_ref, a, b):
     return (a+b)/2. + x_ref*(b-a)/2.;
@@ -390,7 +390,7 @@ class Function(object):
                         # if this happens, it means that we can get better
                         # approximation with the same DOFs, so we definitely take
                         # this candidate:
-                        print "XXX", dof_cand, dof_orig, err_cand, err_orig
+                        print(("XXX", dof_cand, dof_orig, err_cand, err_orig))
                         crit = -1e10
                     else:
                         crit = 1e10 # forget this candidate
@@ -406,7 +406,7 @@ class Function(object):
                         # if this happens, it means that we can get better
                         # approximation with less DOFs, so we definitely take
                         # this candidate:
-                        print "Nice!", dof_cand, dof_orig, err_cand, err_orig
+                        print(("Nice!", dof_cand, dof_orig, err_cand, err_orig))
                         crit = -1e10
                     else:
                         crit = 1e10 # forget this candidate
@@ -424,10 +424,10 @@ def main():
     error = (g-f).l2_norm()
     graph = []
     while error > 1e-9:
-        print error, g.dofs()
+        print((error, g.dofs()))
         graph.append((g.dofs(), error))
-        print "  ", g._mesh._points
-        print "  ", g._mesh._orders
+        print(("  ", g._mesh._points))
+        print(("  ", g._mesh._orders))
         cand_with_errors = g.get_candidates_with_errors(f)
         #for m, err in cand_with_errors[:10]:
         #    print "   ", err, m._points, m._orders
@@ -436,11 +436,11 @@ def main():
         g = f.project_onto(g_mesh)
         error = (g-f).l2_norm()
     graph.append((g.dofs(), error))
-    print "Done.", error
+    print(("Done.", error))
     error = (g - f)
-    print "error:     ", error.l2_norm()
-    print "f dofs:    ", f.dofs()
-    print "g dofs:    ", g.dofs()
+    print(("error:     ", error.l2_norm()))
+    print(("f dofs:    ", f.dofs()))
+    print(("g dofs:    ", g.dofs()))
     f.plot(False)
     g.plot(False)
     g._mesh.plot(False)

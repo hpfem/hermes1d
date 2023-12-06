@@ -20,6 +20,6 @@ def plot_eigs(mesh, eigs):
         if E >= 0:
             break
         x, y = l.get_xy(eig, 0, 100)
-        print "plotting E=%f" % E
+        print(("plotting E=%f" % E))
         plot(x, y)
     show()

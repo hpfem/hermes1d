@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-print "Importing..."
+print("Importing...")
 import os
 from jinja2 import Environment, FileSystemLoader
 
@@ -9,19 +9,19 @@ from common import gauss_lobatto_points
 
 N = 13
 
-print "Generating points"
+print("Generating points")
 points = []
 for i in range(N):
-    print i
+    print(i)
     p = gauss_lobatto_points(i)
     points.append({
         "p": i,
         "points": p
         })
 
-print points
+print(points)
 
-print "Generating the Python file..."
+print("Generating the Python file...")
 template = "gauss_lobatto_points.py"
 env = Environment(loader=FileSystemLoader('.'))
 t = env.get_template(template)
